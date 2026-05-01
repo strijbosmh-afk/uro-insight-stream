@@ -42,6 +42,12 @@ export interface FeedService {
   // Congresses & sessions
   listCongresses(): Promise<Congress[]>;
   getCongress(id: string): Promise<Congress>;
+  addCongress(input: Omit<Congress, "id">): Promise<Congress>;
+  updateCongress(id: string, patch: Partial<Congress>): Promise<Congress>;
+  removeCongress(id: string): Promise<void>;
+  /** Returns hourly tweet counts for the congress for the last `hours` hours. */
+  congressActivity(id: string, hours: number): Promise<number[]>;
+  countCongressTweets(id: string): Promise<number>;
   listSessions(congressId: string): Promise<Session[]>;
   getSession(id: string): Promise<Session>;
 
