@@ -17,6 +17,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -58,37 +59,45 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
+  id: '/$congressId',
+  path: '/$congressId',
+  getParentRoute: () => CongressesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
-  '/congresses': typeof CongressesRoute
+  '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/congresses/$congressId': typeof CongressesCongressIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
-  '/congresses': typeof CongressesRoute
+  '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/congresses/$congressId': typeof CongressesCongressIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
-  '/congresses': typeof CongressesRoute
+  '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/congresses/$congressId': typeof CongressesCongressIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/congresses/$congressId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/congresses/$congressId'
   id:
     | '__root__'
     | '/'
@@ -121,12 +132,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/congresses/$congressId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
-  CongressesRoute: typeof CongressesRoute
+  CongressesRoute: typeof CongressesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   FeedRoute: typeof FeedRoute
   SettingsRoute: typeof SettingsRoute
@@ -192,13 +204,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/congresses/$congressId': {
+      id: '/congresses/$congressId'
+      path: '/$congressId'
+      fullPath: '/congresses/$congressId'
+      preLoaderRoute: typeof CongressesCongressIdRouteImport
+      parentRoute: typeof CongressesRoute
+    }
   }
 }
+
+interface CongressesRouteChildren {
+  CongressesCongressIdRoute: typeof CongressesCongressIdRoute
+}
+
+const CongressesRouteChildren: CongressesRouteChildren = {
+  CongressesCongressIdRoute: CongressesCongressIdRoute,
+}
+
+const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
+  CongressesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
-  CongressesRoute: CongressesRoute,
+  CongressesRoute: CongressesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   FeedRoute: FeedRoute,
   SettingsRoute: SettingsRoute,
