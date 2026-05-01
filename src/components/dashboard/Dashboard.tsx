@@ -104,22 +104,7 @@ export function Dashboard() {
 
   const { data: allSummaries = [] } = useQuery({
     queryKey: ["all-summaries"],
-    queryFn: async () => {
-      // No bulk list method — derive by probing each session/congress.
-      const sessionIds = sessions.map((s) => s.id);
-      const congressIds = congresses.map((c) => c.id);
-      const out: Summary[] = [];
-      for (const id of sessionIds) {
-        const s = await feedService.getSummary("session", id);
-        if (s) out.push(s);
-      }
-      for (const id of congressIds) {
-        const s = await feedService.getSummary("congress", id);
-        if (s) out.push(s);
-      }
-      return out;
-    },
-    enabled: sessions.length > 0,
+    queryFn: () => feedService.listSummaries(),
   });
   const summariesToday = allSummaries.filter(
     (s) => new Date(s.generatedAt).getTime() >= oneDayAgo,
