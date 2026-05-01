@@ -4,6 +4,7 @@ import { Search, ChevronRight } from "lucide-react";
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
+  dashboard: "Dashboard",
   congresses: "Congresses",
   feed: "Live Feed",
   summaries: "Summaries",
