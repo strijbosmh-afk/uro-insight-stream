@@ -33,15 +33,17 @@ export async function recordAudit(entry: AuditEntry) {
   try {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    await supabase.from("audit_log").insert({
-      actor_id: u.user.id,
-      action: entry.action,
-      target_type: entry.target_type,
-      target_id: entry.target_id ?? null,
-      summary: entry.summary ?? null,
-      before: (entry.before as object | null) ?? null,
-      after: (entry.after as object | null) ?? null,
-    });
+    await supabase.from("audit_log").insert([
+      {
+        actor_id: u.user.id,
+        action: entry.action,
+        target_type: entry.target_type,
+        target_id: entry.target_id ?? null,
+        summary: entry.summary ?? null,
+        before: (entry.before ?? null) as never,
+        after: (entry.after ?? null) as never,
+      },
+    ]);
   } catch (e) {
     // Don't break the UI if audit logging fails.
     console.warn("audit log insert failed", e);
