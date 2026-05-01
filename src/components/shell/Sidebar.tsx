@@ -28,7 +28,7 @@ const SECTIONS: NavSection[] = [
   {
     label: "Workspace",
     items: [
-      { label: "Dashboard", to: "/", icon: LayoutDashboard },
+      { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
       { label: "Congresses", to: "/congresses", icon: CalendarRange },
       { label: "Live Feed", to: "/feed", icon: Radio },
       { label: "Summaries", to: "/summaries", icon: FileText },
@@ -94,9 +94,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <ul>
               {section.items.map((item) => {
                 const active =
-                  item.to === "/"
-                    ? pathname === "/"
-                    : pathname === item.to || pathname.startsWith(item.to + "/");
+                  pathname === item.to || pathname.startsWith(item.to + "/");
                 const Icon = item.icon;
                 return (
                   <li key={item.to}>

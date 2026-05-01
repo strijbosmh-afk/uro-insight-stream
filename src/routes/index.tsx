@@ -1,16 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard — UroFeed" }] }),
-  component: Dashboard,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard" });
+  },
 });
-
-function Dashboard() {
-  return (
-    <PlaceholderPage
-      title="Dashboard"
-      description="Operational overview of monitored congresses, source health, and AI summarization throughput. Widgets land here in the next step."
-    />
-  );
-}
