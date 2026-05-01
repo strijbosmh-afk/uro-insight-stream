@@ -20,6 +20,7 @@ import type { Congress } from "@/types";
 const ALL = "__all__";
 
 export function CongressGrid() {
+  const canEdit = useCanEdit();
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
   const [openNew, setOpenNew] = React.useState(false);
@@ -71,7 +72,13 @@ export function CongressGrid() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button size="sm" className="h-7" onClick={() => setOpenNew(true)}>
+      <Button
+        size="sm"
+        className="h-7"
+        onClick={() => setOpenNew(true)}
+        disabled={!canEdit}
+        title={canEdit ? "" : "Editor or admin role required"}
+      >
         <Plus className="w-3 h-3 mr-1" /> New congress
       </Button>
       <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2">
