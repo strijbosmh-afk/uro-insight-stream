@@ -5,6 +5,7 @@ import { useLiveData } from "@/hooks/useLiveData";
 import type { Source, Tweet, Session } from "@/types";
 import { useFeedFilters } from "./FeedFilterContext";
 import { advanceFeedClock, feedNowMs, initFeedClock } from "./feedClock";
+import { useAuth } from "@/auth/AuthProvider";
 
 export interface FeedDataset {
   tweets: Tweet[];
@@ -21,9 +22,12 @@ export interface FeedDataset {
  * virtual clock, and applies all active filters client-side so the rest of
  * the feed UI just consumes a list of `Tweet`s.
  */
-export function useFilteredTweets(intervalMs = 30_000): FeedDataset {
+export function useFilteredTweets(intervalMs?: number): FeedDataset {
   const qc = useQueryClient();
   const { filters } = useFeedFilters();
+  const { prefs } = useAuth();
+  const effectiveInterval =
+    intervalMs ?? (prefs?.polling_interval_seconds ?? 30) * 1000;
 
   // Static-ish lookups
   const { data: sources = [] } = useQuery({
@@ -59,7 +63,7 @@ export function useFilteredTweets(intervalMs = 30_000): FeedDataset {
   const tweetQuery = useLiveData(
     ["live-tweets"],
     async () => feedService.listTweets({ limit: 1000 }),
-    intervalMs,
+    effectiveInterval,
   );
 
   React.useEffect(() => {
