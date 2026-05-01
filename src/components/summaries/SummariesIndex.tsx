@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, ArrowUpDown, FileText } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
@@ -26,7 +26,9 @@ import type { Summary, Session, Abstract, Congress } from "@/types";
 type EnrichedSummary = Summary & {
   title: string;
   context?: string;
-  link?: { to: string; params?: Record<string, string> };
+  navTarget?:
+    | { kind: "session"; sessionId: string }
+    | { kind: "congress"; congressId: string };
 };
 
 const SENTIMENT_STYLE: Record<Summary["sentiment"], string> = {
@@ -46,6 +48,7 @@ function fmt(iso: string) {
 }
 
 export function SummariesIndex() {
+  const navigate = useNavigate();
   const [q, setQ] = React.useState("");
   const [type, setType] = React.useState<"all" | Summary["targetType"]>("all");
   const [sentiment, setSentiment] = React.useState<"all" | Summary["sentiment"]>(
@@ -134,8 +137,8 @@ export function SummariesIndex() {
           ...s,
           title: sess?.title ?? s.targetId,
           context: cong ? `${cong.shortCode} · ${sess?.track ?? ""}` : undefined,
-          link: sess
-            ? { to: "/sessions/$sessionId", params: { sessionId: sess.id } }
+          navTarget: sess
+            ? { kind: "session" as const, sessionId: sess.id }
             : undefined,
         };
       }
@@ -149,8 +152,8 @@ export function SummariesIndex() {
           context: cong
             ? `${cong.shortCode} · ${abs?.abstractNumber ?? ""}`
             : undefined,
-          link: sess
-            ? { to: "/sessions/$sessionId", params: { sessionId: sess.id } }
+          navTarget: sess
+            ? { kind: "session" as const, sessionId: sess.id }
             : undefined,
         };
       }
@@ -160,12 +163,11 @@ export function SummariesIndex() {
         ...s,
         title: cong?.name ?? s.targetId,
         context: cong?.city,
-        link: cong
-          ? { to: "/congresses/$congressId", params: { congressId: cong.id } }
+        navTarget: cong
+          ? { kind: "congress" as const, congressId: cong.id }
           : undefined,
       };
     });
-    // ignored deps for the inner maps that derive from arrays already in deps
   }, [summaries, sessionMap, abstractMap, congressMap]);
 
   const filtered = React.useMemo(() => {
@@ -272,8 +274,29 @@ export function SummariesIndex() {
           </TableHeader>
           <TableBody>
             {filtered.map((s) => {
-              const Row = (
-                <>
+              const onOpen = () => {
+                if (!s.navTarget) return;
+                if (s.navTarget.kind === "session") {
+                  navigate({
+                    to: "/sessions/$sessionId",
+                    params: { sessionId: s.navTarget.sessionId },
+                  });
+                } else {
+                  navigate({
+                    to: "/congresses/$congressId",
+                    params: { congressId: s.navTarget.congressId },
+                  });
+                }
+              };
+              return (
+                <TableRow
+                  key={s.id}
+                  className={cn(
+                    "border-border",
+                    s.navTarget && "cursor-pointer hover:bg-panel-elevated/50",
+                  )}
+                  onClick={s.navTarget ? onOpen : undefined}
+                >
                   <TableCell className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
                     <span className="inline-flex items-center gap-1">
                       <FileText className="w-3 h-3" />
@@ -307,24 +330,6 @@ export function SummariesIndex() {
                   <TableCell className="text-[11px] font-mono text-text-muted">
                     {s.modelUsed}
                   </TableCell>
-                </>
-              );
-              return s.link ? (
-                <TableRow
-                  key={s.id}
-                  className="border-border cursor-pointer hover:bg-panel-elevated/50"
-                  asChild
-                >
-                  <Link
-                    to={s.link.to as "/sessions/$sessionId"}
-                    params={s.link.params as { sessionId: string }}
-                  >
-                    {Row}
-                  </Link>
-                </TableRow>
-              ) : (
-                <TableRow key={s.id} className="border-border">
-                  {Row}
                 </TableRow>
               );
             })}
