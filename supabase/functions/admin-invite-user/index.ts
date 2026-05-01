@@ -95,6 +95,23 @@ Deno.serve(async (req) => {
 
   const newUserId = created.user.id;
 
+  // Generate a single-use invite token. The admin will share the resulting
+  // URL with the new user; visiting /auth?invite=<token>&email=<email>
+  // lets them set a permanent password and sign in.
+  let inviteToken: string | null = null;
+  try {
+    const { data: linkData } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+    });
+    // hashed_token is the single-use token bound to this email + type.
+    inviteToken =
+      (linkData?.properties as { hashed_token?: string } | undefined)
+        ?.hashed_token ?? null;
+  } catch (_) {
+    // Non-fatal: fall back to the temp password flow.
+  }
+
   // The handle_new_user trigger inserts a default 'viewer' role.
   // If a different role was requested, replace it.
   if (role !== "viewer") {
@@ -121,5 +138,6 @@ Deno.serve(async (req) => {
     email,
     role,
     temp_password: tempPassword,
+    invite_token: inviteToken,
   });
 });

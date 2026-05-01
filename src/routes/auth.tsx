@@ -1,20 +1,46 @@
 import * as React from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Activity, Loader2, Mail, KeyRound, Lock } from "lucide-react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  Activity,
+  Loader2,
+  Mail,
+  KeyRound,
+  Lock,
+  CheckCircle2,
+  ArrowLeft,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Panel } from "@/components/shell/Panel";
+import { AuthStatusBar } from "@/components/shell/AuthStatusBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { toast } from "sonner";
+
+interface AuthSearch {
+  redirect?: string;
+  invite?: string;
+  email?: string;
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — UroFeed" },
-      { name: "description", content: "Sign in to access the UroFeed clinical congress dashboard." },
+      {
+        name: "description",
+        content:
+          "Sign in to access the UroFeed clinical congress dashboard.",
+      },
     ],
+  }),
+  validateSearch: (s: Record<string, unknown>): AuthSearch => ({
+    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
+    invite: typeof s.invite === "string" ? s.invite : undefined,
+    email: typeof s.email === "string" ? s.email : undefined,
   }),
   component: AuthPage,
 });
@@ -22,66 +48,141 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { redirect, invite, email: emailFromUrl } = useSearch({ from: "/auth" });
+  const [busyState, setBusyState] = React.useState<
+    "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting"
+  >("ready");
 
+  // Already signed in? Honour ?redirect=, otherwise dashboard.
   React.useEffect(() => {
-    if (!loading && user) {
-      void navigate({ to: "/dashboard" });
+    if (loading || !user) return;
+    if (invite) return; // let the invite flow finish before redirecting
+    if (redirect && redirect.startsWith("/")) {
+      window.location.replace(redirect);
+    } else {
+      void navigate({ to: "/dashboard", replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, redirect, invite]);
+
+  const isInvite = Boolean(invite);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg p-4">
-      <div className="w-full max-w-sm">
-        {/* Brand */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-7 h-7 rounded-[3px] bg-accent/10 border border-accent/40 flex items-center justify-center">
-            <Activity className="w-4 h-4 text-accent" />
+    <div className="h-screen w-screen flex flex-col bg-bg text-text-primary overflow-hidden">
+      <main className="flex-1 min-h-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-[440px]">
+          {/* Brand */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="w-7 h-7 rounded-[3px] bg-accent/10 border border-accent/40 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-accent" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-base font-semibold tracking-tight text-text-primary">
+                UroFeed
+              </span>
+              <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-text-muted mt-0.5">
+                clinical · v0.1
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-base font-semibold tracking-tight text-text-primary">
-              UroFeed
-            </span>
-            <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-text-muted mt-0.5">
-              clinical · v0.1
-            </span>
-          </div>
+
+          <Panel
+            title={isInvite ? "Complete your invite" : "Sign in"}
+            actions={
+              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2">
+                {isInvite ? "view · invite" : "view · auth"}
+              </span>
+            }
+            bodyClassName="p-5"
+          >
+            {isInvite ? (
+              <InviteForm
+                token={invite!}
+                emailHint={emailFromUrl}
+                onBusy={(b) =>
+                  setBusyState(b ? "completing-invite" : "ready")
+                }
+              />
+            ) : (
+              <SignInTabs
+                redirect={redirect}
+                onBusy={(s) => setBusyState(s)}
+              />
+            )}
+          </Panel>
+
+          <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+            {isInvite
+              ? "Setting your password completes the invitation."
+              : "UroFeed is invite-only · ask an admin for access"}
+          </p>
         </div>
-
-        <div className="border border-border rounded-[3px] bg-panel p-5">
-          <Tabs defaultValue="password">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="password" className="text-[12px]">
-                <KeyRound className="w-3 h-3 mr-1" /> Password
-              </TabsTrigger>
-              <TabsTrigger value="magic" className="text-[12px]">
-                <Mail className="w-3 h-3 mr-1" /> Magic link
-              </TabsTrigger>
-              <TabsTrigger value="signup" className="text-[12px]">
-                Sign up
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="password" className="mt-4">
-              <PasswordForm />
-            </TabsContent>
-            <TabsContent value="magic" className="mt-4">
-              <MagicLinkForm />
-            </TabsContent>
-            <TabsContent value="signup" className="mt-4">
-              <SignupNotice />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
-          UroFeed is invite-only. Ask an admin for access.
-        </p>
-      </div>
+      </main>
+      <AuthStatusBar state={busyState} />
     </div>
   );
 }
 
-function PasswordForm() {
+/* ---------- Sign-in (tabs: password · magic link) ---------- */
+
+function SignInTabs({
+  redirect,
+  onBusy,
+}: {
+  redirect?: string;
+  onBusy: (
+    s: "ready" | "signing-in" | "sending-link" | "resetting",
+  ) => void;
+}) {
+  const [tab, setTab] = React.useState<"password" | "magic">("password");
+  const [showReset, setShowReset] = React.useState(false);
+
+  return (
+    <Tabs value={tab} onValueChange={(v) => setTab(v as "password" | "magic")}>
+      <TabsList className="w-full grid grid-cols-2 bg-panel-elevated">
+        <TabsTrigger value="password" className="text-[12px]">
+          <KeyRound className="w-3 h-3 mr-1.5" /> Sign in
+        </TabsTrigger>
+        <TabsTrigger value="magic" className="text-[12px]">
+          <Mail className="w-3 h-3 mr-1.5" /> Magic link
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="password" className="mt-4">
+        {showReset ? (
+          <ForgotPasswordForm
+            onBack={() => setShowReset(false)}
+            onBusy={(b) => onBusy(b ? "resetting" : "ready")}
+          />
+        ) : (
+          <PasswordForm
+            redirect={redirect}
+            onBusy={(b) => onBusy(b ? "signing-in" : "ready")}
+            onForgot={() => setShowReset(true)}
+          />
+        )}
+      </TabsContent>
+
+      <TabsContent value="magic" className="mt-4">
+        <MagicLinkForm
+          redirect={redirect}
+          onBusy={(b) => onBusy(b ? "sending-link" : "ready")}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+/* ---------- Password form ---------- */
+
+function PasswordForm({
+  redirect,
+  onBusy,
+  onForgot,
+}: {
+  redirect?: string;
+  onBusy: (b: boolean) => void;
+  onForgot: () => void;
+}) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -90,50 +191,86 @@ function PasswordForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    onBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) throw error;
       toast.success("Signed in");
-      void navigate({ to: "/dashboard" });
+      if (redirect && redirect.startsWith("/")) {
+        window.location.replace(redirect);
+      } else {
+        void navigate({ to: "/dashboard", replace: true });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sign-in failed";
       toast.error(msg);
     } finally {
       setBusy(false);
+      onBusy(false);
     }
   };
 
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[12px]">Email</Label>
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Email
+        </Label>
         <Input
           type="email"
           autoComplete="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="font-mono"
         />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-[12px]">Password</Label>
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Password
+        </Label>
         <Input
           type="password"
           autoComplete="current-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="font-mono"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Lock className="w-3.5 h-3.5 mr-1.5" />}
+      <Button type="submit" className="w-full h-9" disabled={busy}>
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+        ) : (
+          <Lock className="w-3.5 h-3.5 mr-1.5" />
+        )}
         Sign in
       </Button>
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={onForgot}
+          className="text-[11px] font-mono text-text-muted hover:text-accent transition-colors"
+        >
+          forgot password?
+        </button>
+      </div>
     </form>
   );
 }
 
-function MagicLinkForm() {
+/* ---------- Magic link form ---------- */
+
+function MagicLinkForm({
+  redirect,
+  onBusy,
+}: {
+  redirect?: string;
+  onBusy: (b: boolean) => void;
+}) {
   const [email, setEmail] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -141,30 +278,39 @@ function MagicLinkForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    onBusy(true);
     try {
+      const target =
+        redirect && redirect.startsWith("/")
+          ? `${window.location.origin}${redirect}`
+          : `${window.location.origin}/dashboard`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          shouldCreateUser: false,
-        },
+        options: { emailRedirectTo: target, shouldCreateUser: false },
       });
       if (error) throw error;
       setSent(true);
-      toast.success("Check your email", { description: "We sent a sign-in link." });
+      toast.success("Check your email", {
+        description: "We sent a sign-in link.",
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send link";
       toast.error(msg);
     } finally {
       setBusy(false);
+      onBusy(false);
     }
   };
 
   if (sent) {
     return (
-      <div className="text-[13px] text-text-muted leading-relaxed">
-        A sign-in link has been sent to <span className="text-text-primary font-mono">{email}</span>.
-        Open it on this device to continue.
+      <div className="flex items-start gap-2 text-[12px] text-text-muted leading-relaxed">
+        <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
+        <div>
+          A sign-in link was sent to{" "}
+          <span className="text-text-primary font-mono">{email}</span>. Open it
+          on this device to continue.
+        </div>
       </div>
     );
   }
@@ -172,33 +318,221 @@ function MagicLinkForm() {
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[12px]">Email</Label>
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Email
+        </Label>
         <Input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="font-mono"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Mail className="w-3.5 h-3.5 mr-1.5" />}
+      <Button type="submit" className="w-full h-9" disabled={busy}>
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+        ) : (
+          <Mail className="w-3.5 h-3.5 mr-1.5" />
+        )}
         Send magic link
       </Button>
     </form>
   );
 }
 
-function SignupNotice() {
+/* ---------- Forgot password (inline) ---------- */
+
+function ForgotPasswordForm({
+  onBack,
+  onBusy,
+}: {
+  onBack: () => void;
+  onBusy: (b: boolean) => void;
+}) {
+  const [email, setEmail] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    onBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      setSent(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send reset";
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+      onBusy(false);
+    }
+  };
+
   return (
-    <div className="text-[12px] text-text-muted leading-relaxed space-y-2">
-      <p>
-        Public sign-up is <span className="text-text-primary">disabled</span>.
-        UroFeed is invite-only.
-      </p>
-      <p>
-        Ask an existing administrator to send you an invitation from{" "}
-        <span className="font-mono text-text-primary">Settings → Team</span>.
-      </p>
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-accent"
+      >
+        <ArrowLeft className="w-3 h-3" /> back to sign in
+      </button>
+
+      {sent ? (
+        <div className="flex items-start gap-2 text-[12px] text-text-muted leading-relaxed">
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
+          <div>
+            If an account exists for{" "}
+            <span className="text-text-primary font-mono">{email}</span>, a
+            reset link is on its way.
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-3">
+          <p className="text-[12px] text-text-muted leading-relaxed">
+            Enter your email and we'll send you a link to set a new password.
+          </p>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+              Email
+            </Label>
+            <Input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="font-mono"
+            />
+          </div>
+          <Button type="submit" className="w-full h-9" disabled={busy}>
+            {busy ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Mail className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            Send reset link
+          </Button>
+        </form>
+      )}
     </div>
+  );
+}
+
+/* ---------- Invite completion ---------- */
+
+function InviteForm({
+  token,
+  emailHint,
+  onBusy,
+}: {
+  token: string;
+  emailHint?: string;
+  onBusy: (b: boolean) => void;
+}) {
+  const [email, setEmail] = React.useState(emailHint ?? "");
+  const [password, setPassword] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const navigate = useNavigate();
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("Passwords don't match");
+      return;
+    }
+    setBusy(true);
+    onBusy(true);
+    try {
+      // Invite tokens are issued via generateLink(type:'recovery'); verifyOtp
+      // exchanges the hashed_token + email for a real session.
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email,
+        token_hash: token,
+        type: "recovery",
+      });
+      if (verifyErr) throw verifyErr;
+      // Now we have a session — set the chosen password.
+      const { error: updErr } = await supabase.auth.updateUser({ password });
+      if (updErr) throw updErr;
+      toast.success("Welcome — invite accepted");
+      void navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Invite could not be verified";
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+      onBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <div className="flex items-start gap-2 text-[12px] text-text-muted leading-relaxed border border-accent/30 bg-accent/5 rounded-[3px] p-2.5">
+        <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+        <div>
+          You've been invited to UroFeed. Set a password to activate your
+          account.
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Email
+        </Label>
+        <Input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="font-mono"
+          readOnly={Boolean(emailHint)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          New password
+        </Label>
+        <Input
+          type="password"
+          required
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="font-mono"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Confirm password
+        </Label>
+        <Input
+          type="password"
+          required
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          className="font-mono"
+        />
+      </div>
+      <Button type="submit" className="w-full h-9" disabled={busy}>
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+        ) : (
+          <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+        )}
+        Accept invite & sign in
+      </Button>
+    </form>
   );
 }
