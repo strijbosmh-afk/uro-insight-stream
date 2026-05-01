@@ -409,6 +409,12 @@ export function SessionDetail({ sessionId }: Props) {
           className="col-span-12 lg:col-span-4 min-h-0"
           bodyClassName="overflow-y-auto"
         >
+          <div className="mb-3 flex items-start gap-2 px-2.5 py-2 border border-warning/40 bg-warning/10 rounded-[3px]">
+            <span className="mt-[2px] inline-block w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
+            <p className="text-[10px] font-mono leading-snug text-warning">
+              mock data · session matching not implemented yet · live tweets visible in <a href="/feed" className="underline hover:text-accent">/feed</a>
+            </p>
+          </div>
           <FilterStrip
             sources={uniqueSources}
             hashtags={uniqueHashtags}

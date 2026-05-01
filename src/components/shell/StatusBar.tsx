@@ -1,4 +1,7 @@
 import * as React from "react";
+import { useLiveKpis } from "@/hooks/useLiveKpis";
+import { feedBackend } from "@/services/feedService";
+import { cn } from "@/lib/utils";
 
 function useClock() {
   const [now, setNow] = React.useState<Date | null>(null);
@@ -36,8 +39,33 @@ function V({
   return <span className={cls}>{children}</span>;
 }
 
+function BackendChip() {
+  // mock = warning, hybrid = cyan accent (transitional), api = success
+  const { color, label } = {
+    mock: { color: "text-warning border-warning/40", label: "mock" },
+    hybrid: { color: "text-accent border-accent/40", label: "hybrid" },
+    api: { color: "text-success border-success/40", label: "api" },
+  }[feedBackend];
+  return (
+    <span
+      className={cn(
+        "px-1.5 py-[1px] border rounded-[2px] font-mono text-[9px] uppercase tracking-wider",
+        color,
+      )}
+      title={
+        feedBackend === "hybrid"
+          ? "Sources, hashtags & tweets are live from Supabase. Congresses, sessions, abstracts & summaries still mock."
+          : `Feed backend: ${label}`
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
 export function StatusBar() {
   const now = useClock();
+  const { data: kpis } = useLiveKpis(30_000);
   const time = now
     ? now.toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -50,23 +78,30 @@ export function StatusBar() {
   return (
     <footer className="h-6 shrink-0 flex items-center gap-3 px-3 border-t border-border bg-panel text-[10px] font-mono uppercase tracking-wider">
       <Cell>
-        <K>congress:</K>
-        <V tone="accent">EAU26</V>
+        <K>sources:</K>
+        <V>{kpis?.activeSources ?? "—"}</V>
       </Cell>
       <span className="text-border">│</span>
       <Cell>
-        <K>sources:</K>
-        <V>47</V>
+        <K>tags:</K>
+        <V>{kpis?.activeHashtags ?? "—"}</V>
       </Cell>
       <span className="text-border">│</span>
       <Cell>
         <K>tweets/min:</K>
-        <V tone="success">12.3</V>
+        <V tone={kpis && kpis.tweetsPerMin > 0 ? "success" : "primary"}>
+          {kpis ? kpis.tweetsPerMin.toFixed(1) : "—"}
+        </V>
       </Cell>
       <span className="text-border">│</span>
       <Cell>
-        <K>ai:</K>
-        <V>gpt-4o-mini</V>
+        <K>24h:</K>
+        <V>{kpis?.tweetsLast24h ?? "—"}</V>
+      </Cell>
+      <span className="text-border">│</span>
+      <Cell>
+        <K>backend:</K>
+        <BackendChip />
       </Cell>
       <div className="flex-1" />
       <Cell>
