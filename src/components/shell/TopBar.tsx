@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Search, ChevronRight } from "lucide-react";
+import { feedService } from "@/services/feedService";
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
@@ -15,8 +17,24 @@ const ROUTE_LABELS: Record<string, string> = {
 function useBreadcrumb() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const parts = pathname.split("/").filter(Boolean);
+
+  // Resolve a congress id segment (e.g. /congresses/cong_eau26) to its shortCode.
+  const congressIdInPath =
+    parts[0] === "congresses" && parts[1]?.startsWith("cong_") ? parts[1] : null;
+  const { data: congress } = useQuery({
+    queryKey: ["congress", congressIdInPath],
+    queryFn: () => feedService.getCongress(congressIdInPath as string),
+    enabled: Boolean(congressIdInPath),
+  });
+
   if (parts.length === 0) return ["UroFeed", "Dashboard"];
-  return ["UroFeed", ...parts.map((p) => ROUTE_LABELS[p] ?? p)];
+  return [
+    "UroFeed",
+    ...parts.map((p) => {
+      if (p === congressIdInPath && congress) return congress.shortCode;
+      return ROUTE_LABELS[p] ?? p;
+    }),
+  ];
 }
 
 function useClock() {
