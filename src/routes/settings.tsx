@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettings } from "@/components/settings/AiSettings";
 import { TeamSettings } from "@/components/settings/TeamSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";
+import { IngestionSettings } from "@/components/settings/IngestionSettings";
+import { useAuth } from "@/auth/AuthProvider";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — UroFeed" }] }),
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const { isAdmin } = useAuth();
   return (
     <div className="p-6">
       <Tabs defaultValue="preferences">
@@ -17,6 +20,7 @@ function SettingsPage() {
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          {isAdmin && <TabsTrigger value="ingestion">Ingestion</TabsTrigger>}
         </TabsList>
         <TabsContent value="preferences" className="mt-6">
           <PreferencesSettings />
@@ -27,6 +31,11 @@ function SettingsPage() {
         <TabsContent value="team" className="mt-6">
           <TeamSettings />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="ingestion" className="mt-6">
+            <IngestionSettings />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
