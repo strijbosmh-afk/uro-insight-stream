@@ -124,8 +124,10 @@ export function SessionDetail({ sessionId }: Props) {
     mutationFn: async () => {
       const ai = getAiService();
       const aiSettings = getAiSettings();
-      const title =
-        (selectedAbstract?.title || session?.title) ?? "Untitled target";
+      const abstractObj = selectedAbstract
+        ? abstracts.find((a) => a.id === selectedAbstract)
+        : null;
+      const title = abstractObj?.title ?? session?.title ?? "Untitled target";
       const newSummary = await ai.summarize({
         tweets: scopedTweets,
         context: {
