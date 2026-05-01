@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/shell/AppShell";
 import { AuthProvider, useAuth } from "@/auth/AuthProvider";
-import { Loader2 } from "lucide-react";
 import * as React from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { ShellSkeleton } from "@/components/shell/ShellSkeleton";
 
 import appCss from "../styles.css?url";
 
