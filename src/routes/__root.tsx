@@ -1,7 +1,10 @@
-import { Link, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { Link, Outlet, createRootRouteWithContext, HeadContent, Scripts, useRouterState, useNavigate } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/shell/AppShell";
+import { AuthProvider, useAuth } from "@/auth/AuthProvider";
+import { Loader2 } from "lucide-react";
+import * as React from "react";
 
 import appCss from "../styles.css?url";
 
@@ -75,8 +78,42 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
-      <Toaster />
+      <AuthProvider>
+        <AuthGate />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+function AuthGate() {
+  const { user, loading } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const onAuthRoute = pathname === "/auth";
+
+  React.useEffect(() => {
+    if (loading) return;
+    if (!user && !onAuthRoute) {
+      void navigate({ to: "/auth", replace: true });
+    } else if (user && onAuthRoute) {
+      void navigate({ to: "/dashboard", replace: true });
+    }
+  }, [user, loading, onAuthRoute, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <Loader2 className="w-5 h-5 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  // /auth route: render its own component (no shell).
+  if (onAuthRoute) return <Outlet />;
+
+  // No user (briefly while redirecting) — render nothing.
+  if (!user) return null;
+
+  return <AppShell />;
 }
