@@ -5,6 +5,7 @@ import {
   mockSessions,
   mockTweets,
   mockSummaries,
+  mockAbstracts,
 } from "@/data/mock";
 import type {
   Source,
@@ -14,6 +15,7 @@ import type {
   Tweet,
   Summary,
   SourceList,
+  Abstract,
 } from "@/types";
 import type { FeedService, TweetFilter } from "./feedService";
 
@@ -37,6 +39,7 @@ const sources: Source[] = mockSources.map(seedSourceMeta);
 const hashtags: Hashtag[] = [...mockHashtags];
 const congresses: Congress[] = [...mockCongresses];
 const sessions: Session[] = [...mockSessions];
+const abstracts: Abstract[] = [...mockAbstracts];
 const summaries: Summary[] = [...mockSummaries];
 
 const sourceLists: SourceList[] = [
