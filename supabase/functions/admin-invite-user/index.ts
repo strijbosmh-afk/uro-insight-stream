@@ -1,0 +1,125 @@
+// Admin-only: create a new user account with a chosen role.
+// Requires the caller to be authenticated AND have the 'admin' role.
+// Returns the temporary password so the admin can share it out-of-band
+// (we have no email-sending infra wired up yet).
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function generatePassword(): string {
+  const bytes = new Uint8Array(18);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/[+/=]/g, "")
+    .slice(0, 18);
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!SUPABASE_URL || !SERVICE_ROLE || !ANON_KEY) {
+    return json({ error: "Server misconfigured" }, 500);
+  }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return json({ error: "Missing bearer token" }, 401);
+  }
+
+  // Verify the caller and check their role.
+  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData, error: userErr } = await userClient.auth.getUser();
+  if (userErr || !userData.user) {
+    return json({ error: "Not authenticated" }, 401);
+  }
+  const callerId = userData.user.id;
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const { data: roleRows, error: roleErr } = await admin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", callerId);
+  if (roleErr) return json({ error: roleErr.message }, 500);
+  const callerRoles = (roleRows ?? []).map((r) => r.role);
+  if (!callerRoles.includes("admin")) {
+    return json({ error: "Forbidden — admin only" }, 403);
+  }
+
+  let body: { email?: string; role?: "admin" | "editor" | "viewer"; display_name?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, 400);
+  }
+
+  const email = (body.email || "").trim().toLowerCase();
+  const role = body.role || "viewer";
+  const displayName = (body.display_name || "").trim() || null;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return json({ error: "Invalid email" }, 400);
+  }
+  if (!["admin", "editor", "viewer"].includes(role)) {
+    return json({ error: "Invalid role" }, 400);
+  }
+
+  const tempPassword = generatePassword();
+
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: displayName ? { display_name: displayName } : undefined,
+  });
+  if (createErr || !created.user) {
+    return json({ error: createErr?.message || "Failed to create user" }, 400);
+  }
+
+  const newUserId = created.user.id;
+
+  // The handle_new_user trigger inserts a default 'viewer' role.
+  // If a different role was requested, replace it.
+  if (role !== "viewer") {
+    await admin.from("user_roles").delete().eq("user_id", newUserId);
+    const { error: roleInsErr } = await admin
+      .from("user_roles")
+      .insert({ user_id: newUserId, role, granted_by: callerId });
+    if (roleInsErr) return json({ error: roleInsErr.message }, 500);
+  }
+
+  // Audit log entry.
+  await admin.from("audit_log").insert({
+    actor_id: callerId,
+    action: "user.invite",
+    target_type: "user",
+    target_id: newUserId,
+    summary: `Invited ${email} as ${role}`,
+    after: { email, role, display_name: displayName },
+  });
+
+  return json({
+    ok: true,
+    user_id: newUserId,
+    email,
+    role,
+    temp_password: tempPassword,
+  });
+});
