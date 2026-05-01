@@ -1,4 +1,4 @@
-import { Link, Outlet, createRootRouteWithContext, HeadContent, Scripts, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, createRootRouteWithContext, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/shell/AppShell";
@@ -109,7 +109,6 @@ function RootComponent() {
 function AuthGate() {
   const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
   const onAuthRoute = pathname === "/auth";
 
   React.useEffect(() => {
@@ -121,11 +120,11 @@ function AuthGate() {
         here && here !== "/"
           ? `/auth?redirect=${encodeURIComponent(here)}`
           : "/auth";
-      void navigate({ to: target, replace: true });
+      window.location.replace(target);
     }
     // Note: when authenticated AND on /auth, the /auth page itself handles
     // redirecting (so it can honour ?redirect=… and ?invite=… correctly).
-  }, [user, loading, onAuthRoute, navigate]);
+  }, [user, loading, onAuthRoute]);
 
   if (loading) {
     // Show the full shell with all panels in their loading state — keeps
