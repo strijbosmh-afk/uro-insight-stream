@@ -5,6 +5,7 @@ import {
   mockSessions,
   mockTweets,
   mockSummaries,
+  mockAbstracts,
 } from "@/data/mock";
 import type {
   Source,
@@ -14,6 +15,7 @@ import type {
   Tweet,
   Summary,
   SourceList,
+  Abstract,
 } from "@/types";
 import type { FeedService, TweetFilter } from "./feedService";
 
@@ -37,6 +39,7 @@ const sources: Source[] = mockSources.map(seedSourceMeta);
 const hashtags: Hashtag[] = [...mockHashtags];
 const congresses: Congress[] = [...mockCongresses];
 const sessions: Session[] = [...mockSessions];
+const abstracts: Abstract[] = [...mockAbstracts];
 const summaries: Summary[] = [...mockSummaries];
 
 const sourceLists: SourceList[] = [
@@ -245,6 +248,17 @@ export const mockFeedService: FeedService = {
     return s;
   },
 
+  async listAbstracts(sessionId) {
+    await sleep();
+    return abstracts.filter((a) => a.sessionId === sessionId);
+  },
+  async getAbstract(idArg) {
+    await sleep();
+    const a = abstracts.find((x) => x.id === idArg);
+    if (!a) throw new Error(`Abstract not found: ${idArg}`);
+    return a;
+  },
+
   // ---------- Tweets ----------
   async listTweets(filter: TweetFilter) {
     await sleep();
@@ -282,5 +296,15 @@ export const mockFeedService: FeedService = {
         (s) => s.targetType === targetType && s.targetId === targetId,
       ) ?? null
     );
+  },
+
+  async saveSummary(targetType, targetId, summary) {
+    await sleep();
+    const i = summaries.findIndex(
+      (s) => s.targetType === targetType && s.targetId === targetId,
+    );
+    if (i >= 0) summaries[i] = summary;
+    else summaries.push(summary);
+    return summary;
   },
 };

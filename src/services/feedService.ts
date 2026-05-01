@@ -6,6 +6,7 @@ import type {
   Tweet,
   Summary,
   SourceList,
+  Abstract,
 } from "@/types";
 
 export type TweetFilter = {
@@ -50,6 +51,8 @@ export interface FeedService {
   countCongressTweets(id: string): Promise<number>;
   listSessions(congressId: string): Promise<Session[]>;
   getSession(id: string): Promise<Session>;
+  listAbstracts(sessionId: string): Promise<Abstract[]>;
+  getAbstract(id: string): Promise<Abstract>;
 
   // Tweets & summaries
   listTweets(filter: TweetFilter): Promise<Tweet[]>;
@@ -57,6 +60,12 @@ export interface FeedService {
     targetType: Summary["targetType"],
     targetId: string,
   ): Promise<Summary | null>;
+  /** Persist a (re)generated summary for a target. */
+  saveSummary(
+    targetType: Summary["targetType"],
+    targetId: string,
+    summary: Summary,
+  ): Promise<Summary>;
 }
 
 import { mockFeedService } from "./mockFeedService";

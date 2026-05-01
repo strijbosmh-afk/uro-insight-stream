@@ -8,6 +8,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
   dashboard: "Dashboard",
   congresses: "Congresses",
+  sessions: "Sessions",
   feed: "Live Feed",
   summaries: "Summaries",
   sources: "Sources",
@@ -27,11 +28,24 @@ function useBreadcrumb() {
     enabled: Boolean(congressIdInPath),
   });
 
+  const sessionIdInPath =
+    parts[0] === "sessions" && parts[1]?.startsWith("sess_") ? parts[1] : null;
+  const { data: session } = useQuery({
+    queryKey: ["session", sessionIdInPath],
+    queryFn: () => feedService.getSession(sessionIdInPath as string),
+    enabled: Boolean(sessionIdInPath),
+  });
+
   if (parts.length === 0) return ["UroFeed", "Dashboard"];
   return [
     "UroFeed",
     ...parts.map((p) => {
       if (p === congressIdInPath && congress) return congress.shortCode;
+      if (p === sessionIdInPath && session) {
+        return session.title.length > 40
+          ? session.title.slice(0, 40) + "…"
+          : session.title;
+      }
       return ROUTE_LABELS[p] ?? p;
     }),
   ];
