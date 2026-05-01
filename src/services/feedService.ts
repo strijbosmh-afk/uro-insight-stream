@@ -5,6 +5,7 @@ import type {
   Session,
   Tweet,
   Summary,
+  SourceList,
 } from "@/types";
 
 export type TweetFilter = {
@@ -23,12 +24,20 @@ export interface FeedService {
   addSource(input: Omit<Source, "id">): Promise<Source>;
   updateSource(id: string, patch: Partial<Source>): Promise<Source>;
   removeSource(id: string): Promise<void>;
+  testSource(id: string): Promise<Tweet[]>;
+
+  // Source lists
+  listSourceLists(): Promise<SourceList[]>;
+  addSourceList(input: Omit<SourceList, "id">): Promise<SourceList>;
+  updateSourceList(id: string, patch: Partial<SourceList>): Promise<SourceList>;
+  removeSourceList(id: string): Promise<void>;
 
   // Hashtags
   listHashtags(): Promise<Hashtag[]>;
   addHashtag(input: Omit<Hashtag, "id">): Promise<Hashtag>;
   updateHashtag(id: string, patch: Partial<Hashtag>): Promise<Hashtag>;
   removeHashtag(id: string): Promise<void>;
+  countHashtagTweets(tag: string, sinceMs: number): Promise<number>;
 
   // Congresses & sessions
   listCongresses(): Promise<Congress[]>;
