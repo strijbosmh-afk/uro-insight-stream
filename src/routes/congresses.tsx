@@ -1,16 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
+import { CongressGrid } from "@/components/congresses/CongressGrid";
 
 export const Route = createFileRoute("/congresses")({
   head: () => ({ meta: [{ title: "Congresses — UroFeed" }] }),
-  component: CongressesPage,
+  component: CongressesLayout,
 });
 
-function CongressesPage() {
-  return (
-    <PlaceholderPage
-      title="Congresses"
-      description="Curated registry of EAU, AUA, SIU, ESMO-GU and more. Each congress holds its own sessions, abstracts, and source bindings."
-    />
-  );
+function CongressesLayout() {
+  // If a child route (e.g. /congresses/$congressId) is matched, render only the child.
+  const matches = useMatches();
+  const hasChild = matches.some((m) => m.routeId.startsWith("/congresses/"));
+  if (hasChild) return <Outlet />;
+  return <CongressGrid />;
 }
