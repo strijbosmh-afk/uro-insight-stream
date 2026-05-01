@@ -18,11 +18,14 @@ export function Sparkline({
   const areaPoints = `0,${height} ${points} ${width},${height}`;
   return (
     <svg width={width} height={height} className="block overflow-visible">
-      <polygon points={areaPoints} fill="hsl(var(--accent) / 0.12)" />
+      <polygon
+        points={areaPoints}
+        fill="color-mix(in oklab, var(--accent) 18%, transparent)"
+      />
       <polyline
         points={points}
         fill="none"
-        stroke="hsl(var(--accent))"
+        stroke="var(--accent)"
         strokeWidth={1.25}
         strokeLinejoin="round"
         strokeLinecap="round"
