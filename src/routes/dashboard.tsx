@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { Dashboard } from "@/components/dashboard/Dashboard";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — UroFeed" }] }),
@@ -7,10 +7,5 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  return (
-    <PlaceholderPage
-      title="Dashboard"
-      description="Operational overview of monitored congresses, source health, and AI summarization throughput. Widgets land here in the next step."
-    />
-  );
+  return <Dashboard />;
 }

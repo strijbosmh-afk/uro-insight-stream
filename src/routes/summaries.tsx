@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { SummariesIndex } from "@/components/summaries/SummariesIndex";
 
 export const Route = createFileRoute("/summaries")({
   head: () => ({ meta: [{ title: "Summaries — UroFeed" }] }),
@@ -7,10 +7,5 @@ export const Route = createFileRoute("/summaries")({
 });
 
 function SummariesPage() {
-  return (
-    <PlaceholderPage
-      title="Summaries"
-      description="AI-generated session and abstract summaries. Backed by aiService.summarize(tweets, context)."
-    />
-  );
+  return <SummariesIndex />;
 }

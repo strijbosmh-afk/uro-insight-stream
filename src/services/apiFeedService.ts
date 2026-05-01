@@ -37,5 +37,6 @@ export const apiFeedService: FeedService = {
 
   listTweets: () => notImplemented("listTweets"),
   getSummary: () => notImplemented("getSummary"),
+  listSummaries: () => notImplemented("listSummaries"),
   saveSummary: () => notImplemented("saveSummary"),
 };
