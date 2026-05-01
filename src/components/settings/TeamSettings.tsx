@@ -57,7 +57,11 @@ export function TeamSettings() {
 
   const [email, setEmail] = React.useState("");
   const [role, setRole] = React.useState<AppRole>("viewer");
-  const [tempPwd, setTempPwd] = React.useState<string | null>(null);
+  const [invitePayload, setInvitePayload] = React.useState<{
+    email: string;
+    tempPassword: string;
+    inviteUrl: string | null;
+  } | null>(null);
 
   const invite = useMutation({
     mutationFn: async () => {
@@ -67,10 +71,23 @@ export function TeamSettings() {
       );
       if (error) throw new Error(error.message);
       if (!data?.ok) throw new Error(data?.error || "Invite failed");
-      return data as { temp_password: string; email: string };
+      return data as {
+        temp_password: string;
+        email: string;
+        invite_token: string | null;
+      };
     },
     onSuccess: (d) => {
-      setTempPwd(d.temp_password);
+      const inviteUrl = d.invite_token
+        ? `${window.location.origin}/auth?invite=${encodeURIComponent(
+            d.invite_token,
+          )}&email=${encodeURIComponent(d.email)}`
+        : null;
+      setInvitePayload({
+        email: d.email,
+        tempPassword: d.temp_password,
+        inviteUrl,
+      });
       setEmail("");
       toast.success(`Invited ${d.email}`);
       qc.invalidateQueries({ queryKey: ["team-members"] });
@@ -167,11 +184,40 @@ export function TeamSettings() {
             Invite
           </Button>
         </div>
-        {tempPwd && (
-          <div className="text-[12px] font-mono p-2 rounded-[3px] border border-accent/40 bg-accent/5">
-            Temporary password: <span className="text-accent">{tempPwd}</span>
-            <span className="block text-text-muted mt-1">
-              Share with the new user out-of-band. They can change it after signing in.
+        {invitePayload && (
+          <div className="text-[12px] p-2 rounded-[3px] border border-accent/40 bg-accent/5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-text-muted uppercase tracking-wider text-[10px]">
+                Invite for {invitePayload.email}
+              </span>
+              {invitePayload.inviteUrl && (
+                <button
+                  type="button"
+                  className="text-[10px] font-mono uppercase tracking-wider text-accent hover:underline"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(
+                      invitePayload.inviteUrl ?? "",
+                    );
+                    toast.success("Invite link copied");
+                  }}
+                >
+                  copy link
+                </button>
+              )}
+            </div>
+            {invitePayload.inviteUrl ? (
+              <div className="font-mono text-[11px] break-all text-accent">
+                {invitePayload.inviteUrl}
+              </div>
+            ) : (
+              <div className="font-mono text-[11px]">
+                Temp password:{" "}
+                <span className="text-accent">{invitePayload.tempPassword}</span>
+              </div>
+            )}
+            <span className="block text-text-muted text-[11px]">
+              Share this with the new user out-of-band. The link expires after
+              first use.
             </span>
           </div>
         )}
