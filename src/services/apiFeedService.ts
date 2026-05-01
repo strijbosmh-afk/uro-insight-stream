@@ -1,6 +1,21 @@
-// Hybrid backend: real Supabase for sources, hashtags, and tweets;
-// delegates the rest (congresses, sessions, abstracts, source lists,
-// summaries) to the in-memory mock service until those tables are migrated.
+// Hybrid backend.
+//
+// REAL (Supabase): sources, hashtags, tweets, ingestion_config, ingestion_runs.
+// MOCK (delegated to mockFeedService): source lists, congresses, sessions,
+// abstracts, summaries.
+//
+// Real tweets ingested by the X API adapter carry sessionId=null and
+// abstractId=null. There is NO classifier yet — never synthesize them.
+// Tweets without a sessionId must not appear on session detail pages;
+// listTweets({ sessionId }) deliberately falls through to the mock store
+// so SessionDetail keeps its mock context, while listTweets() with no
+// session/abstract filter returns ONLY real tweets so the Live Feed
+// proves the live ingestion pipeline.
+//
+// TODO(next-turn): migrate the mock-delegated methods to Supabase in this
+// order — congresses → sessions → abstracts → summaries. After each
+// migration, drop the corresponding mock delegate below and switch the
+// matching listTweets branch off the mock fallback.
 
 import type { FeedService, TweetFilter } from "./feedService";
 import type { Source, Hashtag, Tweet } from "@/types";
@@ -70,7 +85,10 @@ function rowToTweet(r: {
 }): Tweet {
   return {
     id: r.id,
-    sourceId: r.source_id ?? r.author_handle,
+    // Real ingested tweets have no source_id link until we match author_handle
+    // back to the sources table. Surface the handle so UI can still render
+    // an attribution; never invent an id that pretends to match a Source row.
+    sourceId: r.source_id ?? `@${r.author_handle.replace(/^@/, "")}`,
     text: r.text,
     createdAt: r.created_at,
     likeCount: r.like_count,
@@ -206,9 +224,17 @@ export const apiFeedService: FeedService = {
 
   // ---------- Tweets (Supabase, falls back to mock when empty) ----------
   async listTweets(filter: TweetFilter) {
+    // Session/abstract filters target MOCK data because real tweets do not
+    // carry session_id/abstract_id yet. Delegate fully so SessionDetail and
+    // AbstractDetail keep working on the mock dataset until the classifier
+    // (and the migrated sessions/abstracts tables) land.
+    if (filter.sessionId || filter.abstractId) {
+      return mockFeedService.listTweets(filter);
+    }
+
+    // Otherwise return ONLY real tweets from Supabase. No mock blend — the
+    // Live Feed must visibly prove the ingestion pipeline.
     let q = supabase.from("tweets").select("*").order("created_at", { ascending: false });
-    if (filter.sessionId) q = q.eq("session_id", filter.sessionId);
-    if (filter.abstractId) q = q.eq("abstract_id", filter.abstractId);
     if (filter.sourceIds?.length) q = q.in("source_id", filter.sourceIds);
     if (filter.hashtags?.length) {
       q = q.overlaps("hashtags", filter.hashtags.map((h) => h.replace(/^#/, "")));
@@ -218,15 +244,7 @@ export const apiFeedService: FeedService = {
     q = q.limit(filter.limit ?? 200);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
-    const rows = (data ?? []).map(rowToTweet);
-    // Until the live pipeline is producing volume, blend in mock tweets so
-    // the UI keeps signal during the transition. New live tweets sort first.
-    if (rows.length < 20) {
-      const mock = await mockFeedService.listTweets(filter);
-      const seen = new Set(rows.map((t) => t.id));
-      return [...rows, ...mock.filter((t) => !seen.has(t.id))].slice(0, filter.limit ?? 200);
-    }
-    return rows;
+    return (data ?? []).map(rowToTweet);
   },
 
   // ---------- Summaries (mock store for now) ----------
