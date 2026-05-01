@@ -1,16 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { AiSettings } from "@/components/settings/AiSettings";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — UroFeed" }] }),
+  head: () => ({ meta: [{ title: "Settings · AI — UroFeed" }] }),
   component: SettingsPage,
 });
 
 function SettingsPage() {
   return (
-    <PlaceholderPage
-      title="Settings"
-      description="Workspace, API keys, polling interval, and AI model configuration."
-    />
+    <div className="p-6">
+      <AiSettings />
+    </div>
   );
 }
