@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runIngestionForTarget, loadConfig } from "./ingestion.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TargetSchema = z.object({
   targetType: z.enum(["handle", "hashtag"]),
@@ -10,7 +11,7 @@ const TargetSchema = z.object({
   lookbackMinutes: z.number().int().min(5).max(60 * 24 * 7).optional(),
 });
 
-async function assertEditor(supabase: Awaited<ReturnType<typeof requireSupabaseAuth.server>> extends never ? never : any, userId: string) {
+async function assertEditor(supabase: SupabaseClient, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r: { role: string }) => r.role);
   if (!roles.includes("admin") && !roles.includes("editor")) {
