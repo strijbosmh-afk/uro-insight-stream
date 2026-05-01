@@ -92,7 +92,7 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToSource);
   },
   async addSource(input) {
-    const row = { ...sourceToRow(input as Source), id: id("src") };
+    const row = { ...sourceToRow(input as Source), id: id("src") } as never;
     const { data, error } = await supabase.from("sources").insert(row).select("*").single();
     if (error) throw new Error(error.message);
     return rowToSource(data);
@@ -100,7 +100,7 @@ export const apiFeedService: FeedService = {
   async updateSource(idArg, patch) {
     const { data, error } = await supabase
       .from("sources")
-      .update(sourceToRow(patch))
+      .update(sourceToRow(patch) as never)
       .eq("id", idArg)
       .select("*")
       .single();
@@ -163,7 +163,7 @@ export const apiFeedService: FeedService = {
     if (patch.active !== undefined) row.active = patch.active;
     const { data, error } = await supabase
       .from("hashtags")
-      .update(row)
+      .update(row as never)
       .eq("id", idArg)
       .select("*")
       .single();
