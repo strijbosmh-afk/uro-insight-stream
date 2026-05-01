@@ -178,6 +178,66 @@ export const mockFeedService: FeedService = {
     await sleep();
     return sessions.filter((s) => s.congressId === congressId);
   },
+  async addCongress(input) {
+    await sleep();
+    const next: Congress = { ...input, id: id("cong") };
+    congresses.push(next);
+    return next;
+  },
+  async updateCongress(idArg, patch) {
+    await sleep();
+    const i = congresses.findIndex((c) => c.id === idArg);
+    if (i < 0) throw new Error(`Congress not found: ${idArg}`);
+    congresses[i] = { ...congresses[i], ...patch, id: congresses[i].id };
+    return congresses[i];
+  },
+  async removeCongress(idArg) {
+    await sleep();
+    const i = congresses.findIndex((c) => c.id === idArg);
+    if (i >= 0) congresses.splice(i, 1);
+    // detach hashtags linked to this congress
+    hashtags.forEach((h) => {
+      if (h.congressId === idArg) h.congressId = undefined;
+    });
+  },
+  async congressActivity(idArg, hours) {
+    await sleep();
+    const c = congresses.find((x) => x.id === idArg);
+    if (!c) return new Array(hours).fill(0);
+    const tagSet = new Set(
+      c.primaryHashtags.map((t) => t.replace(/^#/, "").toLowerCase()),
+    );
+    const sessIds = new Set(
+      sessions.filter((s) => s.congressId === idArg).map((s) => s.id),
+    );
+    const buckets = new Array(hours).fill(0) as number[];
+    const now = Date.now();
+    tweets.forEach((t) => {
+      const matches =
+        (t.sessionId && sessIds.has(t.sessionId)) ||
+        t.hashtags.some((h) => tagSet.has(h.replace(/^#/, "").toLowerCase()));
+      if (!matches) return;
+      const ageH = Math.floor((now - new Date(t.createdAt).getTime()) / 3_600_000);
+      if (ageH >= 0 && ageH < hours) buckets[hours - 1 - ageH] += 1;
+    });
+    return buckets;
+  },
+  async countCongressTweets(idArg) {
+    await sleep();
+    const c = congresses.find((x) => x.id === idArg);
+    if (!c) return 0;
+    const tagSet = new Set(
+      c.primaryHashtags.map((t) => t.replace(/^#/, "").toLowerCase()),
+    );
+    const sessIds = new Set(
+      sessions.filter((s) => s.congressId === idArg).map((s) => s.id),
+    );
+    return tweets.filter(
+      (t) =>
+        (t.sessionId && sessIds.has(t.sessionId)) ||
+        t.hashtags.some((h) => tagSet.has(h.replace(/^#/, "").toLowerCase())),
+    ).length;
+  },
   async getSession(idArg) {
     await sleep();
     const s = sessions.find((x) => x.id === idArg);
