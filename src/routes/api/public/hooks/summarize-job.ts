@@ -6,8 +6,16 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const Route = createFileRoute("/api/public/hooks/summarize-job")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
         try {
+          const expected = process.env.X_JOB_SECRET;
+          const got = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+          if (!expected || got !== expected) {
+            return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+              status: 401,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) {
             return Response.json({ ok: false, error: "LOVABLE_API_KEY missing" }, { status: 500 });

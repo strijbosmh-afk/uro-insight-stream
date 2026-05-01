@@ -73,7 +73,9 @@ export interface FeedService {
 import { mockFeedService } from "./mockFeedService";
 import { apiFeedService } from "./apiFeedService";
 
-const backend = (import.meta.env.VITE_FEED_BACKEND ?? "mock") as "mock" | "api";
+// Default to the live (Supabase-backed) hybrid service. Set
+// VITE_FEED_BACKEND=mock to revert to in-memory mock data.
+const backend = (import.meta.env.VITE_FEED_BACKEND ?? "api") as "mock" | "api";
 
 export const feedService: FeedService =
   backend === "api" ? apiFeedService : mockFeedService;

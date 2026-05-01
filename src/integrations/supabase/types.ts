@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      hashtags: {
+        Row: {
+          active: boolean
+          congress_id: string | null
+          created_at: string
+          id: string
+          tag: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          congress_id?: string | null
+          created_at?: string
+          id: string
+          tag: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          congress_id?: string | null
+          created_at?: string
+          id?: string
+          tag?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingestion_config: {
         Row: {
           adapter: string
@@ -152,6 +179,54 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sources: {
+        Row: {
+          active: boolean
+          avatar_url: string
+          created_at: string
+          display_name: string
+          handle: string
+          id: string
+          last_seen_at: string | null
+          list_ids: string[]
+          role: string
+          specialty: string[]
+          tweet_count: number
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string
+          created_at?: string
+          display_name: string
+          handle: string
+          id: string
+          last_seen_at?: string | null
+          list_ids?: string[]
+          role?: string
+          specialty?: string[]
+          tweet_count?: number
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string
+          created_at?: string
+          display_name?: string
+          handle?: string
+          id?: string
+          last_seen_at?: string | null
+          list_ids?: string[]
+          role?: string
+          specialty?: string[]
+          tweet_count?: number
+          updated_at?: string
+          verified?: boolean
         }
         Relationships: []
       }
@@ -313,6 +388,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cron_job_secret: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

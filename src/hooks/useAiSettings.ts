@@ -23,7 +23,7 @@ export const DEFAULT_PROMPT_TEMPLATE = [
 ].join("\n");
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
-  useLive: false,
+  useLive: true,
   model: "google/gemini-3-flash-preview",
   tone: "clinical",
   language: "English",
