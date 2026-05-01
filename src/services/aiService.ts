@@ -122,7 +122,7 @@ function buildUserPrompt(
     .join("\n");
 }
 
-export const openAiCompatibleService: AiService = {
+export const lovableGatewayService: AiService = {
   async summarize({ tweets, context, options }) {
     const { data, error } = await supabase.functions.invoke("ai-summarize", {
       body: {
@@ -179,5 +179,5 @@ import { getAiSettings } from "@/hooks/useAiSettings";
 
 export function getAiService(): AiService {
   const s = getAiSettings();
-  return s.useLive ? openAiCompatibleService : mockAiService;
+  return s.useLive ? lovableGatewayService : mockAiService;
 }
