@@ -90,7 +90,6 @@ export function Dashboard() {
   }, [allTweets]);
 
   const nowMs = feedNowMs();
-  const oneHourAgo = nowMs - 60 * 60 * 1000;
   const oneDayAgo = nowMs - 24 * 60 * 60 * 1000;
 
   // Live KPIs from Supabase (real ingestion data)
