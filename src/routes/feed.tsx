@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/shell/PlaceholderPage";
+import { FeedFilterProvider } from "@/components/feed/FeedFilterContext";
+import { FilterBar } from "@/components/feed/FilterBar";
+import { TweetStream } from "@/components/feed/TweetStream";
+import { LiveSignals } from "@/components/feed/LiveSignals";
+import { TimelineScrubber } from "@/components/feed/TimelineScrubber";
+import { useFilteredTweets } from "@/components/feed/useFilteredTweets";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Live Feed — UroFeed" }] }),
@@ -8,9 +13,30 @@ export const Route = createFileRoute("/feed")({
 
 function FeedPage() {
   return (
-    <PlaceholderPage
-      title="Live Feed"
-      description="Real-time stream of posts from monitored X/Twitter handles and hashtags. Polls every 30s via useLiveData."
-    />
+    <FeedFilterProvider>
+      <FeedLayout />
+    </FeedFilterProvider>
+  );
+}
+
+function FeedLayout() {
+  const data = useFilteredTweets(30_000);
+  return (
+    <div className="h-full flex flex-col gap-3 min-h-0">
+      <div className="border border-border rounded-[4px] bg-panel overflow-hidden">
+        <FilterBar />
+      </div>
+      <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
+        <div className="col-span-12 xl:col-span-9 min-h-0">
+          <TweetStream data={data} />
+        </div>
+        <div className="col-span-12 xl:col-span-3 min-h-0">
+          <LiveSignals tweets={data.tweets} sourcesById={data.sourcesById} />
+        </div>
+      </div>
+      <div className="h-[120px] shrink-0">
+        <TimelineScrubber />
+      </div>
+    </div>
   );
 }
