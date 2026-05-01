@@ -21,6 +21,7 @@ import {
 import { feedService } from "@/services/feedService";
 import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, SourceList } from "@/types";
+import { recordAudit } from "@/services/auditService";
 
 interface Props {
   open: boolean;
@@ -57,6 +58,13 @@ export function NewCongressDialog({ open, onOpenChange, lists }: Props) {
     onSuccess: (c) => {
       toast.success(`${c.shortCode} created`);
       qc.invalidateQueries({ queryKey: ["congresses"] });
+      void recordAudit({
+        action: "congress.create",
+        target_type: "congress",
+        target_id: c.id,
+        summary: `Created ${c.shortCode} — ${c.name}`,
+        after: { shortCode: c.shortCode, status: c.status },
+      });
       reset();
       onOpenChange(false);
     },

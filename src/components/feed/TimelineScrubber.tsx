@@ -25,6 +25,11 @@ function buildHistogram(timestamps: number[], windowStartMs: number, windowEndMs
 
 export function TimelineScrubber() {
   const { filters, patch } = useFeedFilters();
+  // Defer time labels until after client mount — feedNowMs() returns
+  // wall-clock time which differs between SSR render and hydration tick,
+  // causing a hydration mismatch on the visible HH:MM strings.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
   const { data: allTweets = [] } = useQuery({
     queryKey: ["live-tweets"],
     queryFn: () => feedService.listTweets({ limit: 1000 }),
@@ -126,8 +131,11 @@ export function TimelineScrubber() {
       }
     >
       <div className="flex items-center gap-3 h-full">
-        <span className="text-[10px] font-mono text-text-muted whitespace-nowrap">
-          {fmt(windowStartMs)}
+        <span
+          className="text-[10px] font-mono text-text-muted whitespace-nowrap min-w-[34px]"
+          suppressHydrationWarning
+        >
+          {mounted ? fmt(windowStartMs) : "—"}
         </span>
         <div
           ref={containerRef}
@@ -163,10 +171,13 @@ export function TimelineScrubber() {
             aria-hidden
           />
         </div>
-        <span className="text-[10px] font-mono text-text-muted whitespace-nowrap">
-          {fmt(windowEndMs)}
+        <span
+          className="text-[10px] font-mono text-text-muted whitespace-nowrap min-w-[34px]"
+          suppressHydrationWarning
+        >
+          {mounted ? fmt(windowEndMs) : "—"}
         </span>
-        {filters.brush && (
+        {mounted && filters.brush && (
           <span className="text-[10px] font-mono text-accent whitespace-nowrap">
             {fmt(filters.brush.sinceMs)}–{fmt(filters.brush.untilMs)}
           </span>

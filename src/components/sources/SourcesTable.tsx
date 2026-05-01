@@ -19,6 +19,8 @@ import { RoleBadge } from "./RoleBadge";
 import { SourceDrawer } from "./SourceDrawer";
 import { AddSourceDialog } from "./AddSourceDialog";
 import type { Source, SourceList } from "@/types";
+import { useCanEdit } from "@/auth/permissions";
+import { recordAudit } from "@/services/auditService";
 
 const ALL = "__all__";
 
@@ -35,6 +37,7 @@ function formatLastSeen(iso?: string) {
 
 export function SourcesTable() {
   const qc = useQueryClient();
+  const canEdit = useCanEdit();
   const [query, setQuery] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState<string>(ALL);
   const [listFilter, setListFilter] = React.useState<string>(ALL);
@@ -69,6 +72,16 @@ export function SourcesTable() {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["sources"], ctx.prev);
       toast.error("Failed to toggle source");
+    },
+    onSuccess: (_d, { id, active }) => {
+      const handle = sources.find((s) => s.id === id)?.handle ?? id;
+      void recordAudit({
+        action: "source.update",
+        target_type: "source",
+        target_id: id,
+        summary: `${active ? "Activated" : "Deactivated"} @${handle}`,
+        after: { active },
+      });
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["sources"] }),
   });
@@ -149,7 +162,13 @@ export function SourcesTable() {
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" className="h-8" onClick={() => setOpenAdd(true)}>
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={() => setOpenAdd(true)}
+            disabled={!canEdit}
+            title={canEdit ? "" : "Editor or admin role required"}
+          >
             <Plus className="h-3.5 w-3.5 mr-1" />
             Add source
           </Button>
@@ -237,6 +256,7 @@ export function SourcesTable() {
                       onCheckedChange={(v) =>
                         toggleActive.mutate({ id: s.id, active: v })
                       }
+                      disabled={!canEdit}
                     />
                   </td>
                   <td className="px-3 py-1.5 text-right font-mono text-text-muted whitespace-nowrap">
@@ -254,7 +274,7 @@ export function SourcesTable() {
                       size="sm"
                       className="h-6 px-2 text-[11px]"
                       onClick={() => test.mutate(s.id)}
-                      disabled={test.isPending}
+                      disabled={test.isPending || !canEdit}
                     >
                       <PlayCircle className="h-3 w-3 mr-1" />
                       Test

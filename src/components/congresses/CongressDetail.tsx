@@ -21,6 +21,8 @@ import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, Session, SourceList } from "@/types";
 import { StatusPill } from "./StatusPill";
 import { Sparkline } from "./Sparkline";
+import { useCanEdit, useCanAdmin } from "@/auth/permissions";
+import { recordAudit } from "@/services/auditService";
 
 function fmtDay(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -38,6 +40,8 @@ function fmtTime(iso: string) {
 
 export function CongressDetail({ congressId }: { congressId: string }) {
   const qc = useQueryClient();
+  const canEdit = useCanEdit();
+  const canAdmin = useCanAdmin();
   const { data: congress, isLoading } = useQuery({
     queryKey: ["congress", congressId],
     queryFn: () => feedService.getCongress(congressId),
@@ -66,9 +70,16 @@ export function CongressDetail({ congressId }: { congressId: string }) {
   const update = useMutation({
     mutationFn: (patch: Partial<Congress>) =>
       feedService.updateCongress(congressId, patch),
-    onSuccess: () => {
+    onSuccess: (_d, patch) => {
       qc.invalidateQueries({ queryKey: ["congress", congressId] });
       qc.invalidateQueries({ queryKey: ["congresses"] });
+      void recordAudit({
+        action: "congress.update",
+        target_type: "congress",
+        target_id: congressId,
+        summary: `Updated ${congress?.shortCode ?? congressId}`,
+        after: patch,
+      });
     },
     onError: () => toast.error("Update failed"),
   });
@@ -78,6 +89,12 @@ export function CongressDetail({ congressId }: { congressId: string }) {
     onSuccess: () => {
       toast.success("Congress deleted");
       qc.invalidateQueries({ queryKey: ["congresses"] });
+      void recordAudit({
+        action: "congress.delete",
+        target_type: "congress",
+        target_id: congressId,
+        summary: `Deleted ${congress?.shortCode ?? congressId}`,
+      });
       window.history.back();
     },
   });
@@ -127,6 +144,8 @@ export function CongressDetail({ congressId }: { congressId: string }) {
         onClick={() => {
           if (confirm(`Delete ${congress.shortCode}?`)) remove.mutate();
         }}
+        disabled={!canAdmin}
+        title={canAdmin ? "" : "Admin role required"}
       >
         <Trash2 className="w-3 h-3 mr-1" /> Delete
       </Button>
@@ -179,23 +198,30 @@ export function CongressDetail({ congressId }: { congressId: string }) {
                 <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
                   Hashtags
                 </div>
-                <HashtagEditor congress={congress} onChange={(tags) => update.mutate({ primaryHashtags: tags })} />
+                <HashtagEditor
+                  congress={congress}
+                  readOnly={!canEdit}
+                  onChange={(tags) => update.mutate({ primaryHashtags: tags })}
+                />
 
                 <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
                   <Field label="City">
                     <InlineEdit
+                      readOnly={!canEdit}
                       value={congress.city}
                       onSave={(v) => update.mutate({ city: v })}
                     />
                   </Field>
                   <Field label="Country">
                     <InlineEdit
+                      readOnly={!canEdit}
                       value={congress.country}
                       onSave={(v) => update.mutate({ country: v })}
                     />
                   </Field>
                   <Field label="Start date">
                     <InlineEdit
+                      readOnly={!canEdit}
                       type="date"
                       value={congress.startDate}
                       onSave={(v) => update.mutate({ startDate: v })}
@@ -203,6 +229,7 @@ export function CongressDetail({ congressId }: { congressId: string }) {
                   </Field>
                   <Field label="End date">
                     <InlineEdit
+                      readOnly={!canEdit}
                       type="date"
                       value={congress.endDate}
                       onSave={(v) => update.mutate({ endDate: v })}
@@ -383,10 +410,12 @@ function InlineEdit({
   value,
   onSave,
   type = "text",
+  readOnly = false,
 }: {
   value: string;
   onSave: (v: string) => void;
   type?: string;
+  readOnly?: boolean;
 }) {
   const [v, setV] = React.useState(value);
   React.useEffect(() => setV(value), [value]);
@@ -394,6 +423,8 @@ function InlineEdit({
     <Input
       type={type}
       value={v}
+      readOnly={readOnly}
+      disabled={readOnly}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => v !== value && onSave(v)}
       onKeyDown={(e) => {
@@ -408,13 +439,16 @@ function InlineEdit({
 function HashtagEditor({
   congress,
   onChange,
+  readOnly = false,
 }: {
   congress: Congress;
   onChange: (tags: string[]) => void;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = React.useState("");
   const tags = congress.primaryHashtags;
   const add = () => {
+    if (readOnly) return;
     if (!isValidHashtag(draft)) {
       toast.error("Invalid hashtag");
       return;
@@ -436,17 +470,20 @@ function HashtagEditor({
             className="inline-flex items-center gap-1 h-6 pl-2 pr-1 text-[11px] font-mono text-accent border border-accent/30 bg-accent/5 rounded-[2px]"
           >
             {t}
-            <button
-              type="button"
-              onClick={() => onChange(tags.filter((x) => x !== t))}
-              className="text-text-muted hover:text-text-primary"
-              aria-label={`Remove ${t}`}
-            >
-              <X className="w-3 h-3" />
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onChange(tags.filter((x) => x !== t))}
+                className="text-text-muted hover:text-text-primary"
+                aria-label={`Remove ${t}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </span>
         ))}
       </div>
+      {!readOnly && (
       <div className="flex items-center gap-2 mt-2">
         <Input
           value={draft}
@@ -464,6 +501,7 @@ function HashtagEditor({
           <Plus className="w-3 h-3 mr-1" /> Add
         </Button>
       </div>
+      )}
     </div>
   );
 }

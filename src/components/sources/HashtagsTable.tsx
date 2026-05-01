@@ -22,6 +22,8 @@ import { feedService } from "@/services/feedService";
 import { cn } from "@/lib/utils";
 import { AddHashtagDialog } from "./AddHashtagDialog";
 import type { Hashtag } from "@/types";
+import { useCanEdit, useCanAdmin } from "@/auth/permissions";
+import { recordAudit } from "@/services/auditService";
 
 const ALL = "__all__";
 const NONE = "__none__";
@@ -29,6 +31,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function HashtagsTable() {
   const qc = useQueryClient();
+  const canEdit = useCanEdit();
+  const canAdmin = useCanAdmin();
   const [query, setQuery] = React.useState("");
   const [congressFilter, setCongressFilter] = React.useState<string>(ALL);
   const [openAdd, setOpenAdd] = React.useState(false);
@@ -85,6 +89,16 @@ export function HashtagsTable() {
       if (ctx?.prev) qc.setQueryData(["hashtags"], ctx.prev);
       toast.error("Failed to toggle hashtag");
     },
+    onSuccess: (_d, { id, active }) => {
+      const tag = hashtags.find((h) => h.id === id)?.tag ?? id;
+      void recordAudit({
+        action: "hashtag.update",
+        target_type: "hashtag",
+        target_id: id,
+        summary: `${active ? "Activated" : "Deactivated"} ${tag}`,
+        after: { active },
+      });
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["hashtags"] }),
   });
 
@@ -102,7 +116,16 @@ export function HashtagsTable() {
       if (ctx?.prev) qc.setQueryData(["hashtags"], ctx.prev);
       toast.error("Failed to remove hashtag");
     },
-    onSuccess: () => toast.success("Hashtag removed"),
+    onSuccess: (_d, id) => {
+      const tag = hashtags.find((h) => h.id === id)?.tag ?? id;
+      toast.success("Hashtag removed");
+      void recordAudit({
+        action: "hashtag.delete",
+        target_type: "hashtag",
+        target_id: id,
+        summary: `Removed ${tag}`,
+      });
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["hashtags"] }),
   });
 
@@ -143,7 +166,13 @@ export function HashtagsTable() {
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" className="h-8" onClick={() => setOpenAdd(true)}>
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={() => setOpenAdd(true)}
+            disabled={!canEdit}
+            title={canEdit ? "" : "Editor or admin role required"}
+          >
             <Plus className="h-3.5 w-3.5 mr-1" />
             Add hashtag
           </Button>
@@ -186,6 +215,7 @@ export function HashtagsTable() {
                         onCheckedChange={(v) =>
                           toggleActive.mutate({ id: h.id, active: v })
                         }
+                        disabled={!canEdit}
                       />
                     </td>
                     <td className="px-3 py-1.5 text-right font-mono">
@@ -197,6 +227,8 @@ export function HashtagsTable() {
                         size="sm"
                         className="h-6 px-2 text-[11px] text-text-muted hover:text-destructive"
                         onClick={() => remove.mutate(h.id)}
+                        disabled={!canAdmin}
+                        title={canAdmin ? "" : "Admin role required"}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>

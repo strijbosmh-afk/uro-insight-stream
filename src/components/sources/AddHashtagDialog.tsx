@@ -21,6 +21,7 @@ import {
 import { feedService } from "@/services/feedService";
 import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, Hashtag } from "@/types";
+import { recordAudit } from "@/services/auditService";
 
 interface Props {
   open: boolean;
@@ -45,6 +46,13 @@ export function AddHashtagDialog({ open, onOpenChange, congresses }: Props) {
     onSuccess: (h) => {
       toast.success(`Added ${h.tag}`);
       qc.invalidateQueries({ queryKey: ["hashtags"] });
+      void recordAudit({
+        action: "hashtag.create",
+        target_type: "hashtag",
+        target_id: h.id,
+        summary: `Added ${h.tag}`,
+        after: { tag: h.tag, congressId: h.congressId },
+      });
       reset();
       onOpenChange(false);
     },
