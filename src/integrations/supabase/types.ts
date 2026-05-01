@@ -50,6 +50,81 @@ export type Database = {
         }
         Relationships: []
       }
+      ingestion_config: {
+        Row: {
+          adapter: string
+          default_lookback_minutes: number
+          enabled: boolean
+          id: number
+          poll_interval_minutes: number
+          rate_limit_per_15min: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          adapter?: string
+          default_lookback_minutes?: number
+          enabled?: boolean
+          id?: number
+          poll_interval_minutes?: number
+          rate_limit_per_15min?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          adapter?: string
+          default_lookback_minutes?: number
+          enabled?: boolean
+          id?: number
+          poll_interval_minutes?: number
+          rate_limit_per_15min?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      ingestion_runs: {
+        Row: {
+          adapter: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          target: string
+          target_type: string
+          triggered_by: string | null
+          tweets_fetched: number
+          tweets_inserted: number
+        }
+        Insert: {
+          adapter: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status: string
+          target: string
+          target_type: string
+          triggered_by?: string | null
+          tweets_fetched?: number
+          tweets_inserted?: number
+        }
+        Update: {
+          adapter?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          target?: string
+          target_type?: string
+          triggered_by?: string | null
+          tweets_fetched?: number
+          tweets_inserted?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -77,6 +152,66 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tweets: {
+        Row: {
+          abstract_id: string | null
+          author_display_name: string | null
+          author_handle: string
+          congress_id: string | null
+          created_at: string
+          hashtags: string[]
+          id: string
+          ingested_at: string
+          lang: string | null
+          like_count: number
+          media_urls: string[]
+          raw: Json | null
+          reply_count: number
+          retweet_count: number
+          session_id: string | null
+          source_id: string | null
+          text: string
+        }
+        Insert: {
+          abstract_id?: string | null
+          author_display_name?: string | null
+          author_handle: string
+          congress_id?: string | null
+          created_at: string
+          hashtags?: string[]
+          id: string
+          ingested_at?: string
+          lang?: string | null
+          like_count?: number
+          media_urls?: string[]
+          raw?: Json | null
+          reply_count?: number
+          retweet_count?: number
+          session_id?: string | null
+          source_id?: string | null
+          text: string
+        }
+        Update: {
+          abstract_id?: string | null
+          author_display_name?: string | null
+          author_handle?: string
+          congress_id?: string | null
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          ingested_at?: string
+          lang?: string | null
+          like_count?: number
+          media_urls?: string[]
+          raw?: Json | null
+          reply_count?: number
+          retweet_count?: number
+          session_id?: string | null
+          source_id?: string | null
+          text?: string
         }
         Relationships: []
       }
