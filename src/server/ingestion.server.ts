@@ -57,7 +57,7 @@ async function upsertTweets(
     media_urls: t.mediaUrls,
     hashtags: t.hashtags,
     congress_id: tagCongressId(t, congressTagMap),
-    raw: t.raw ?? null,
+    raw: (t.raw ?? null) as never,
   }));
   const { error, count } = await supabaseAdmin
     .from("tweets")
