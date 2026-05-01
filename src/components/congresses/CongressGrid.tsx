@@ -14,6 +14,7 @@ import {
 import { feedService } from "@/services/feedService";
 import { CongressCard } from "./CongressCard";
 import { NewCongressDialog } from "./NewCongressDialog";
+import { useCanEdit } from "@/auth/permissions";
 import type { Congress } from "@/types";
 
 const ALL = "__all__";
