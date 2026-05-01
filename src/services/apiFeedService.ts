@@ -32,7 +32,10 @@ export const apiFeedService: FeedService = {
   countCongressTweets: () => notImplemented("countCongressTweets"),
   listSessions: () => notImplemented("listSessions"),
   getSession: () => notImplemented("getSession"),
+  listAbstracts: () => notImplemented("listAbstracts"),
+  getAbstract: () => notImplemented("getAbstract"),
 
   listTweets: () => notImplemented("listTweets"),
   getSummary: () => notImplemented("getSummary"),
+  saveSummary: () => notImplemented("saveSummary"),
 };
