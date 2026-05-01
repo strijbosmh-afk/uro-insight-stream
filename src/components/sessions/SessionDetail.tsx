@@ -26,6 +26,8 @@ import type {
 import { TweetCard } from "@/components/feed/TweetCard";
 import { useSummaryPrefs } from "@/hooks/useSummaryPrefs";
 import { CustomizeSummaryDrawer } from "./CustomizeSummaryDrawer";
+import { getAiService } from "@/services/aiService";
+import { getAiSettings } from "@/hooks/useAiSettings";
 import { cn } from "@/lib/utils";
 
 function fmtTime(iso: string) {
@@ -120,29 +122,29 @@ export function SessionDetail({ sessionId }: Props) {
 
   const regenerate = useMutation({
     mutationFn: async () => {
-      // Mock generation: synthesize a Summary from current tweets and prefs.
-      const newSummary: Summary = {
-        id: `sum_${Date.now().toString(36)}`,
-        targetType,
-        targetId,
-        bulletPoints: synthesizeBullets(scopedTweets, prefs.maxBullets, prefs.tone),
-        keyQuotes: scopedTweets
-          .slice(0, 3)
-          .map((t) => ({
-            quote: t.text.length > 140 ? t.text.slice(0, 140) + "…" : t.text,
-            sourceId: t.sourceId,
-            tweetId: t.id,
-          })),
-        sentiment: inferSentiment(scopedTweets),
-        controversies: synthesizeControversies(scopedTweets),
-        takeaways: [
-          "Discuss with MDT for relevant subgroups.",
-          "Re-evaluate after upcoming guideline update.",
-        ],
-        tweetCount: scopedTweets.length,
-        generatedAt: new Date().toISOString(),
-        modelUsed: "gpt-4o-mini (mock)",
-      };
+      const ai = getAiService();
+      const aiSettings = getAiSettings();
+      const abstractObj = selectedAbstract
+        ? abstracts.find((a) => a.id === selectedAbstract)
+        : null;
+      const title = abstractObj?.title ?? session?.title ?? "Untitled target";
+      const newSummary = await ai.summarize({
+        tweets: scopedTweets,
+        context: {
+          type: targetType,
+          targetId,
+          title,
+          specialty: undefined,
+        },
+        options: {
+          maxBullets: prefs.maxBullets,
+          tone: prefs.tone,
+          language: prefs.language,
+          systemPrompt: prefs.systemPrompt,
+          promptTemplate: prefs.userTemplate,
+          model: aiSettings.model,
+        },
+      });
       return feedService.saveSummary(targetType, targetId, newSummary);
     },
     onSuccess: () => {
