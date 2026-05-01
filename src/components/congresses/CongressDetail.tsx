@@ -474,12 +474,24 @@ function SessionRow({ session }: { session: Session }) {
     queryFn: () => feedService.listTweets({ sessionId: session.id }),
   });
   return (
-    <TableRow className="border-border">
+    <TableRow className="border-border cursor-pointer hover:bg-panel-elevated/50">
       <TableCell className="font-mono text-[12px] text-text-muted">
-        {fmtTime(session.startTime)}
+        <Link
+          to="/sessions/$sessionId"
+          params={{ sessionId: session.id }}
+          className="block"
+        >
+          {fmtTime(session.startTime)}
+        </Link>
       </TableCell>
       <TableCell className="text-[12px] text-text-primary">
-        {session.title}
+        <Link
+          to="/sessions/$sessionId"
+          params={{ sessionId: session.id }}
+          className="block hover:text-accent"
+        >
+          {session.title}
+        </Link>
       </TableCell>
       <TableCell className="text-[11px] font-mono text-text-muted">
         {session.room}
