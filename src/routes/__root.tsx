@@ -59,6 +59,25 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
+  beforeLoad: async ({ location }) => {
+    // Server-side / loader-side guard. Runs on every navigation including
+    // initial deep-link. We only enforce on the client because the Supabase
+    // session lives in browser storage; during SSR there's no session to
+    // read, so we let the page render and the client AuthGate handles it.
+    if (typeof window === "undefined") return;
+    const path = location.pathname;
+    if (path === "/auth") return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      const search = new URLSearchParams();
+      const target = location.href || path;
+      if (target && target !== "/") search.set("redirect", target);
+      const qs = search.toString();
+      window.location.replace("/auth" + (qs ? `?${qs}` : ""));
+      // Throw to abort further loading; the navigation above will replace.
+      throw new Error("__redirect_to_auth__");
+    }
+  },
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
@@ -96,18 +115,22 @@ function AuthGate() {
   React.useEffect(() => {
     if (loading) return;
     if (!user && !onAuthRoute) {
-      void navigate({ to: "/auth", replace: true });
-    } else if (user && onAuthRoute) {
-      void navigate({ to: "/dashboard", replace: true });
+      // Preserve the originally-requested URL so we can bounce back after sign-in.
+      const here = window.location.pathname + window.location.search;
+      const target =
+        here && here !== "/"
+          ? `/auth?redirect=${encodeURIComponent(here)}`
+          : "/auth";
+      void navigate({ to: target, replace: true });
     }
+    // Note: when authenticated AND on /auth, the /auth page itself handles
+    // redirecting (so it can honour ?redirect=… and ?invite=… correctly).
   }, [user, loading, onAuthRoute, navigate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <Loader2 className="w-5 h-5 animate-spin text-accent" />
-      </div>
-    );
+    // Show the full shell with all panels in their loading state — keeps
+    // perceived load fast and avoids a flash of blank background.
+    return <ShellSkeleton />;
   }
 
   // /auth route: render its own component (no shell).
