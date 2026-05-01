@@ -134,6 +134,14 @@
   .font-mono {
     font-family: var(--font-mono);
   }
+
+  /* Crisp keyboard focus ring — RayStation cyan */
+  *:focus { outline: none; }
+  *:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent);
+  }
 }
 
 /* RayStation-style indeterminate progress bar */
