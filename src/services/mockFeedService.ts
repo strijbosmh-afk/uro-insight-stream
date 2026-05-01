@@ -13,16 +13,43 @@ import type {
   Session,
   Tweet,
   Summary,
+  SourceList,
 } from "@/types";
 import type { FeedService, TweetFilter } from "./feedService";
 
 // In-memory mutable copies so admin CRUD survives within the session.
-const sources: Source[] = [...mockSources];
+// Seed last-seen + tweet count from mock tweets so the table has signal.
+const tweets: Tweet[] = [...mockTweets];
+const seedSourceMeta = (s: Source): Source => {
+  const own = tweets.filter((t) => t.sourceId === s.id);
+  const last = own.reduce(
+    (acc, t) => (acc && acc > t.createdAt ? acc : t.createdAt),
+    "" as string,
+  );
+  return {
+    ...s,
+    listIds: s.listIds ?? [],
+    tweetCount: own.length,
+    lastSeenAt: last || undefined,
+  };
+};
+const sources: Source[] = mockSources.map(seedSourceMeta);
 const hashtags: Hashtag[] = [...mockHashtags];
 const congresses: Congress[] = [...mockCongresses];
 const sessions: Session[] = [...mockSessions];
-const tweets: Tweet[] = [...mockTweets];
 const summaries: Summary[] = [...mockSummaries];
+
+const sourceLists: SourceList[] = [
+  { id: "list_eau", name: "EAU Faculty", color: "#22D3EE" },
+  { id: "list_robotic", name: "Robotic Surgery", color: "#A78BFA" },
+  { id: "list_prostate", name: "Prostate Cancer KOLs", color: "#F472B6" },
+];
+// Seed each source with at most one demo list assignment so chips render.
+sources.forEach((s, i) => {
+  if (!s.listIds || s.listIds.length === 0) {
+    s.listIds = [sourceLists[i % sourceLists.length].id];
+  }
+});
 
 const sleep = () =>
   new Promise<void>((res) =>
@@ -40,7 +67,12 @@ export const mockFeedService: FeedService = {
   },
   async addSource(input) {
     await sleep();
-    const next: Source = { ...input, id: id("src") };
+    const next: Source = {
+      ...input,
+      id: id("src"),
+      listIds: input.listIds ?? [],
+      tweetCount: 0,
+    };
     sources.push(next);
     return next;
   },
@@ -55,6 +87,45 @@ export const mockFeedService: FeedService = {
     await sleep();
     const i = sources.findIndex((s) => s.id === idArg);
     if (i >= 0) sources.splice(i, 1);
+  },
+
+  async testSource(idArg) {
+    await sleep();
+    const own = tweets
+      .filter((t) => t.sourceId === idArg)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+      .slice(0, 5);
+    return own;
+  },
+
+  // ---------- Source lists ----------
+  async listSourceLists() {
+    await sleep();
+    return [...sourceLists];
+  },
+  async addSourceList(input) {
+    await sleep();
+    const next: SourceList = { ...input, id: id("list") };
+    sourceLists.push(next);
+    return next;
+  },
+  async updateSourceList(idArg, patch) {
+    await sleep();
+    const i = sourceLists.findIndex((l) => l.id === idArg);
+    if (i < 0) throw new Error(`List not found: ${idArg}`);
+    sourceLists[i] = { ...sourceLists[i], ...patch, id: sourceLists[i].id };
+    return sourceLists[i];
+  },
+  async removeSourceList(idArg) {
+    await sleep();
+    const i = sourceLists.findIndex((l) => l.id === idArg);
+    if (i >= 0) sourceLists.splice(i, 1);
+    // Also remove from any source that referenced it.
+    sources.forEach((s) => {
+      if (s.listIds?.includes(idArg)) {
+        s.listIds = s.listIds.filter((x) => x !== idArg);
+      }
+    });
   },
 
   // ---------- Hashtags ----------
@@ -79,6 +150,17 @@ export const mockFeedService: FeedService = {
     await sleep();
     const i = hashtags.findIndex((h) => h.id === idArg);
     if (i >= 0) hashtags.splice(i, 1);
+  },
+
+  async countHashtagTweets(tag, sinceMs) {
+    await sleep();
+    const cutoff = new Date(Date.now() - sinceMs).toISOString();
+    const norm = tag.replace(/^#/, "").toLowerCase();
+    return tweets.filter(
+      (t) =>
+        t.createdAt >= cutoff &&
+        t.hashtags.some((h) => h.replace(/^#/, "").toLowerCase() === norm),
+    ).length;
   },
 
   // ---------- Congresses & Sessions ----------
