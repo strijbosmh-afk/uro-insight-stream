@@ -25,6 +25,11 @@ export const apiFeedService: FeedService = {
 
   listCongresses: () => notImplemented("listCongresses"),
   getCongress: () => notImplemented("getCongress"),
+  addCongress: () => notImplemented("addCongress"),
+  updateCongress: () => notImplemented("updateCongress"),
+  removeCongress: () => notImplemented("removeCongress"),
+  congressActivity: () => notImplemented("congressActivity"),
+  countCongressTweets: () => notImplemented("countCongressTweets"),
   listSessions: () => notImplemented("listSessions"),
   getSession: () => notImplemented("getSession"),
 

@@ -38,6 +38,8 @@ export type Congress = {
   endDate: string;
   status: "upcoming" | "live" | "archived";
   primaryHashtags: string[];
+  /** Optional override: if set, only these source lists are scoped to this congress. */
+  sourceListIds?: string[];
 };
 
 export type Session = {
