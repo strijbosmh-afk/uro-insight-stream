@@ -20,6 +20,8 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
+import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -76,6 +78,18 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const ApiPublicHooksTweetIngestRoute =
+  ApiPublicHooksTweetIngestRouteImport.update({
+    id: '/api/public/hooks/tweet-ingest',
+    path: '/api/public/hooks/tweet-ingest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSummarizeJobRoute =
+  ApiPublicHooksSummarizeJobRouteImport.update({
+    id: '/api/public/hooks/summarize-job',
+    path: '/api/public/hooks/summarize-job',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +103,8 @@ export interface FileRoutesByFullPath {
   '/summaries': typeof SummariesRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +118,8 @@ export interface FileRoutesByTo {
   '/summaries': typeof SummariesRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +134,8 @@ export interface FileRoutesById {
   '/summaries': typeof SummariesRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +151,8 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/tweet-ingest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +166,8 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/tweet-ingest'
   id:
     | '__root__'
     | '/'
@@ -157,6 +181,8 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/tweet-ingest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,6 +196,8 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
+  ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -251,6 +279,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
     }
+    '/api/public/hooks/tweet-ingest': {
+      id: '/api/public/hooks/tweet-ingest'
+      path: '/api/public/hooks/tweet-ingest'
+      fullPath: '/api/public/hooks/tweet-ingest'
+      preLoaderRoute: typeof ApiPublicHooksTweetIngestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/summarize-job': {
+      id: '/api/public/hooks/summarize-job'
+      path: '/api/public/hooks/summarize-job'
+      fullPath: '/api/public/hooks/summarize-job'
+      preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -277,6 +319,8 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
+  ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
