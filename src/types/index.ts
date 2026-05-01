@@ -9,6 +9,16 @@ export type Source = {
   specialty: string[];
   verified: boolean;
   active: boolean;
+  listIds?: string[];
+  lastSeenAt?: string;
+  tweetCount?: number;
+};
+
+export type SourceList = {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
 };
 
 export type Hashtag = {
