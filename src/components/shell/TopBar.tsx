@@ -20,15 +20,17 @@ function useBreadcrumb() {
 }
 
 function useClock() {
-  const [now, setNow] = React.useState(() => new Date());
+  const [now, setNow] = React.useState<Date | null>(null);
   React.useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
   return now;
 }
 
-function fmtTime(d: Date) {
+function fmtTime(d: Date | null) {
+  if (!d) return "--:--:--";
   return d.toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",

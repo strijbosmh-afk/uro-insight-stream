@@ -1,8 +1,9 @@
 import * as React from "react";
 
 function useClock() {
-  const [now, setNow] = React.useState(() => new Date());
+  const [now, setNow] = React.useState<Date | null>(null);
   React.useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -37,12 +38,14 @@ function V({
 
 export function StatusBar() {
   const now = useClock();
-  const time = now.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+  const time = now
+    ? now.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    : "--:--:--";
 
   return (
     <footer className="h-6 shrink-0 flex items-center gap-3 px-3 border-t border-border bg-panel text-[10px] font-mono uppercase tracking-wider">
