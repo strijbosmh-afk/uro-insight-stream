@@ -298,6 +298,11 @@ export const mockFeedService: FeedService = {
     );
   },
 
+  async listSummaries() {
+    await sleep();
+    return [...summaries];
+  },
+
   async saveSummary(targetType, targetId, summary) {
     await sleep();
     const i = summaries.findIndex(

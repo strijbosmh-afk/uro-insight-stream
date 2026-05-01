@@ -60,6 +60,8 @@ export interface FeedService {
     targetType: Summary["targetType"],
     targetId: string,
   ): Promise<Summary | null>;
+  /** Returns every summary in the store (across sessions/abstracts/congresses). */
+  listSummaries(): Promise<Summary[]>;
   /** Persist a (re)generated summary for a target. */
   saveSummary(
     targetType: Summary["targetType"],
