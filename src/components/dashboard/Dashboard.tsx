@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { feedService } from "@/services/feedService";
+import { useLiveKpis } from "@/hooks/useLiveKpis";
 import { feedNowMs, initFeedClock } from "@/components/feed/feedClock";
 import { cn } from "@/lib/utils";
 import type { Session, Tweet, Source, Summary, Congress } from "@/types";
@@ -92,15 +93,13 @@ export function Dashboard() {
   const oneHourAgo = nowMs - 60 * 60 * 1000;
   const oneDayAgo = nowMs - 24 * 60 * 60 * 1000;
 
-  // KPIs
+  // Live KPIs from Supabase (real ingestion data)
+  const { data: liveKpis } = useLiveKpis(30_000);
+
+  // KPIs (mock-derived for things still on mock: congresses, summaries)
   const activeCongresses = congresses.filter(
     (c) => c.status === "live" || c.status === "upcoming",
   ).length;
-  const tweetsLastHour = allTweets.filter(
-    (t) => new Date(t.createdAt).getTime() >= oneHourAgo,
-  );
-  const tweetsPerMin = Math.round((tweetsLastHour.length / 60) * 10) / 10;
-  const sourcesTracked = sources.filter((s) => s.active !== false).length;
 
   const { data: allSummaries = [] } = useQuery({
     queryKey: ["all-summaries"],
@@ -161,15 +160,15 @@ export function Dashboard() {
         <Kpi
           icon={<Radio className="w-4 h-4" />}
           label="Tweets / min"
-          value={tweetsPerMin}
-          sub={`${tweetsLastHour.length} in last hour`}
+          value={liveKpis?.tweetsPerMin ?? 0}
+          sub={`${liveKpis?.tweetsLastHour ?? 0} in last hour · live`}
           accent
         />
         <Kpi
           icon={<Database className="w-4 h-4" />}
           label="Sources tracked"
-          value={sourcesTracked}
-          sub={`${sources.length - sourcesTracked} paused`}
+          value={liveKpis?.activeSources ?? 0}
+          sub={`${liveKpis?.activeHashtags ?? 0} hashtags · live`}
         />
         <Kpi
           icon={<FileText className="w-4 h-4" />}
