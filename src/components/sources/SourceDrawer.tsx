@@ -24,6 +24,8 @@ import {
 import { feedService } from "@/services/feedService";
 import { isValidHandle, normalizeHandle } from "@/lib/validation";
 import type { Source, SourceList } from "@/types";
+import { useCanEdit, useCanAdmin } from "@/auth/permissions";
+import { recordAudit } from "@/services/auditService";
 
 interface Props {
   source: Source | null;
@@ -36,6 +38,8 @@ const ROLES: Source["role"][] = ["KOL", "institution", "journal", "society", "ot
 
 export function SourceDrawer({ source, lists, open, onOpenChange }: Props) {
   const qc = useQueryClient();
+  const canEdit = useCanEdit();
+  const canAdmin = useCanAdmin();
   const [draft, setDraft] = React.useState<Source | null>(source);
   const [specialtyText, setSpecialtyText] = React.useState("");
 
@@ -59,7 +63,16 @@ export function SourceDrawer({ source, lists, open, onOpenChange }: Props) {
       if (ctx?.prev) qc.setQueryData(["sources"], ctx.prev);
       toast.error("Failed to save source");
     },
-    onSuccess: () => toast.success("Source updated"),
+    onSuccess: (_d, patch) => {
+      toast.success("Source updated");
+      void recordAudit({
+        action: "source.update",
+        target_type: "source",
+        target_id: source!.id,
+        summary: `Updated @${source!.handle}`,
+        after: patch,
+      });
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["sources"] }),
   });
 
@@ -79,6 +92,13 @@ export function SourceDrawer({ source, lists, open, onOpenChange }: Props) {
     },
     onSuccess: () => {
       toast.success("Source removed");
+      void recordAudit({
+        action: "source.delete",
+        target_type: "source",
+        target_id: source!.id,
+        summary: `Removed @${source!.handle}`,
+        before: { handle: source!.handle, role: source!.role },
+      });
       onOpenChange(false);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["sources"] }),
@@ -224,7 +244,8 @@ export function SourceDrawer({ source, lists, open, onOpenChange }: Props) {
             size="sm"
             className="text-destructive hover:text-destructive"
             onClick={() => remove.mutate()}
-            disabled={remove.isPending}
+            disabled={remove.isPending || !canAdmin}
+            title={canAdmin ? "" : "Admin role required"}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
             Delete
@@ -233,7 +254,12 @@ export function SourceDrawer({ source, lists, open, onOpenChange }: Props) {
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={save} disabled={update.isPending}>
+            <Button
+              size="sm"
+              onClick={save}
+              disabled={update.isPending || !canEdit}
+              title={canEdit ? "" : "Editor or admin role required"}
+            >
               Save
             </Button>
           </div>

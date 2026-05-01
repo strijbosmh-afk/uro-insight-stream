@@ -24,6 +24,7 @@ import {
 import { feedService } from "@/services/feedService";
 import { isValidHandle, normalizeHandle } from "@/lib/validation";
 import type { Source } from "@/types";
+import { recordAudit } from "@/services/auditService";
 
 interface Props {
   open: boolean;
@@ -62,6 +63,15 @@ export function AddSourceDialog({ open, onOpenChange }: Props) {
           : `Added ${added.length} sources`,
       );
       qc.invalidateQueries({ queryKey: ["sources"] });
+      for (const s of added) {
+        void recordAudit({
+          action: "source.create",
+          target_type: "source",
+          target_id: s.id,
+          summary: `Added @${s.handle}`,
+          after: { handle: s.handle, role: s.role },
+        });
+      }
       reset();
       onOpenChange(false);
     },

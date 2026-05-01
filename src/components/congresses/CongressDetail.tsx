@@ -21,6 +21,8 @@ import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, Session, SourceList } from "@/types";
 import { StatusPill } from "./StatusPill";
 import { Sparkline } from "./Sparkline";
+import { useCanEdit, useCanAdmin } from "@/auth/permissions";
+import { recordAudit } from "@/services/auditService";
 
 function fmtDay(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -38,6 +40,8 @@ function fmtTime(iso: string) {
 
 export function CongressDetail({ congressId }: { congressId: string }) {
   const qc = useQueryClient();
+  const canEdit = useCanEdit();
+  const canAdmin = useCanAdmin();
   const { data: congress, isLoading } = useQuery({
     queryKey: ["congress", congressId],
     queryFn: () => feedService.getCongress(congressId),
@@ -66,9 +70,16 @@ export function CongressDetail({ congressId }: { congressId: string }) {
   const update = useMutation({
     mutationFn: (patch: Partial<Congress>) =>
       feedService.updateCongress(congressId, patch),
-    onSuccess: () => {
+    onSuccess: (_d, patch) => {
       qc.invalidateQueries({ queryKey: ["congress", congressId] });
       qc.invalidateQueries({ queryKey: ["congresses"] });
+      void recordAudit({
+        action: "congress.update",
+        target_type: "congress",
+        target_id: congressId,
+        summary: `Updated ${congress?.shortCode ?? congressId}`,
+        after: patch,
+      });
     },
     onError: () => toast.error("Update failed"),
   });
@@ -78,6 +89,12 @@ export function CongressDetail({ congressId }: { congressId: string }) {
     onSuccess: () => {
       toast.success("Congress deleted");
       qc.invalidateQueries({ queryKey: ["congresses"] });
+      void recordAudit({
+        action: "congress.delete",
+        target_type: "congress",
+        target_id: congressId,
+        summary: `Deleted ${congress?.shortCode ?? congressId}`,
+      });
       window.history.back();
     },
   });
@@ -127,6 +144,8 @@ export function CongressDetail({ congressId }: { congressId: string }) {
         onClick={() => {
           if (confirm(`Delete ${congress.shortCode}?`)) remove.mutate();
         }}
+        disabled={!canAdmin}
+        title={canAdmin ? "" : "Admin role required"}
       >
         <Trash2 className="w-3 h-3 mr-1" /> Delete
       </Button>
