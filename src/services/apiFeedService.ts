@@ -10,11 +10,18 @@ export const apiFeedService: FeedService = {
   addSource: () => notImplemented("addSource"),
   updateSource: () => notImplemented("updateSource"),
   removeSource: () => notImplemented("removeSource"),
+  testSource: () => notImplemented("testSource"),
+
+  listSourceLists: () => notImplemented("listSourceLists"),
+  addSourceList: () => notImplemented("addSourceList"),
+  updateSourceList: () => notImplemented("updateSourceList"),
+  removeSourceList: () => notImplemented("removeSourceList"),
 
   listHashtags: () => notImplemented("listHashtags"),
   addHashtag: () => notImplemented("addHashtag"),
   updateHashtag: () => notImplemented("updateHashtag"),
   removeHashtag: () => notImplemented("removeHashtag"),
+  countHashtagTweets: () => notImplemented("countHashtagTweets"),
 
   listCongresses: () => notImplemented("listCongresses"),
   getCongress: () => notImplemented("getCongress"),
