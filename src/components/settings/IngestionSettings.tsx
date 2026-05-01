@@ -63,9 +63,15 @@ export function IngestionSettings() {
   const [manualType, setManualType] = React.useState<"handle" | "hashtag">("handle");
   const [manualTarget, setManualTarget] = React.useState("");
 
+  type CfgPatch = {
+    adapter?: "x_api_v2" | "mock" | "socialdata" | "twitterapi_io";
+    enabled?: boolean;
+    poll_interval_minutes?: number;
+    rate_limit_per_15min?: number;
+    default_lookback_minutes?: number;
+  };
   const cfgMutation = useMutation({
-    mutationFn: (patch: Parameters<typeof updateCfg>[0]["data"]) =>
-      updateCfg({ data: patch }),
+    mutationFn: (patch: CfgPatch) => updateCfg({ data: patch }),
     onSuccess: () => {
       toast.success("Config saved");
       qc.invalidateQueries({ queryKey: ["ingestion-status"] });
