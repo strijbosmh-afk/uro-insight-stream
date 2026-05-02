@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getNewRecommendedSourcesCount } from "@/server/onboarding.functions";
 import {
   Activity,
   Radio,
@@ -45,6 +47,13 @@ function relTime(iso: string, nowMs: number) {
 }
 
 export function Dashboard() {
+  const fetchNewRecs = useServerFn(getNewRecommendedSourcesCount);
+  const { data: newRecs } = useQuery({
+    queryKey: ["new-recommended-sources-count"],
+    queryFn: () => fetchNewRecs(),
+    staleTime: 60_000,
+  });
+  const [bannerDismissed, setBannerDismissed] = React.useState(false);
   const { data: congresses = [] } = useQuery({
     queryKey: ["congresses"],
     queryFn: () => feedService.listCongresses(),
@@ -148,6 +157,44 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3 p-3 overflow-y-auto">
+      {newRecs && newRecs.count > 0 && !bannerDismissed && (
+        <div
+          className="flex items-center justify-between px-3 py-2 shrink-0"
+          style={{
+            background: "color-mix(in oklab, var(--accent) 8%, var(--panel))",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <div className="text-[12px] text-text-primary">
+            Your interests changed —{" "}
+            <span className="font-mono text-accent">{newRecs.count}</span> new sources are
+            recommended you don't follow yet.
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent("urofeed:open-wizard-step", {
+                    detail: { step: "Sources" },
+                  }),
+                )
+              }
+              className="font-mono text-[11px] uppercase text-accent hover:underline"
+            >
+              Review →
+            </button>
+            <button
+              type="button"
+              onClick={() => setBannerDismissed(true)}
+              className="text-text-muted hover:text-text-primary text-xs"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* KPI tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
         <Kpi
