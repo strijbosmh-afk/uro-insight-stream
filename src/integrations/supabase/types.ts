@@ -77,6 +77,59 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_queue: {
+        Row: {
+          attempts: number
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          job_type: string
+          priority: number
+          requested_at: string
+          requested_by: string | null
+          since: string
+          source_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_type?: string
+          priority?: number
+          requested_at?: string
+          requested_by?: string | null
+          since?: string
+          source_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_type?: string
+          priority?: number
+          requested_at?: string
+          requested_by?: string | null
+          since?: string
+          source_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_queue_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingestion_config: {
         Row: {
           adapter: string
@@ -181,6 +234,143 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      recommended_congresses_by_specialty: {
+        Row: {
+          congress_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          specialty_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          congress_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          specialty_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          congress_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          specialty_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommended_congresses_by_specialty_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "urology_specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommended_hashtags_by_specialty: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          hashtag_id: string
+          id: string
+          note: string | null
+          specialty_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          hashtag_id: string
+          id?: string
+          note?: string | null
+          specialty_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          hashtag_id?: string
+          id?: string
+          note?: string | null
+          specialty_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommended_hashtags_by_specialty_hashtag_id_fkey"
+            columns: ["hashtag_id"]
+            isOneToOne: false
+            referencedRelation: "hashtags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommended_hashtags_by_specialty_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "urology_specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommended_sources_by_specialty: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          source_id: string
+          specialty_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          source_id: string
+          specialty_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          source_id?: string
+          specialty_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommended_sources_by_specialty_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommended_sources_by_specialty_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "urology_specialties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sources: {
         Row: {
@@ -290,6 +480,30 @@ export type Database = {
         }
         Relationships: []
       }
+      urology_specialties: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       user_ai_settings: {
         Row: {
           created_at: string
@@ -320,6 +534,36 @@ export type Database = {
           tone?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_onboarding_state: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          skipped_at: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          skipped_at?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          skipped_at?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
         }
         Relationships: []
       }
@@ -382,6 +626,105 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_specialties: {
+        Row: {
+          created_at: string
+          is_primary: boolean
+          specialty_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_primary?: boolean
+          specialty_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          is_primary?: boolean
+          specialty_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "urology_specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscribed_congresses: {
+        Row: {
+          congress_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          congress_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          congress_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscribed_hashtags: {
+        Row: {
+          created_at: string
+          hashtag_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hashtag_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hashtag_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscribed_hashtags_hashtag_id_fkey"
+            columns: ["hashtag_id"]
+            isOneToOne: false
+            referencedRelation: "hashtags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscribed_sources: {
+        Row: {
+          created_at: string
+          source_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          source_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          source_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscribed_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
