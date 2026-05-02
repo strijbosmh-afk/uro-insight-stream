@@ -10,8 +10,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
 
 type NavItem = {
   label: string;
@@ -24,7 +26,7 @@ type NavSection = {
   items: NavItem[];
 };
 
-const SECTIONS: NavSection[] = [
+const BASE_SECTIONS: NavSection[] = [
   {
     label: "Workspace",
     items: [
@@ -43,6 +45,13 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+const ADMIN_SECTION: NavSection = {
+  label: "Admin",
+  items: [
+    { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
+  ],
+};
+
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -50,6 +59,11 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAdmin } = useAuth();
+  const sections = React.useMemo(
+    () => (isAdmin ? [...BASE_SECTIONS, ADMIN_SECTION] : BASE_SECTIONS),
+    [isAdmin],
+  );
 
   return (
     <aside
@@ -84,7 +98,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.label} className="mb-4">
             {!collapsed && (
               <div className="px-4 mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">

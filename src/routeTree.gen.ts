@@ -20,6 +20,7 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
@@ -80,6 +81,11 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
+  id: '/admin/recommendations',
+  path: '/admin/recommendations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
   id: '/lovable/email/auth/webhook',
   path: '/lovable/email/auth/webhook',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/recommendations': typeof AdminRecommendationsRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/recommendations': typeof AdminRecommendationsRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/recommendations': typeof AdminRecommendationsRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/recommendations'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/recommendations'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/recommendations'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
+  AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
     }
+    '/admin/recommendations': {
+      id: '/admin/recommendations'
+      path: '/admin/recommendations'
+      fullPath: '/admin/recommendations'
+      preLoaderRoute: typeof AdminRecommendationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/webhook': {
       id: '/lovable/email/auth/webhook'
       path: '/lovable/email/auth/webhook'
@@ -358,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
+  AdminRecommendationsRoute: AdminRecommendationsRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
