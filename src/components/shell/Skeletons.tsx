@@ -8,9 +8,16 @@ import { cn } from "@/lib/utils";
  * brightness.
  */
 
-function Bar({ className }: { className?: string }) {
+function Bar({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <span
+      style={style}
       className={cn(
         "block rounded-[2px] bg-panel-elevated/70 animate-pulse",
         className,
@@ -140,12 +147,7 @@ export function CardSkeleton() {
   );
 }
 
-/** Allow Bar to accept inline style for width override. */
-declare module "react" {
-  // no-op augmentation, just makes intent obvious to readers
-}
-
-// Helper used internally above for inline width — exported for consumers.
+// Exported alias for consumers that want a primitive bar.
 export function SkelBar({
   className,
   style,
