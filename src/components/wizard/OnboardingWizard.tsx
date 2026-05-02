@@ -930,12 +930,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // ---------------- Provisioning ----------------
-function ProvisioningStep({ onDone }: { onDone: () => void }) {
+function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: boolean }) {
   const fetchStatus = useServerFn(getUserIngestStatus);
   const { data, refetch } = useQuery({
     queryKey: ["onboarding-ingest-status"],
     queryFn: () => fetchStatus(),
     refetchInterval: 2000,
+  });
+
+  // Admin bootstrap nudge: render an extra "configure recommendations" CTA
+  // when the recommendations matrices are empty.
+  const { data: recsState } = useQuery({
+    queryKey: ["wizard-admin-recs-empty"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const [{ count: srcCount }, { count: congCount }] = await Promise.all([
+        supabase
+          .from("recommended_sources_by_specialty")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("recommended_congresses_by_specialty")
+          .select("id", { count: "exact", head: true }),
+      ]);
+      return { empty: (srcCount ?? 0) === 0 || (congCount ?? 0) === 0 };
+    },
   });
 
   const total = (data?.queued ?? 0) + (data?.processing ?? 0) + (data?.completed ?? 0) + (data?.failed ?? 0);
@@ -993,6 +1011,34 @@ function ProvisioningStep({ onDone }: { onDone: () => void }) {
         </div>
       )}
 
+      {isAdmin && recsState?.empty && (
+        <div
+          className="p-4 mt-2"
+          style={{
+            background: "color-mix(in oklab, var(--accent) 8%, var(--panel))",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <div className="font-mono text-[10px] uppercase tracking-wider text-text-secondary">
+            step {STEPS.length} / {STEPS.length} · admin bootstrap
+          </div>
+          <h3 className="mt-2 text-sm font-medium text-text-primary">
+            Configure recommendations before regular users sign up.
+          </h3>
+          <p className="mt-1 text-xs text-text-secondary">
+            Recommendation matrices are empty. New users won't see pre-checked
+            congresses or sources until you populate them.
+          </p>
+          <Link
+            to="/admin/recommendations"
+            className="inline-flex items-center gap-1 mt-3 px-3 py-1.5 text-xs font-mono uppercase"
+            style={{ background: "var(--accent)", color: "var(--accent-foreground, #000)" }}
+          >
+            Open Admin → Recommendations <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
+
       <button hidden onClick={() => refetch()} />
     </div>
   );
@@ -1003,6 +1049,335 @@ function Stat({ label, value, accent }: { label: string; value: number; accent?:
     <div className="p-3" style={{ background: "var(--panel-elevated)", border: "1px solid var(--border)" }}>
       <div className={cn("font-mono text-2xl", accent ? "text-accent" : "text-text-primary")}>{value}</div>
       <div className="font-mono text-[10px] uppercase text-text-secondary mt-1">{label}</div>
+    </div>
+  );
+}
+
+// ---------------- Congresses ----------------
+type CongressRow = {
+  id: string;
+  name: string;
+  short_code: string;
+  start_date: string | null;
+  end_date: string | null;
+  city: string | null;
+  primary_hashtags: string[];
+};
+
+function CongressesStep({
+  specialtyIds,
+  selected,
+  onChange,
+}: {
+  specialtyIds: string[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const { data: recommended = [], isLoading } = useQuery({
+    queryKey: ["wizard-recommended-congresses", specialtyIds.join(",")],
+    enabled: specialtyIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("recommended_congresses_by_specialty")
+        .select(
+          "congress_id, weight, note, congresses(id, name, short_code, start_date, end_date, city, primary_hashtags)",
+        )
+        .in("specialty_id", specialtyIds)
+        .order("weight", { ascending: false });
+      const seen = new Set<string>();
+      const out: Array<{ congress: CongressRow; note: string | null }> = [];
+      for (const row of (data ?? []) as Array<{
+        congress_id: string;
+        weight: number;
+        note: string | null;
+        congresses: CongressRow | null;
+      }>) {
+        if (!row.congresses || seen.has(row.congress_id)) continue;
+        seen.add(row.congress_id);
+        out.push({ congress: row.congresses, note: row.note });
+      }
+      return out;
+    },
+  });
+
+  const [showAddDialog, setShowAddDialog] = React.useState(false);
+
+  const toggle = (id: string) => {
+    if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
+    else onChange([...selected, id]);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-semibold text-text-primary">Pick the congresses you follow</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          Pre-checked based on your specialties. Uncheck anything irrelevant or add more.
+        </p>
+      </div>
+
+      {isLoading && (
+        <div className="text-sm text-text-muted flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading recommendations…
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {recommended.map(({ congress, note }) => {
+          const isSelected = selected.includes(congress.id);
+          return (
+            <button
+              key={congress.id}
+              type="button"
+              onClick={() => toggle(congress.id)}
+              className="w-full text-left p-3 transition-colors"
+              style={{
+                background: isSelected ? "var(--panel-elevated)" : "var(--panel)",
+                border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="pt-0.5">
+                  <div
+                    className="w-4 h-4 flex items-center justify-center"
+                    style={{
+                      background: isSelected ? "var(--accent)" : "transparent",
+                      border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                    }}
+                  >
+                    {isSelected && <Check className="w-3 h-3" style={{ color: "var(--bg)" }} />}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-medium text-text-primary truncate">
+                      {congress.name}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase text-accent shrink-0">
+                      {congress.short_code}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-[11px] font-mono text-text-secondary">
+                    {congress.start_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {congress.start_date}
+                        {congress.end_date && ` → ${congress.end_date}`}
+                      </span>
+                    )}
+                    {congress.city && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {congress.city}
+                      </span>
+                    )}
+                  </div>
+                  {congress.primary_hashtags?.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {congress.primary_hashtags.map((h) => (
+                        <span
+                          key={h}
+                          className="font-mono text-[10px] px-1.5 py-px"
+                          style={{
+                            border: "1px solid var(--border)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          {h.startsWith("#") ? h : `#${h}`}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {note && (
+                    <p className="mt-1.5 text-[11px] text-text-muted italic line-clamp-1">{note}</p>
+                  )}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        {!isLoading && recommended.length === 0 && (
+          <p className="text-xs text-text-muted italic">
+            No recommendations for your specialties — add congresses manually below.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Button variant="outline" size="sm" onClick={() => setShowAddDialog((v) => !v)}>
+          + Add another congress
+        </Button>
+        {showAddDialog && (
+          <CongressTypeahead
+            excludeIds={selected.concat(recommended.map((r) => r.congress.id))}
+            onAdd={(id) => onChange([...selected, id])}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CongressTypeahead({
+  excludeIds,
+  onAdd,
+}: {
+  excludeIds: string[];
+  onAdd: (id: string) => void;
+}) {
+  const [query, setQuery] = React.useState("");
+  const { data: results = [] } = useQuery({
+    queryKey: ["wizard-congress-typeahead", query],
+    enabled: query.trim().length >= 2,
+    queryFn: async () => {
+      const q = query.trim();
+      const { data } = await supabase
+        .from("congresses")
+        .select("id, name, short_code, city")
+        .or(`name.ilike.%${q}%,short_code.ilike.%${q}%`)
+        .limit(10);
+      return ((data ?? []) as Array<{ id: string; name: string; short_code: string; city: string | null }>)
+        .filter((r) => !excludeIds.includes(r.id));
+    },
+  });
+  return (
+    <div className="mt-3 space-y-2">
+      <Input
+        autoFocus
+        placeholder="Search congresses…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {results.length > 0 && (
+        <div className="border border-border divide-y divide-border">
+          {results.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => {
+                onAdd(r.id);
+                setQuery("");
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-panel-elevated/60 flex items-center justify-between"
+            >
+              <span>
+                <span className="text-text-primary">{r.name}</span>
+                {r.city && <span className="text-text-muted ml-2">{r.city}</span>}
+              </span>
+              <span className="font-mono text-[10px] text-accent uppercase">{r.short_code}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Hashtags ----------------
+const HASHTAG_TAG_RE = /^[A-Za-z0-9_]{1,100}$/;
+
+function HashtagsStep({
+  input,
+  onInput,
+  accepted,
+  onAccepted,
+}: {
+  input: string;
+  onInput: (v: string) => void;
+  accepted: string[];
+  onAccepted: (v: string[]) => void;
+}) {
+  const [errors, setErrors] = React.useState<string[]>([]);
+
+  const commit = () => {
+    if (!input.trim()) return;
+    const tokens = input
+      .split(/[\n,]+/)
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter(Boolean);
+    const newErrors: string[] = [];
+    const lcExisting = new Set(accepted.map((t) => t.toLowerCase()));
+    const fresh: string[] = [];
+    for (const t of tokens) {
+      if (!HASHTAG_TAG_RE.test(t)) {
+        newErrors.push(t);
+        continue;
+      }
+      const lc = t.toLowerCase();
+      if (lcExisting.has(lc)) continue;
+      lcExisting.add(lc);
+      fresh.push(t);
+    }
+    if (fresh.length > 0) onAccepted([...accepted, ...fresh]);
+    setErrors(newErrors);
+    onInput("");
+  };
+
+  const remove = (t: string) => onAccepted(accepted.filter((x) => x !== t));
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-semibold text-text-primary">Track specific hashtags</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          <span className="font-mono text-[10px] uppercase mr-1.5 text-text-muted">Optional</span>
+          Add hashtags beyond the ones tied to congresses you selected.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <textarea
+          value={input}
+          onChange={(e) => onInput(e.target.value)}
+          onBlur={commit}
+          rows={3}
+          placeholder="UroSoMe, prostatecancer, endourology…"
+          className="w-full p-3 text-sm font-mono"
+          style={{
+            background: "var(--panel-elevated)",
+            border: "1px solid var(--border)",
+            color: "var(--text-primary)",
+          }}
+        />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={commit} disabled={!input.trim()}>
+            Add tags
+          </Button>
+          <span className="text-[11px] text-text-muted">
+            Comma- or newline-separated · letters, digits, underscore only
+          </span>
+        </div>
+        {errors.length > 0 && (
+          <p className="text-[11px] text-red-400">
+            Skipped invalid: {errors.map((e) => `"${e}"`).join(", ")}
+          </p>
+        )}
+      </div>
+
+      {accepted.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {accepted.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-mono"
+              style={{
+                background: "var(--panel-elevated)",
+                border: "1px solid var(--border)",
+                color: "var(--accent)",
+              }}
+            >
+              #{t}
+              <button
+                type="button"
+                onClick={() => remove(t)}
+                className="text-text-muted hover:text-text-primary"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
