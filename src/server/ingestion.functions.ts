@@ -75,6 +75,69 @@ export const getIngestionStatus = createServerFn({ method: "GET" })
       0,
     );
 
+    // ---- Lookup rate gauge (global, last 15 min window) ----
+    const { data: globalLookup } = await supabaseAdmin
+      .from("rate_limit_global_lookups")
+      .select("count, window_start")
+      .eq("id", 1)
+      .maybeSingle();
+    const lookupWindowStart = globalLookup?.window_start ?? null;
+    const lookupWindowFresh =
+      !!lookupWindowStart &&
+      Date.now() - new Date(lookupWindowStart).getTime() < 15 * 60_000;
+    const lookupCount = lookupWindowFresh ? globalLookup?.count ?? 0 : 0;
+
+    // ---- Queue depth gauge ----
+    const [{ count: queuePending }, { count: queueProcessing }] = await Promise.all([
+      supabaseAdmin
+        .from("ingest_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("enrichment_status", "pending"),
+      supabaseAdmin
+        .from("ingest_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("enrichment_status", "processing"),
+    ]);
+    const { data: lastDrain } = await supabaseAdmin
+      .from("ingest_queue_run_log")
+      .select("finished_at")
+      .not("finished_at", "is", null)
+      .order("finished_at", { ascending: false })
+      .limit(1);
+
+    // ---- Top lookup users (last hour) ----
+    const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+    const { data: topUsageRaw } = await supabaseAdmin
+      .from("rate_limit_lookups")
+      .select("user_id, count, window_start")
+      .gte("window_start", hourAgo)
+      .order("count", { ascending: false })
+      .limit(20);
+    const usageByUser = new Map<string, number>();
+    for (const r of (topUsageRaw ?? []) as Array<{ user_id: string; count: number }>) {
+      usageByUser.set(r.user_id, (usageByUser.get(r.user_id) ?? 0) + (r.count ?? 0));
+    }
+    const topIds = [...usageByUser.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    let topUsers: Array<{ user_id: string; handle: string; count: number }> = [];
+    if (topIds.length > 0) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email, display_name")
+        .in("id", topIds.map(([id]) => id));
+      const profMap = new Map(
+        ((profs ?? []) as Array<{ id: string; email: string; display_name: string | null }>).map(
+          (p) => [p.id, p.display_name ?? p.email.split("@")[0]],
+        ),
+      );
+      topUsers = topIds.map(([id, count]) => ({
+        user_id: id,
+        handle: profMap.get(id) ?? id.slice(0, 8),
+        count,
+      }));
+    }
+
     return {
       config: cfg,
       runs: runs ?? [],
@@ -85,6 +148,17 @@ export const getIngestionStatus = createServerFn({ method: "GET" })
         llmCallsLast24h,
         llmTokensLast24h,
       },
+      lookup: {
+        count: lookupCount,
+        limit: 200,
+        windowStart: lookupWindowFresh ? lookupWindowStart : null,
+      },
+      queue: {
+        pending: queuePending ?? 0,
+        processing: queueProcessing ?? 0,
+        lastDrainAt: lastDrain?.[0]?.finished_at ?? null,
+      },
+      topLookupUsers: topUsers,
     };
   });
 
