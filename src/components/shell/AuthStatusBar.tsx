@@ -9,7 +9,13 @@ import * as React from "react";
 export function AuthStatusBar({
   state = "ready",
 }: {
-  state?: "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting";
+  state?:
+    | "ready"
+    | "signing-in"
+    | "sending-link"
+    | "completing-invite"
+    | "resetting"
+    | "requesting-access";
 }) {
   const [time, setTime] = React.useState<string>("--:--:--");
   React.useEffect(() => {

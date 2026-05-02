@@ -9,10 +9,13 @@ import {
   CheckCircle2,
   ArrowLeft,
   ShieldCheck,
+  UserPlus,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Panel } from "@/components/shell/Panel";
 import { AuthStatusBar } from "@/components/shell/AuthStatusBar";
@@ -50,8 +53,9 @@ function AuthPage() {
   const navigate = useNavigate();
   const { redirect, invite, email: emailFromUrl } = useSearch({ from: "/auth" });
   const [busyState, setBusyState] = React.useState<
-    "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting"
+    "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting" | "requesting-access"
   >("ready");
+  const [showAccessRequest, setShowAccessRequest] = React.useState(false);
 
   // Already signed in? Honour ?redirect=, otherwise dashboard.
   React.useEffect(() => {
@@ -86,10 +90,20 @@ function AuthPage() {
           </div>
 
           <Panel
-            title={isInvite ? "Complete your invite" : "Sign in"}
+            title={
+              isInvite
+                ? "Complete your invite"
+                : showAccessRequest
+                  ? "Request access"
+                  : "Sign in"
+            }
             actions={
               <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2">
-                {isInvite ? "view · invite" : "view · auth"}
+                {isInvite
+                  ? "view · invite"
+                  : showAccessRequest
+                    ? "view · request"
+                    : "view · auth"}
               </span>
             }
             bodyClassName="p-5"
@@ -102,6 +116,13 @@ function AuthPage() {
                   setBusyState(b ? "completing-invite" : "ready")
                 }
               />
+            ) : showAccessRequest ? (
+              <AccessRequestForm
+                onBack={() => setShowAccessRequest(false)}
+                onBusy={(b) =>
+                  setBusyState(b ? "requesting-access" : "ready")
+                }
+              />
             ) : (
               <SignInTabs
                 redirect={redirect}
@@ -110,11 +131,26 @@ function AuthPage() {
             )}
           </Panel>
 
-          <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
-            {isInvite
-              ? "Setting your password completes the invitation."
-              : "UroFeed is invite-only · ask an admin for access"}
-          </p>
+          {isInvite ? (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              Setting your password completes the invitation.
+            </p>
+          ) : showAccessRequest ? (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              An admin will review your request and reach out by email.
+            </p>
+          ) : (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              UroFeed is invite-only ·{" "}
+              <button
+                type="button"
+                onClick={() => setShowAccessRequest(true)}
+                className="text-accent hover:underline underline-offset-2 transition-colors"
+              >
+                ask an admin for access
+              </button>
+            </p>
+          )}
         </div>
       </main>
       <AuthStatusBar state={busyState} />
@@ -532,6 +568,141 @@ function InviteForm({
           <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
         )}
         Accept invite & sign in
+      </Button>
+    </form>
+  );
+}
+
+/* ---------- Access request (ask an admin for access) ---------- */
+
+function AccessRequestForm({
+  onBack,
+  onBusy,
+}: {
+  onBack: () => void;
+  onBusy: (b: boolean) => void;
+}) {
+  const [email, setEmail] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    onBusy(true);
+    try {
+      const { error } = await supabase.from("access_requests").insert({
+        email: email.trim().toLowerCase(),
+        name: name.trim() || null,
+        reason: reason.trim() || null,
+      });
+      if (error) throw error;
+      setSent(true);
+      toast.success("Request sent", {
+        description: "An admin will review it shortly.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Couldn't send request";
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+      onBusy(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 text-[12px] text-text-muted leading-relaxed border border-success/30 bg-success/5 rounded-[3px] p-2.5">
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
+          <div>
+            Your request has been sent. An admin will reach out at{" "}
+            <span className="text-text-primary font-mono">{email}</span> once
+            it's reviewed.
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-9"
+          onClick={onBack}
+        >
+          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+          Back to sign in
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-accent"
+      >
+        <ArrowLeft className="w-3 h-3" /> back to sign in
+      </button>
+
+      <div className="flex items-start gap-2 text-[12px] text-text-muted leading-relaxed border border-accent/30 bg-accent/5 rounded-[3px] p-2.5">
+        <UserPlus className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+        <div>
+          UroFeed is invite-only. Tell us who you are and an admin will get in
+          touch.
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Email
+        </Label>
+        <Input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="font-mono"
+          autoComplete="email"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Name <span className="text-text-muted/60 normal-case">(optional)</span>
+        </Label>
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="font-mono"
+          autoComplete="name"
+          placeholder="Dr. Jane Smith"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+          Why do you need access?{" "}
+          <span className="text-text-muted/60 normal-case">(optional)</span>
+        </Label>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="font-mono text-[12px] min-h-[72px]"
+          placeholder="e.g. Urology resident attending EAU 2026"
+          maxLength={500}
+        />
+      </div>
+
+      <Button type="submit" className="w-full h-9" disabled={busy || !email}>
+        {busy ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+        ) : (
+          <Send className="w-3.5 h-3.5 mr-1.5" />
+        )}
+        Send request
       </Button>
     </form>
   );
