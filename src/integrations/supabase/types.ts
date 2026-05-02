@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      abstracts: {
+        Row: {
+          abstract_number: string
+          authors: string[]
+          created_at: string
+          id: string
+          institution: string
+          seeded_from_mock: boolean
+          session_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          abstract_number?: string
+          authors?: string[]
+          created_at?: string
+          id: string
+          institution?: string
+          seeded_from_mock?: boolean
+          session_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          abstract_number?: string
+          authors?: string[]
+          created_at?: string
+          id?: string
+          institution?: string
+          seeded_from_mock?: boolean
+          session_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       access_requests: {
         Row: {
           created_at: string
@@ -98,6 +134,7 @@ export type Database = {
           id: string
           name: string
           primary_hashtags: string[]
+          seeded_from_mock: boolean
           short_code: string
           start_date: string | null
           status: string
@@ -111,6 +148,7 @@ export type Database = {
           id?: string
           name: string
           primary_hashtags?: string[]
+          seeded_from_mock?: boolean
           short_code: string
           start_date?: string | null
           status?: string
@@ -124,6 +162,7 @@ export type Database = {
           id?: string
           name?: string
           primary_hashtags?: string[]
+          seeded_from_mock?: boolean
           short_code?: string
           start_date?: string | null
           status?: string
@@ -630,6 +669,54 @@ export type Database = {
           },
         ]
       }
+      sessions: {
+        Row: {
+          abstract_ids: string[]
+          chairs: string[]
+          congress_id: string
+          created_at: string
+          end_time: string
+          id: string
+          room: string
+          seeded_from_mock: boolean
+          session_hashtag: string | null
+          start_time: string
+          title: string
+          track: string
+          updated_at: string
+        }
+        Insert: {
+          abstract_ids?: string[]
+          chairs?: string[]
+          congress_id: string
+          created_at?: string
+          end_time: string
+          id: string
+          room?: string
+          seeded_from_mock?: boolean
+          session_hashtag?: string | null
+          start_time: string
+          title: string
+          track?: string
+          updated_at?: string
+        }
+        Update: {
+          abstract_ids?: string[]
+          chairs?: string[]
+          congress_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          room?: string
+          seeded_from_mock?: boolean
+          session_hashtag?: string | null
+          start_time?: string
+          title?: string
+          track?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sources: {
         Row: {
           active: boolean
@@ -678,6 +765,57 @@ export type Database = {
         }
         Relationships: []
       }
+      summaries: {
+        Row: {
+          bullet_points: string[]
+          controversies: string[]
+          created_at: string
+          generated_at: string
+          id: string
+          key_quotes: Json
+          model_used: string
+          seeded_from_mock: boolean
+          sentiment: string
+          takeaways: string[]
+          target_id: string
+          target_type: string
+          tweet_count: number
+          updated_at: string
+        }
+        Insert: {
+          bullet_points?: string[]
+          controversies?: string[]
+          created_at?: string
+          generated_at?: string
+          id: string
+          key_quotes?: Json
+          model_used?: string
+          seeded_from_mock?: boolean
+          sentiment?: string
+          takeaways?: string[]
+          target_id: string
+          target_type: string
+          tweet_count?: number
+          updated_at?: string
+        }
+        Update: {
+          bullet_points?: string[]
+          controversies?: string[]
+          created_at?: string
+          generated_at?: string
+          id?: string
+          key_quotes?: Json
+          model_used?: string
+          seeded_from_mock?: boolean
+          sentiment?: string
+          takeaways?: string[]
+          target_id?: string
+          target_type?: string
+          tweet_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -702,11 +840,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tweet_match_run_log: {
+        Row: {
+          finished_at: string | null
+          hashtag_matches: number
+          id: string
+          llm_calls: number
+          llm_matches: number
+          llm_tokens_used: number
+          notes: string | null
+          started_at: string
+          time_window_matches: number
+          tweets_considered: number
+        }
+        Insert: {
+          finished_at?: string | null
+          hashtag_matches?: number
+          id?: string
+          llm_calls?: number
+          llm_matches?: number
+          llm_tokens_used?: number
+          notes?: string | null
+          started_at?: string
+          time_window_matches?: number
+          tweets_considered?: number
+        }
+        Update: {
+          finished_at?: string | null
+          hashtag_matches?: number
+          id?: string
+          llm_calls?: number
+          llm_matches?: number
+          llm_tokens_used?: number
+          notes?: string | null
+          started_at?: string
+          time_window_matches?: number
+          tweets_considered?: number
+        }
+        Relationships: []
+      }
       tweets: {
         Row: {
           abstract_id: string | null
           author_display_name: string | null
           author_handle: string
+          classification_attempted_at: string | null
           congress_id: string | null
           created_at: string
           hashtags: string[]
@@ -714,6 +892,7 @@ export type Database = {
           ingested_at: string
           lang: string | null
           like_count: number
+          match_method: string | null
           media_urls: string[]
           raw: Json | null
           reply_count: number
@@ -726,6 +905,7 @@ export type Database = {
           abstract_id?: string | null
           author_display_name?: string | null
           author_handle: string
+          classification_attempted_at?: string | null
           congress_id?: string | null
           created_at: string
           hashtags?: string[]
@@ -733,6 +913,7 @@ export type Database = {
           ingested_at?: string
           lang?: string | null
           like_count?: number
+          match_method?: string | null
           media_urls?: string[]
           raw?: Json | null
           reply_count?: number
@@ -745,6 +926,7 @@ export type Database = {
           abstract_id?: string | null
           author_display_name?: string | null
           author_handle?: string
+          classification_attempted_at?: string | null
           congress_id?: string | null
           created_at?: string
           hashtags?: string[]
@@ -752,6 +934,7 @@ export type Database = {
           ingested_at?: string
           lang?: string | null
           like_count?: number
+          match_method?: string | null
           media_urls?: string[]
           raw?: Json | null
           reply_count?: number
