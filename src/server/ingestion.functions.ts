@@ -45,10 +45,46 @@ export const getIngestionStatus = createServerFn({ method: "GET" })
       .from("ingestion_runs")
       .select("id", { count: "exact", head: true })
       .gte("started_at", fifteenMinAgo);
+
+    // Matcher stats (unmatched tweets + last-24h matcher activity)
+    const dayAgo = new Date(Date.now() - 24 * 3_600_000).toISOString();
+    const { count: unmatchedCount } = await supabaseAdmin
+      .from("tweets")
+      .select("id", { count: "exact", head: true })
+      .is("session_id", null);
+    const { data: matchRuns } = await supabaseAdmin
+      .from("tweet_match_run_log")
+      .select(
+        "hashtag_matches, time_window_matches, llm_matches, llm_calls, llm_tokens_used",
+      )
+      .gte("started_at", dayAgo);
+    const matchedLast24h = (matchRuns ?? []).reduce(
+      (acc, r) =>
+        acc +
+        (r.hashtag_matches ?? 0) +
+        (r.time_window_matches ?? 0) +
+        (r.llm_matches ?? 0),
+      0,
+    );
+    const llmCallsLast24h = (matchRuns ?? []).reduce(
+      (acc, r) => acc + (r.llm_calls ?? 0),
+      0,
+    );
+    const llmTokensLast24h = (matchRuns ?? []).reduce(
+      (acc, r) => acc + (r.llm_tokens_used ?? 0),
+      0,
+    );
+
     return {
       config: cfg,
       runs: runs ?? [],
       recentRunCount: recentCount ?? 0,
+      matcher: {
+        unmatched: unmatchedCount ?? 0,
+        matchedLast24h,
+        llmCallsLast24h,
+        llmTokensLast24h,
+      },
     };
   });
 
