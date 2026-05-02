@@ -60,14 +60,7 @@ export function useOnboardingGate(): OnboardingStatus {
     const skipped = !!state?.skipped_at;
     const currentStep = state?.current_step ?? 1;
     const shouldOpenWizard = !completed && !skipped && !hasSpec;
-    const needsResumeBanner = !completed && (skipped || (!!state && !hasSpec === false));
-    return {
-      loading: false,
-      shouldOpenWizard,
-      needsResumeBanner: !completed && (skipped || (!!state && currentStep > 1)),
-      currentStep,
-    };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void needsResumeBanner;
+    const needsResumeBanner = !completed && (skipped || (!!state && currentStep > 1));
+    return { loading: false, shouldOpenWizard, needsResumeBanner, currentStep };
   }, [authLoading, isLoading, data, user]);
 }
