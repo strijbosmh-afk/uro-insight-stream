@@ -1077,24 +1077,27 @@ function CongressesStep({
     queryKey: ["wizard-recommended-congresses", specialtyIds.join(",")],
     enabled: specialtyIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: recRows } = await supabase
         .from("recommended_congresses_by_specialty")
-        .select(
-          "congress_id, weight, note, congresses(id, name, short_code, start_date, end_date, city, primary_hashtags)",
-        )
+        .select("congress_id, weight, note")
         .in("specialty_id", specialtyIds)
         .order("weight", { ascending: false });
+      const rows = (recRows ?? []) as Array<{ congress_id: string; note: string | null }>;
+      const ids = Array.from(new Set(rows.map((r) => r.congress_id)));
+      if (ids.length === 0) return [] as Array<{ congress: CongressRow; note: string | null }>;
+      const { data: congs } = await supabase
+        .from("congresses")
+        .select("id, name, short_code, start_date, end_date, city, primary_hashtags")
+        .in("id", ids);
+      const congMap = new Map(((congs ?? []) as CongressRow[]).map((c) => [c.id, c]));
       const seen = new Set<string>();
       const out: Array<{ congress: CongressRow; note: string | null }> = [];
-      for (const row of (data ?? []) as Array<{
-        congress_id: string;
-        weight: number;
-        note: string | null;
-        congresses: CongressRow | null;
-      }>) {
-        if (!row.congresses || seen.has(row.congress_id)) continue;
+      for (const row of rows) {
+        if (seen.has(row.congress_id)) continue;
+        const c = congMap.get(row.congress_id);
+        if (!c) continue;
         seen.add(row.congress_id);
-        out.push({ congress: row.congresses, note: row.note });
+        out.push({ congress: c, note: row.note });
       }
       return out;
     },
