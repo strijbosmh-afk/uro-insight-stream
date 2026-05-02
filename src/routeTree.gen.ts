@@ -20,12 +20,14 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
+import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -82,6 +84,11 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const ApiLookupHandleRoute = ApiLookupHandleRouteImport.update({
+  id: '/api/lookup-handle',
+  path: '/api/lookup-handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
   id: '/admin/recommendations',
   path: '/admin/recommendations',
@@ -115,6 +122,12 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessIngestQueueRoute =
+  ApiPublicHooksProcessIngestQueueRouteImport.update({
+    id: '/api/public/hooks/process-ingest-queue',
+    path: '/api/public/hooks/process-ingest-queue',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,8 +140,10 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -146,8 +161,10 @@ export interface FileRoutesByTo {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -166,8 +183,10 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -187,8 +206,10 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -206,8 +227,10 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -225,8 +248,10 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -245,7 +270,9 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
+  ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -332,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
     }
+    '/api/lookup-handle': {
+      id: '/api/lookup-handle'
+      path: '/api/lookup-handle'
+      fullPath: '/api/lookup-handle'
+      preLoaderRoute: typeof ApiLookupHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/recommendations': {
       id: '/admin/recommendations'
       path: '/admin/recommendations'
@@ -374,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-ingest-queue': {
+      id: '/api/public/hooks/process-ingest-queue'
+      path: '/api/public/hooks/process-ingest-queue'
+      fullPath: '/api/public/hooks/process-ingest-queue'
+      preLoaderRoute: typeof ApiPublicHooksProcessIngestQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -400,7 +441,9 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
+  ApiLookupHandleRoute: ApiLookupHandleRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
