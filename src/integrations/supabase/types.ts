@@ -89,6 +89,48 @@ export type Database = {
         }
         Relationships: []
       }
+      congresses: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          primary_hashtags: string[]
+          short_code: string
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          primary_hashtags?: string[]
+          short_code: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          primary_hashtags?: string[]
+          short_code?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -206,11 +248,15 @@ export type Database = {
       ingest_queue: {
         Row: {
           attempts: number
+          enrichment_status: string
           error_message: string | null
           finished_at: string | null
           id: string
+          job_payload: Json | null
           job_type: string
+          last_processed_at: string | null
           priority: number
+          rate_limited_until: string | null
           requested_at: string
           requested_by: string | null
           since: string
@@ -220,11 +266,15 @@ export type Database = {
         }
         Insert: {
           attempts?: number
+          enrichment_status?: string
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          job_payload?: Json | null
           job_type?: string
+          last_processed_at?: string | null
           priority?: number
+          rate_limited_until?: string | null
           requested_at?: string
           requested_by?: string | null
           since?: string
@@ -234,11 +284,15 @@ export type Database = {
         }
         Update: {
           attempts?: number
+          enrichment_status?: string
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          job_payload?: Json | null
           job_type?: string
+          last_processed_at?: string | null
           priority?: number
+          rate_limited_until?: string | null
           requested_at?: string
           requested_by?: string | null
           since?: string
@@ -255,6 +309,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ingest_queue_run_log: {
+        Row: {
+          finished_at: string | null
+          id: string
+          jobs_completed: number
+          jobs_failed: number
+          jobs_picked: number
+          jobs_rate_limited: number
+          notes: string | null
+          started_at: string
+          x_api_calls: number
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          jobs_completed?: number
+          jobs_failed?: number
+          jobs_picked?: number
+          jobs_rate_limited?: number
+          notes?: string | null
+          started_at?: string
+          x_api_calls?: number
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          jobs_completed?: number
+          jobs_failed?: number
+          jobs_picked?: number
+          jobs_rate_limited?: number
+          notes?: string | null
+          started_at?: string
+          x_api_calls?: number
+        }
+        Relationships: []
       }
       ingestion_config: {
         Row: {
@@ -358,6 +448,48 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rate_limit_global_lookups: {
+        Row: {
+          count: number
+          id: number
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          id?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          id?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      rate_limit_lookups: {
+        Row: {
+          count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
