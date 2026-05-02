@@ -1230,7 +1230,9 @@ export type Database = {
         }[]
       }
       release_ingest_queue_lock: { Args: never; Returns: boolean }
+      release_tweet_matcher_lock: { Args: never; Returns: boolean }
       try_ingest_queue_lock: { Args: never; Returns: boolean }
+      try_tweet_matcher_lock: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
