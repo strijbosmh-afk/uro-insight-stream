@@ -1046,6 +1046,8 @@ export type Database = {
           read_ct: number
         }[]
       }
+      release_ingest_queue_lock: { Args: never; Returns: boolean }
+      try_ingest_queue_lock: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
