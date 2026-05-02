@@ -10,6 +10,24 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { isValidHandle, isValidHashtag, normalizeHandle, normalizeHashtag } from "@/lib/validation";
 
+function rerun(step: "Specialties" | "Congresses" | "Sources" | "Hashtags") {
+  window.dispatchEvent(
+    new CustomEvent("urofeed:open-wizard-step", { detail: { step } }),
+  );
+}
+
+function RerunButton({ step }: { step: "Specialties" | "Congresses" | "Sources" | "Hashtags" }) {
+  return (
+    <button
+      type="button"
+      onClick={() => rerun(step)}
+      className="font-mono text-[10px] uppercase tracking-wider text-accent hover:underline"
+    >
+      Re-run this step ↗
+    </button>
+  );
+}
+
 type Specialty = { id: string; label: string; description: string; sort_order: number };
 type UserSpec = { specialty_id: string; is_primary: boolean };
 type Source = { id: string; handle: string; display_name: string; role: string };
