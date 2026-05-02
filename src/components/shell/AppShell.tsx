@@ -14,8 +14,22 @@ export function AppShell() {
   const density = prefs?.theme_density ?? "comfortable";
   const gate = useOnboardingGate();
   const [wizardOpen, setWizardOpen] = React.useState(false);
+  const [wizardScope, setWizardScope] = React.useState<
+    "Specialties" | "Congresses" | "Sources" | "Hashtags" | undefined
+  >(undefined);
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  React.useEffect(() => {
+    const handler = (
+      e: CustomEvent<{ step: "Specialties" | "Congresses" | "Sources" | "Hashtags" }>,
+    ) => {
+      setWizardScope(e.detail.step);
+      setWizardOpen(true);
+    };
+    window.addEventListener("urofeed:open-wizard-step", handler as EventListener);
+    return () => window.removeEventListener("urofeed:open-wizard-step", handler as EventListener);
+  }, []);
 
   React.useEffect(() => {
     if (gate.shouldOpenWizard && !wizardOpen) setWizardOpen(true);
@@ -55,7 +69,11 @@ export function AppShell() {
       {wizardOpen && (
         <OnboardingWizard
           initialStep={gate.currentStep}
-          onClose={() => setWizardOpen(false)}
+          scopeStep={wizardScope}
+          onClose={() => {
+            setWizardOpen(false);
+            setWizardScope(undefined);
+          }}
         />
       )}
     </div>
