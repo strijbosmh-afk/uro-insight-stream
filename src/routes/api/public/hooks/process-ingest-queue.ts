@@ -3,7 +3,6 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runIngestionForTarget } from "@/server/ingestion.server";
 
 const MAX_JOBS_PER_TICK = 10;
-const ADVISORY_LOCK_KEY = 8421771; // arbitrary stable bigint
 
 type Job = {
   id: string;
@@ -22,16 +21,13 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 async function tryAdvisoryLock(): Promise<boolean> {
-  const { data, error } = await supabaseAdmin.rpc("pg_try_advisory_lock" as never, { key: ADVISORY_LOCK_KEY } as never);
-  if (error) {
-    // RPC may not exist; fall back to "no lock" semantics — best-effort
-    return true;
-  }
+  const { data, error } = await supabaseAdmin.rpc("try_ingest_queue_lock");
+  if (error) return true; // fail-open if RPC unavailable
   return data === true;
 }
 
 async function releaseAdvisoryLock(): Promise<void> {
-  await supabaseAdmin.rpc("pg_advisory_unlock" as never, { key: ADVISORY_LOCK_KEY } as never);
+  await supabaseAdmin.rpc("release_ingest_queue_lock");
 }
 
 async function claimJobs(limit: number): Promise<Job[]> {
