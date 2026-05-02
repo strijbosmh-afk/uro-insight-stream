@@ -9,10 +9,13 @@ import {
   CheckCircle2,
   ArrowLeft,
   ShieldCheck,
+  UserPlus,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Panel } from "@/components/shell/Panel";
 import { AuthStatusBar } from "@/components/shell/AuthStatusBar";
@@ -50,8 +53,9 @@ function AuthPage() {
   const navigate = useNavigate();
   const { redirect, invite, email: emailFromUrl } = useSearch({ from: "/auth" });
   const [busyState, setBusyState] = React.useState<
-    "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting"
+    "ready" | "signing-in" | "sending-link" | "completing-invite" | "resetting" | "requesting-access"
   >("ready");
+  const [showAccessRequest, setShowAccessRequest] = React.useState(false);
 
   // Already signed in? Honour ?redirect=, otherwise dashboard.
   React.useEffect(() => {
@@ -86,10 +90,20 @@ function AuthPage() {
           </div>
 
           <Panel
-            title={isInvite ? "Complete your invite" : "Sign in"}
+            title={
+              isInvite
+                ? "Complete your invite"
+                : showAccessRequest
+                  ? "Request access"
+                  : "Sign in"
+            }
             actions={
               <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted px-2">
-                {isInvite ? "view · invite" : "view · auth"}
+                {isInvite
+                  ? "view · invite"
+                  : showAccessRequest
+                    ? "view · request"
+                    : "view · auth"}
               </span>
             }
             bodyClassName="p-5"
@@ -102,6 +116,13 @@ function AuthPage() {
                   setBusyState(b ? "completing-invite" : "ready")
                 }
               />
+            ) : showAccessRequest ? (
+              <AccessRequestForm
+                onBack={() => setShowAccessRequest(false)}
+                onBusy={(b) =>
+                  setBusyState(b ? "requesting-access" : "ready")
+                }
+              />
             ) : (
               <SignInTabs
                 redirect={redirect}
@@ -110,11 +131,26 @@ function AuthPage() {
             )}
           </Panel>
 
-          <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
-            {isInvite
-              ? "Setting your password completes the invitation."
-              : "UroFeed is invite-only · ask an admin for access"}
-          </p>
+          {isInvite ? (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              Setting your password completes the invitation.
+            </p>
+          ) : showAccessRequest ? (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              An admin will review your request and reach out by email.
+            </p>
+          ) : (
+            <p className="text-center text-[11px] text-text-muted mt-4 font-mono">
+              UroFeed is invite-only ·{" "}
+              <button
+                type="button"
+                onClick={() => setShowAccessRequest(true)}
+                className="text-accent hover:underline underline-offset-2 transition-colors"
+              >
+                ask an admin for access
+              </button>
+            </p>
+          )}
         </div>
       </main>
       <AuthStatusBar state={busyState} />
