@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Filter,
   X,
+  Sparkles,
+  MessageSquareOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Panel } from "@/components/shell/Panel";
@@ -29,6 +31,14 @@ import { CustomizeSummaryDrawer } from "./CustomizeSummaryDrawer";
 import { getAiService } from "@/services/aiService";
 import { getAiSettings } from "@/hooks/useAiSettings";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shell/EmptyState";
+import {
+  SessionRowSkeleton,
+  SummarySkeleton,
+  TweetCardSkeleton,
+} from "@/components/shell/Skeletons";
+import { ExportMenu } from "@/components/summaries/ExportMenu";
+import type { SummaryExportInput } from "@/services/exportSummary";
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", {
@@ -72,6 +82,11 @@ export function SessionDetail({ sessionId }: Props) {
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ["session", sessionId],
     queryFn: () => feedService.getSession(sessionId),
+  });
+  const { data: congress } = useQuery({
+    queryKey: ["congress", session?.congressId],
+    enabled: Boolean(session?.congressId),
+    queryFn: () => feedService.getCongress(session!.congressId),
   });
   const { data: abstracts = [] } = useQuery({
     queryKey: ["abstracts", sessionId],
@@ -192,11 +207,44 @@ export function SessionDetail({ sessionId }: Props) {
 
   if (sessionLoading || !session) {
     return (
-      <div className="p-6 text-text-muted text-[12px] font-mono">
-        Loading session…
+      <div className="flex flex-col h-full min-h-0 gap-3 p-3">
+        <div className="flex-1 min-h-0 grid grid-cols-12 gap-3">
+          <Panel title="Session" className="col-span-12 lg:col-span-3 min-h-0" loading>
+            <div className="space-y-2">
+              <SessionRowSkeleton />
+              <SessionRowSkeleton />
+              <SessionRowSkeleton />
+            </div>
+          </Panel>
+          <Panel title="AI summary" className="col-span-12 lg:col-span-5 min-h-0" loading>
+            <SummarySkeleton />
+          </Panel>
+          <Panel title="Source tweets" className="col-span-12 lg:col-span-4 min-h-0" loading>
+            <div className="space-y-2">
+              <TweetCardSkeleton />
+              <TweetCardSkeleton />
+              <TweetCardSkeleton />
+            </div>
+          </Panel>
+        </div>
       </div>
     );
   }
+
+  const exportInput = (): SummaryExportInput | null => {
+    if (!summary) return null;
+    const abstractObj = selectedAbstract
+      ? abstracts.find((a) => a.id === selectedAbstract) ?? null
+      : null;
+    return {
+      summary,
+      title: abstractObj?.title ?? session.title,
+      congress: congress ?? undefined,
+      session,
+      abstract: abstractObj,
+      sourceLookup: sourceMap,
+    };
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3 p-3">
@@ -211,6 +259,15 @@ export function SessionDetail({ sessionId }: Props) {
           Back to congress
         </Link>
         <div className="ml-auto flex items-center gap-2">
+          {summary && (
+            <ExportMenu
+              resolve={() => {
+                const input = exportInput();
+                if (!input) throw new Error("Generate a summary first");
+                return input;
+              }}
+            />
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -294,8 +351,23 @@ export function SessionDetail({ sessionId }: Props) {
           className="col-span-12 lg:col-span-5 min-h-0"
           bodyClassName="overflow-y-auto"
         >
-          {!summary ? (
-            <EmptySummary onGenerate={() => regenerate.mutate()} />
+          {regenerate.isPending && !summary ? (
+            <SummarySkeleton />
+          ) : !summary ? (
+            <EmptyState
+              icon={Sparkles}
+              caption={
+                <>
+                  No summary generated yet · Click <span className="text-accent">Generate</span>{" "}
+                  to synthesise key takeaways from the source tweets.
+                </>
+              }
+              action={{
+                label: "Generate summary",
+                icon: RefreshCw,
+                onClick: () => regenerate.mutate(),
+              }}
+            />
           ) : (
             <div className="space-y-3">
               <SubPanel title="Key takeaways">
@@ -423,9 +495,20 @@ export function SessionDetail({ sessionId }: Props) {
           />
           <div className="mt-3 space-y-2">
             {scopedTweets.length === 0 && (
-              <div className="text-[12px] text-text-muted py-8 text-center font-mono">
-                no matching tweets
-              </div>
+              <EmptyState
+                icon={MessageSquareOff}
+                compact
+                caption={
+                  tweetFilter.sourceId || tweetFilter.hashtag
+                    ? "No tweets match the current source/hashtag filter."
+                    : "No tweets attached to this session yet · live ingestion targets handles + hashtags, classifier not active."
+                }
+                secondary={
+                  tweetFilter.sourceId || tweetFilter.hashtag
+                    ? { label: "clear filters", onClick: () => setTweetFilter({}) }
+                    : undefined
+                }
+              />
             )}
             {scopedTweets.map((t) => (
               <div

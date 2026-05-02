@@ -1,11 +1,13 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, PlayCircle, Plus, Search } from "lucide-react";
+import { CheckCircle2, PlayCircle, Plus, Search, Database } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import {
   Select,
   SelectContent,
@@ -191,6 +193,10 @@ export function SourcesTable() {
               </tr>
             </thead>
             <tbody>
+              {isLoading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRowSkeleton key={`sk-${i}`} cols={10} />
+                ))}
               {filtered.map((s) => (
                 <tr
                   key={s.id}
@@ -284,11 +290,38 @@ export function SourcesTable() {
               ))}
               {filtered.length === 0 && !isLoading && (
                 <tr>
-                  <td
-                    colSpan={10}
-                    className="px-3 py-8 text-center text-text-muted text-[12px]"
-                  >
-                    No sources match your filters.
+                  <td colSpan={10} className="p-4">
+                    <EmptyState
+                      icon={Database}
+                      caption={
+                        sources.length === 0
+                          ? "No sources yet · Add the first urology account you want to follow."
+                          : "No sources match your filters."
+                      }
+                      action={
+                        sources.length === 0
+                          ? {
+                              label: "Add source",
+                              icon: Plus,
+                              onClick: () => setOpenAdd(true),
+                              disabled: !canEdit,
+                              title: canEdit ? "" : "Editor or admin role required",
+                            }
+                          : undefined
+                      }
+                      secondary={
+                        sources.length > 0
+                          ? {
+                              label: "clear filters",
+                              onClick: () => {
+                                setQuery("");
+                                setRoleFilter(ALL);
+                                setListFilter(ALL);
+                              },
+                            }
+                          : undefined
+                      }
+                    />
                   </td>
                 </tr>
               )}

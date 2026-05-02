@@ -1,9 +1,11 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowUp, Pause, Play, RefreshCw } from "lucide-react";
+import { ArrowUp, Pause, Play, RefreshCw, Radio } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { TweetCard } from "./TweetCard";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { TweetStreamSkeleton } from "@/components/shell/Skeletons";
 import type { FeedDataset } from "./useFilteredTweets";
 
 const ESTIMATED_ROW_PX = 168;
@@ -130,9 +132,19 @@ export function TweetStream({ data }: { data: FeedDataset }) {
           className="absolute inset-0 overflow-auto px-3 py-3"
         >
           {tweets.length === 0 ? (
-            <div className="text-text-muted text-[12px] font-mono">
-              No posts match the current filters.
-            </div>
+            isFetching && lastUpdatedMs === 0 ? (
+              <TweetStreamSkeleton count={5} />
+            ) : (
+              <EmptyState
+                icon={Radio}
+                caption="No tweets yet · Sources/hashtags configured but nothing ingested in this window."
+                action={{
+                  label: "Refresh",
+                  icon: RefreshCw,
+                  onClick: () => refetchAll(),
+                }}
+              />
+            )
           ) : (
             <div
               style={{
