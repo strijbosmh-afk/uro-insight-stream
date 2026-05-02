@@ -20,6 +20,7 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -82,6 +83,11 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const ApiLookupHandleRoute = ApiLookupHandleRouteImport.update({
+  id: '/api/lookup-handle',
+  path: '/api/lookup-handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
   id: '/admin/recommendations',
   path: '/admin/recommendations',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/admin/recommendations'
+    | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
+  ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
     }
+    '/api/lookup-handle': {
+      id: '/api/lookup-handle'
+      path: '/api/lookup-handle'
+      fullPath: '/api/lookup-handle'
+      preLoaderRoute: typeof ApiLookupHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/recommendations': {
       id: '/admin/recommendations'
       path: '/admin/recommendations'
@@ -400,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
+  ApiLookupHandleRoute: ApiLookupHandleRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
