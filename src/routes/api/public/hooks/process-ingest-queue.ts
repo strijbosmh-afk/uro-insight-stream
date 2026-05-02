@@ -149,7 +149,10 @@ export const Route = createFileRoute("/api/public/hooks/process-ingest-queue")({
             } else {
               completed += 1;
             }
-            await supabaseAdmin.from("ingest_queue").update(patch).eq("id", job.id);
+            await supabaseAdmin
+              .from("ingest_queue")
+              .update(patch as never)
+              .eq("id", job.id);
           }
 
           if (runId) {

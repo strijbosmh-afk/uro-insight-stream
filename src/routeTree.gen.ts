@@ -27,6 +27,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
+import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -121,6 +122,12 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessIngestQueueRoute =
+  ApiPublicHooksProcessIngestQueueRouteImport.update({
+    id: '/api/public/hooks/process-ingest-queue',
+    path: '/api/public/hooks/process-ingest-queue',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -156,6 +164,7 @@ export interface FileRoutesByTo {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -177,6 +186,7 @@ export interface FileRoutesById {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
@@ -259,6 +272,7 @@ export interface RootRouteChildren {
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -394,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-ingest-queue': {
+      id: '/api/public/hooks/process-ingest-queue'
+      path: '/api/public/hooks/process-ingest-queue'
+      fullPath: '/api/public/hooks/process-ingest-queue'
+      preLoaderRoute: typeof ApiPublicHooksProcessIngestQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -422,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
