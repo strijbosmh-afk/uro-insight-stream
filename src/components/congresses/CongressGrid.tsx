@@ -4,6 +4,9 @@ import { Plus, Search } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { CardSkeleton } from "@/components/shell/Skeletons";
+import { CalendarRange } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -123,10 +126,45 @@ export function CongressGrid() {
             </div>
           </div>
 
-          {filtered.length === 0 && !isLoading && (
-            <div className="text-text-muted text-[12px]">
-              No congresses match the current filter.
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <CardSkeleton key={`sk-${i}`} />
+              ))}
             </div>
+          )}
+
+          {!isLoading && filtered.length === 0 && (
+            <EmptyState
+              icon={CalendarRange}
+              caption={
+                congresses.length === 0
+                  ? "No congresses yet · Create one to start tracking sessions, abstracts, and live commentary."
+                  : "No congresses match the current filter."
+              }
+              action={
+                congresses.length === 0
+                  ? {
+                      label: "New congress",
+                      icon: Plus,
+                      onClick: () => setOpenNew(true),
+                      disabled: !canEdit,
+                      title: canEdit ? "" : "Editor or admin role required",
+                    }
+                  : undefined
+              }
+              secondary={
+                congresses.length > 0
+                  ? {
+                      label: "clear filters",
+                      onClick: () => {
+                        setQuery("");
+                        setStatusFilter(ALL);
+                      },
+                    }
+                  : undefined
+              }
+            />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

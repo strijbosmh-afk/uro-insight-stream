@@ -6,11 +6,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, Hash } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import {
   Select,
   SelectContent,
@@ -190,6 +192,10 @@ export function HashtagsTable() {
               </tr>
             </thead>
             <tbody>
+              {isLoading &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRowSkeleton key={`sk-${i}`} cols={5} />
+                ))}
               {filtered.map((h, i) => {
                 const cnt = counts[i]?.data;
                 const cong = h.congressId ? congressById[h.congressId] : null;
@@ -238,11 +244,37 @@ export function HashtagsTable() {
               })}
               {filtered.length === 0 && !isLoading && (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-3 py-8 text-center text-text-muted text-[12px]"
-                  >
-                    No hashtags match your filters.
+                  <td colSpan={5} className="p-4">
+                    <EmptyState
+                      icon={Hash}
+                      caption={
+                        hashtags.length === 0
+                          ? "No hashtags yet · Add a congress tag to start collecting tweets."
+                          : "No hashtags match your filters."
+                      }
+                      action={
+                        hashtags.length === 0
+                          ? {
+                              label: "Add hashtag",
+                              icon: Plus,
+                              onClick: () => setOpenAdd(true),
+                              disabled: !canEdit,
+                              title: canEdit ? "" : "Editor or admin role required",
+                            }
+                          : undefined
+                      }
+                      secondary={
+                        hashtags.length > 0
+                          ? {
+                              label: "clear filters",
+                              onClick: () => {
+                                setQuery("");
+                                setCongressFilter(ALL);
+                              },
+                            }
+                          : undefined
+                      }
+                    />
                   </td>
                 </tr>
               )}
