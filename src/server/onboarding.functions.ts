@@ -51,3 +51,34 @@ export const getUserIngestStatus = createServerFn({ method: "GET" })
     }
     return counts;
   });
+
+/**
+ * Returns the count of recommended sources for the user's current specialties
+ * that they are NOT already subscribed to. Drives the dashboard
+ * "specialty-changed" banner.
+ */
+export const getNewRecommendedSourcesCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: specs } = await supabaseAdmin
+      .from("user_specialties")
+      .select("specialty_id")
+      .eq("user_id", userId);
+    const specialtyIds = (specs ?? []).map((r: { specialty_id: string }) => r.specialty_id);
+    if (specialtyIds.length === 0) return { count: 0 };
+    const { data: recs } = await supabaseAdmin
+      .from("recommended_sources_by_specialty")
+      .select("source_id")
+      .in("specialty_id", specialtyIds);
+    const recIds = new Set((recs ?? []).map((r: { source_id: string }) => r.source_id));
+    if (recIds.size === 0) return { count: 0 };
+    const { data: subs } = await supabaseAdmin
+      .from("user_subscribed_sources")
+      .select("source_id")
+      .eq("user_id", userId);
+    const subIds = new Set((subs ?? []).map((r: { source_id: string }) => r.source_id));
+    let missing = 0;
+    for (const id of recIds) if (!subIds.has(id)) missing += 1;
+    return { count: missing };
+  });

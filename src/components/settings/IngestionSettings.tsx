@@ -124,9 +124,20 @@ export function IngestionSettings() {
               {cfg.enabled ? "enabled" : "disabled"}
             </Badge>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Gauge className="h-3.5 w-3.5" />
-            {rateUsage}/{cfg.rate_limit_per_15min} runs · last 15min
+          <div className="flex items-center gap-4 text-[11px] font-mono text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Gauge className="h-3.5 w-3.5" />
+              runs: {rateUsage}/{cfg.rate_limit_per_15min} · 15min
+            </span>
+            <span>
+              lookup rate: {data.lookup?.count ?? 0} / {data.lookup?.limit ?? 200} / 15min
+            </span>
+            <span>
+              queue depth: {data.queue?.pending ?? 0} pending · {data.queue?.processing ?? 0} processing · last drain:{" "}
+              {data.queue?.lastDrainAt
+                ? formatDistanceToNow(new Date(data.queue.lastDrainAt), { addSuffix: true })
+                : "—"}
+            </span>
           </div>
         </div>
 
@@ -197,6 +208,24 @@ export function IngestionSettings() {
           </div>
         </div>
       </section>
+
+      {/* Top lookup users */}
+      {(data.topLookupUsers ?? []).length > 0 && (
+        <section className="border border-border bg-panel p-4 relative">
+          <div className="absolute top-0 left-0 h-0.5 w-12 bg-cyan-400" />
+          <h3 className="font-mono text-sm uppercase tracking-wide mb-3">
+            Top lookup users · last hour
+          </h3>
+          <div className="space-y-1 font-mono text-xs">
+            {data.topLookupUsers!.map((u) => (
+              <div key={u.user_id} className="flex items-center justify-between">
+                <span className="text-text-primary">@{u.handle}</span>
+                <span className="text-accent">{u.count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Manual sync */}
       <section className="border border-border bg-panel p-4 relative">

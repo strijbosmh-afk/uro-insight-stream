@@ -10,6 +10,24 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { isValidHandle, isValidHashtag, normalizeHandle, normalizeHashtag } from "@/lib/validation";
 
+function rerun(step: "Specialties" | "Congresses" | "Sources" | "Hashtags") {
+  window.dispatchEvent(
+    new CustomEvent("urofeed:open-wizard-step", { detail: { step } }),
+  );
+}
+
+function RerunButton({ step }: { step: "Specialties" | "Congresses" | "Sources" | "Hashtags" }) {
+  return (
+    <button
+      type="button"
+      onClick={() => rerun(step)}
+      className="font-mono text-[10px] uppercase tracking-wider text-accent hover:underline"
+    >
+      Re-run this step ↗
+    </button>
+  );
+}
+
 type Specialty = { id: string; label: string; description: string; sort_order: number };
 type UserSpec = { specialty_id: string; is_primary: boolean };
 type Source = { id: string; handle: string; display_name: string; role: string };
@@ -88,7 +106,11 @@ export function InterestsSettings() {
 
   return (
     <div className="grid grid-cols-12 gap-3">
-      <Panel title="Specialties" className="col-span-12">
+      <Panel
+        title="Specialties"
+        className="col-span-12"
+        actions={<RerunButton step="Specialties" />}
+      >
         <p className="text-[12px] text-text-muted mb-4">
           Pick up to {MAX_SPECIALTIES}. The starred one is your primary focus and gets the highest weight in
           recommendations.
@@ -327,7 +349,11 @@ function SubscriptionsBlock() {
 
   return (
     <>
-      <Panel title="Following · sources" className="col-span-12 xl:col-span-6">
+      <Panel
+        title="Following · sources"
+        className="col-span-12 xl:col-span-6"
+        actions={<RerunButton step="Sources" />}
+      >
         <p className="text-[12px] text-text-muted mb-3">
           Sources you follow appear in your Live Feed first.
         </p>
@@ -383,7 +409,11 @@ function SubscriptionsBlock() {
         </div>
       </Panel>
 
-      <Panel title="Following · hashtags" className="col-span-12 xl:col-span-6">
+      <Panel
+        title="Following · hashtags"
+        className="col-span-12 xl:col-span-6"
+        actions={<RerunButton step="Hashtags" />}
+      >
         <p className="text-[12px] text-text-muted mb-3">
           Hashtags you follow are highlighted in the feed.
         </p>
@@ -431,7 +461,11 @@ function SubscriptionsBlock() {
         </div>
       </Panel>
 
-      <Panel title="Following · congresses" className="col-span-12">
+      <Panel
+        title="Following · congresses"
+        className="col-span-12"
+        actions={<RerunButton step="Congresses" />}
+      >
         <p className="text-[12px] text-text-muted mb-3">
           Add congress IDs (e.g. <span className="font-mono text-accent">cong_eau26</span>). The wizard in Phase 2
           will let you pick from a list.
