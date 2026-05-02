@@ -806,16 +806,31 @@ function ReviewStep({
   specialties,
   primarySpecialty,
   sources,
+  congressIds,
+  hashtags,
 }: {
   specialties: string[];
   primarySpecialty: string | null;
   sources: DraftSource[];
+  congressIds: string[];
+  hashtags: string[];
 }) {
   const { data: specs = [] } = useQuery({
     queryKey: ["urology-specialties"],
     queryFn: async () => {
       const { data } = await supabase.from("urology_specialties").select("id, label");
       return (data ?? []) as Array<{ id: string; label: string }>;
+    },
+  });
+  const { data: congs = [] } = useQuery({
+    queryKey: ["wizard-review-congresses", congressIds.join(",")],
+    enabled: congressIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("congresses")
+        .select("id, name, short_code")
+        .in("id", congressIds);
+      return (data ?? []) as Array<{ id: string; name: string; short_code: string }>;
     },
   });
 
@@ -862,6 +877,40 @@ function ReviewStep({
           ))}
           {sources.length === 0 && (
             <p className="text-xs text-text-muted italic">No sources — feed will be empty.</p>
+          )}
+        </div>
+      </Section>
+
+      <Section title={`Congresses (${congressIds.length})`}>
+        <div className="flex flex-wrap gap-2">
+          {congs.map((c) => (
+            <span
+              key={c.id}
+              className="px-2 py-1 text-xs font-mono text-text-primary"
+              style={{ background: "var(--panel-elevated)", border: "1px solid var(--border)" }}
+            >
+              {c.short_code}
+            </span>
+          ))}
+          {congressIds.length === 0 && (
+            <p className="text-xs text-text-muted italic">None selected.</p>
+          )}
+        </div>
+      </Section>
+
+      <Section title={`Hashtags (${hashtags.length})`}>
+        <div className="flex flex-wrap gap-2">
+          {hashtags.map((t) => (
+            <span
+              key={t}
+              className="px-2 py-1 text-xs font-mono text-accent"
+              style={{ background: "var(--panel-elevated)", border: "1px solid var(--border)" }}
+            >
+              #{t}
+            </span>
+          ))}
+          {hashtags.length === 0 && (
+            <p className="text-xs text-text-muted italic">None added.</p>
           )}
         </div>
       </Section>
