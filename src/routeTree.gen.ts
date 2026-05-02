@@ -28,6 +28,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
+import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -128,6 +129,12 @@ const ApiPublicHooksProcessIngestQueueRoute =
     path: '/api/public/hooks/process-ingest-queue',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMatchTweetsToSessionsRoute =
+  ApiPublicHooksMatchTweetsToSessionsRouteImport.update({
+    id: '/api/public/hooks/match-tweets-to-sessions',
+    path: '/api/public/hooks/match-tweets-to-sessions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -164,6 +172,7 @@ export interface FileRoutesByTo {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -186,6 +195,7 @@ export interface FileRoutesById {
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
@@ -251,6 +263,7 @@ export interface FileRouteTypes {
     | '/api/lookup-handle'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
@@ -272,6 +285,7 @@ export interface RootRouteChildren {
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -415,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessIngestQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/match-tweets-to-sessions': {
+      id: '/api/public/hooks/match-tweets-to-sessions'
+      path: '/api/public/hooks/match-tweets-to-sessions'
+      fullPath: '/api/public/hooks/match-tweets-to-sessions'
+      preLoaderRoute: typeof ApiPublicHooksMatchTweetsToSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -443,6 +464,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksMatchTweetsToSessionsRoute:
+    ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
@@ -453,3 +476,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

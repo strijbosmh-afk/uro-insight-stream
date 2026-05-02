@@ -73,17 +73,13 @@ export interface FeedService {
 import { mockFeedService } from "./mockFeedService";
 import { apiFeedService } from "./apiFeedService";
 
-// Default to the live (Supabase-backed) hybrid service. Set
-// VITE_FEED_BACKEND=mock to revert to in-memory mock data.
-// Three modes:
-//   - "mock":   in-memory only, no Supabase
-//   - "api":    fully Supabase (target end-state)
-//   - "hybrid": real for sources/hashtags/tweets, mock for the rest
-// We're currently in "hybrid" — apiFeedService is the implementation that
-// honours the split. The env var still selects pure mock when needed.
-export type FeedBackend = "mock" | "hybrid" | "api";
+// Two modes:
+//   - "mock": in-memory only, used by tests / local development.
+//   - "api":  fully Supabase. Default for production.
+// The env var selects pure mock when needed.
+export type FeedBackend = "mock" | "api";
 const envBackend = import.meta.env.VITE_FEED_BACKEND as FeedBackend | undefined;
-export const feedBackend: FeedBackend = envBackend ?? "hybrid";
+export const feedBackend: FeedBackend = envBackend === "mock" ? "mock" : "api";
 
 export const feedService: FeedService =
   feedBackend === "mock" ? mockFeedService : apiFeedService;

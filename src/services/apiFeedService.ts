@@ -1,29 +1,25 @@
-// Hybrid backend.
+// Real Supabase-backed FeedService implementation.
 //
-// REAL (Supabase): sources, hashtags, tweets, ingestion_config, ingestion_runs.
-// MOCK (delegated to mockFeedService): source lists, congresses, sessions,
-// abstracts, summaries.
-//
-// Real tweets ingested by the X API adapter carry sessionId=null and
-// abstractId=null. There is NO classifier yet — never synthesize them.
-// Tweets without a sessionId must not appear on session detail pages;
-// listTweets({ sessionId }) deliberately falls through to the mock store
-// so SessionDetail keeps its mock context, while listTweets() with no
-// session/abstract filter returns ONLY real tweets so the Live Feed
-// proves the live ingestion pipeline.
-//
-// TODO(next-turn): migrate the mock-delegated methods to Supabase in this
-// order — congresses → sessions → abstracts → summaries. After each
-// migration, drop the corresponding mock delegate below and switch the
-// matching listTweets branch off the mock fallback.
+// Every method queries Supabase. There are no mock fallbacks. The mock
+// service still exists for tests (selected via VITE_FEED_BACKEND=mock).
 
 import type { FeedService, TweetFilter } from "./feedService";
-import type { Source, Hashtag, Tweet } from "@/types";
+import type {
+  Source,
+  Hashtag,
+  Tweet,
+  Congress,
+  Session,
+  Abstract,
+  Summary,
+} from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mockFeedService } from "./mockFeedService";
 
 const id = (prefix: string) =>
   `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+// ---------- Row mappers ----------
 
 function rowToSource(r: {
   id: string;
@@ -85,9 +81,6 @@ function rowToTweet(r: {
 }): Tweet {
   return {
     id: r.id,
-    // Real ingested tweets have no source_id link until we match author_handle
-    // back to the sources table. Surface the handle so UI can still render
-    // an attribution; never invent an id that pretends to match a Source row.
     sourceId: r.source_id ?? `@${r.author_handle.replace(/^@/, "")}`,
     text: r.text,
     createdAt: r.created_at,
@@ -102,8 +95,117 @@ function rowToTweet(r: {
   };
 }
 
+function rowToCongress(r: {
+  id: string;
+  name: string;
+  short_code: string;
+  city: string | null;
+  country: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  primary_hashtags: string[];
+}): Congress {
+  return {
+    id: r.id,
+    name: r.name,
+    shortCode: r.short_code,
+    city: r.city ?? "",
+    country: r.country ?? "",
+    startDate: r.start_date ?? "",
+    endDate: r.end_date ?? "",
+    status: r.status as Congress["status"],
+    primaryHashtags: r.primary_hashtags,
+  };
+}
+function congressToRow(c: Partial<Congress> & { id?: string }) {
+  return {
+    ...(c.id ? { id: c.id } : {}),
+    ...(c.name !== undefined ? { name: c.name } : {}),
+    ...(c.shortCode !== undefined ? { short_code: c.shortCode } : {}),
+    ...(c.city !== undefined ? { city: c.city } : {}),
+    ...(c.country !== undefined ? { country: c.country } : {}),
+    ...(c.startDate !== undefined ? { start_date: c.startDate || null } : {}),
+    ...(c.endDate !== undefined ? { end_date: c.endDate || null } : {}),
+    ...(c.status !== undefined ? { status: c.status } : {}),
+    ...(c.primaryHashtags !== undefined
+      ? { primary_hashtags: c.primaryHashtags }
+      : {}),
+  };
+}
+
+function rowToSession(r: {
+  id: string;
+  congress_id: string;
+  title: string;
+  track: string;
+  room: string;
+  start_time: string;
+  end_time: string;
+  chairs: string[];
+  abstract_ids: string[];
+}): Session {
+  return {
+    id: r.id,
+    congressId: r.congress_id,
+    title: r.title,
+    track: r.track,
+    room: r.room,
+    startTime: r.start_time,
+    endTime: r.end_time,
+    chairs: r.chairs,
+    abstractIds: r.abstract_ids,
+  };
+}
+
+function rowToAbstract(r: {
+  id: string;
+  session_id: string;
+  title: string;
+  authors: string[];
+  institution: string;
+  abstract_number: string;
+}): Abstract {
+  return {
+    id: r.id,
+    sessionId: r.session_id,
+    title: r.title,
+    authors: r.authors,
+    institution: r.institution,
+    abstractNumber: r.abstract_number,
+  };
+}
+
+function rowToSummary(r: {
+  id: string;
+  target_type: string;
+  target_id: string;
+  bullet_points: string[];
+  key_quotes: unknown;
+  sentiment: string;
+  controversies: string[];
+  takeaways: string[];
+  tweet_count: number;
+  generated_at: string;
+  model_used: string;
+}): Summary {
+  return {
+    id: r.id,
+    targetType: r.target_type as Summary["targetType"],
+    targetId: r.target_id,
+    bulletPoints: r.bullet_points,
+    keyQuotes: (r.key_quotes as Summary["keyQuotes"]) ?? [],
+    sentiment: r.sentiment as Summary["sentiment"],
+    controversies: r.controversies,
+    takeaways: r.takeaways,
+    tweetCount: r.tweet_count,
+    generatedAt: r.generated_at,
+    modelUsed: r.model_used,
+  };
+}
+
 export const apiFeedService: FeedService = {
-  // ---------- Sources (Supabase) ----------
+  // ---------- Sources ----------
   async listSources() {
     const { data, error } = await supabase.from("sources").select("*").order("handle");
     if (error) throw new Error(error.message);
@@ -130,7 +232,6 @@ export const apiFeedService: FeedService = {
     if (error) throw new Error(error.message);
   },
   async testSource(idArg) {
-    // Show last 5 tweets we already have for this source.
     const { data, error } = await supabase
       .from("tweets")
       .select("*")
@@ -141,13 +242,13 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToTweet);
   },
 
-  // ---------- Source lists (mock for now) ----------
+  // ---------- Source lists (still mock — no schema yet) ----------
   listSourceLists: () => mockFeedService.listSourceLists(),
   addSourceList: (i) => mockFeedService.addSourceList(i),
   updateSourceList: (i, p) => mockFeedService.updateSourceList(i, p),
   removeSourceList: (i) => mockFeedService.removeSourceList(i),
 
-  // ---------- Hashtags (Supabase) ----------
+  // ---------- Hashtags ----------
   async listHashtags(): Promise<Hashtag[]> {
     const { data, error } = await supabase.from("hashtags").select("*").order("tag");
     if (error) throw new Error(error.message);
@@ -209,32 +310,156 @@ export const apiFeedService: FeedService = {
     return count ?? 0;
   },
 
-  // ---------- Congresses / sessions / abstracts (mock for now) ----------
-  listCongresses: () => mockFeedService.listCongresses(),
-  getCongress: (i) => mockFeedService.getCongress(i),
-  addCongress: (i) => mockFeedService.addCongress(i),
-  updateCongress: (i, p) => mockFeedService.updateCongress(i, p),
-  removeCongress: (i) => mockFeedService.removeCongress(i),
-  congressActivity: (i, h) => mockFeedService.congressActivity(i, h),
-  countCongressTweets: (i) => mockFeedService.countCongressTweets(i),
-  listSessions: (i) => mockFeedService.listSessions(i),
-  getSession: (i) => mockFeedService.getSession(i),
-  listAbstracts: (i) => mockFeedService.listAbstracts(i),
-  getAbstract: (i) => mockFeedService.getAbstract(i),
+  // ---------- Congresses ----------
+  async listCongresses() {
+    const { data, error } = await supabase
+      .from("congresses")
+      .select("*")
+      .order("start_date", { ascending: false, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(rowToCongress);
+  },
+  async getCongress(idArg) {
+    const { data, error } = await supabase
+      .from("congresses")
+      .select("*")
+      .eq("id", idArg)
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToCongress(data);
+  },
+  async addCongress(input) {
+    const row = { ...congressToRow(input as Congress), id: id("cong") } as never;
+    const { data, error } = await supabase
+      .from("congresses")
+      .insert(row)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToCongress(data);
+  },
+  async updateCongress(idArg, patch) {
+    const { data, error } = await supabase
+      .from("congresses")
+      .update(congressToRow(patch) as never)
+      .eq("id", idArg)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToCongress(data);
+  },
+  async removeCongress(idArg) {
+    const { error } = await supabase.from("congresses").delete().eq("id", idArg);
+    if (error) throw new Error(error.message);
+  },
+  async congressActivity(idArg, hours) {
+    const since = new Date(Date.now() - hours * 3_600_000).toISOString();
+    const c = await this.getCongress(idArg);
+    const tags = (c.primaryHashtags ?? []).map((t) => t.replace(/^#/, ""));
+    const { data: sessRows } = await supabase
+      .from("sessions")
+      .select("id")
+      .eq("congress_id", idArg);
+    const sessIds = (sessRows ?? []).map((r) => r.id);
 
-  // ---------- Tweets (Supabase, falls back to mock when empty) ----------
-  async listTweets(filter: TweetFilter) {
-    // Session/abstract filters target MOCK data because real tweets do not
-    // carry session_id/abstract_id yet. Delegate fully so SessionDetail and
-    // AbstractDetail keep working on the mock dataset until the classifier
-    // (and the migrated sessions/abstracts tables) land.
-    if (filter.sessionId || filter.abstractId) {
-      return mockFeedService.listTweets(filter);
+    // Pull tweets matching either a session in this congress or one of its hashtags
+    let tweetRows: Array<{ created_at: string }> = [];
+    if (sessIds.length > 0) {
+      const { data } = await supabase
+        .from("tweets")
+        .select("created_at")
+        .gte("created_at", since)
+        .in("session_id", sessIds);
+      tweetRows = data ?? [];
+    }
+    if (tags.length > 0) {
+      const { data } = await supabase
+        .from("tweets")
+        .select("created_at")
+        .gte("created_at", since)
+        .overlaps("hashtags", tags);
+      tweetRows = tweetRows.concat(data ?? []);
     }
 
-    // Otherwise return ONLY real tweets from Supabase. No mock blend — the
-    // Live Feed must visibly prove the ingestion pipeline.
+    const buckets = new Array(hours).fill(0) as number[];
+    const now = Date.now();
+    for (const t of tweetRows) {
+      const ageH = Math.floor((now - new Date(t.created_at).getTime()) / 3_600_000);
+      if (ageH >= 0 && ageH < hours) buckets[hours - 1 - ageH] += 1;
+    }
+    return buckets;
+  },
+  async countCongressTweets(idArg) {
+    const c = await this.getCongress(idArg);
+    const tags = (c.primaryHashtags ?? []).map((t) => t.replace(/^#/, ""));
+    const { data: sessRows } = await supabase
+      .from("sessions")
+      .select("id")
+      .eq("congress_id", idArg);
+    const sessIds = (sessRows ?? []).map((r) => r.id);
+    const ids = new Set<string>();
+    if (sessIds.length > 0) {
+      const { data } = await supabase
+        .from("tweets")
+        .select("id")
+        .in("session_id", sessIds);
+      (data ?? []).forEach((r) => ids.add(r.id));
+    }
+    if (tags.length > 0) {
+      const { data } = await supabase
+        .from("tweets")
+        .select("id")
+        .overlaps("hashtags", tags);
+      (data ?? []).forEach((r) => ids.add(r.id));
+    }
+    return ids.size;
+  },
+
+  // ---------- Sessions ----------
+  async listSessions(congressId) {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("congress_id", congressId)
+      .order("start_time");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(rowToSession);
+  },
+  async getSession(idArg) {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("id", idArg)
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToSession(data);
+  },
+
+  // ---------- Abstracts ----------
+  async listAbstracts(sessionId) {
+    const { data, error } = await supabase
+      .from("abstracts")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("abstract_number");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(rowToAbstract);
+  },
+  async getAbstract(idArg) {
+    const { data, error } = await supabase
+      .from("abstracts")
+      .select("*")
+      .eq("id", idArg)
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToAbstract(data);
+  },
+
+  // ---------- Tweets ----------
+  async listTweets(filter: TweetFilter) {
     let q = supabase.from("tweets").select("*").order("created_at", { ascending: false });
+    if (filter.sessionId) q = q.eq("session_id", filter.sessionId);
+    if (filter.abstractId) q = q.eq("abstract_id", filter.abstractId);
     if (filter.sourceIds?.length) q = q.in("source_id", filter.sourceIds);
     if (filter.hashtags?.length) {
       q = q.overlaps("hashtags", filter.hashtags.map((h) => h.replace(/^#/, "")));
@@ -247,8 +472,47 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToTweet);
   },
 
-  // ---------- Summaries (mock store for now) ----------
-  getSummary: (t, i) => mockFeedService.getSummary(t, i),
-  listSummaries: () => mockFeedService.listSummaries(),
-  saveSummary: (t, i, s) => mockFeedService.saveSummary(t, i, s),
+  // ---------- Summaries ----------
+  async getSummary(targetType, targetId) {
+    const { data, error } = await supabase
+      .from("summaries")
+      .select("*")
+      .eq("target_type", targetType)
+      .eq("target_id", targetId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? rowToSummary(data) : null;
+  },
+  async listSummaries() {
+    const { data, error } = await supabase
+      .from("summaries")
+      .select("*")
+      .order("generated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(rowToSummary);
+  },
+  async saveSummary(targetType, targetId, summary) {
+    const row = {
+      id: summary.id,
+      target_type: targetType,
+      target_id: targetId,
+      bullet_points: summary.bulletPoints,
+      key_quotes: summary.keyQuotes as never,
+      sentiment: summary.sentiment,
+      controversies: summary.controversies,
+      takeaways: summary.takeaways,
+      tweet_count: summary.tweetCount,
+      generated_at: summary.generatedAt,
+      model_used: summary.modelUsed,
+    };
+    const { data, error } = await supabase
+      .from("summaries")
+      .upsert(row as never, { onConflict: "id" })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToSummary(data);
+  },
 };

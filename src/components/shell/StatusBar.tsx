@@ -40,10 +40,9 @@ function V({
 }
 
 function BackendChip() {
-  // mock = warning, hybrid = cyan accent (transitional), api = success
+  // mock = warning, api = success
   const { color, label } = {
     mock: { color: "text-warning border-warning/40", label: "mock" },
-    hybrid: { color: "text-accent border-accent/40", label: "hybrid" },
     api: { color: "text-success border-success/40", label: "api" },
   }[feedBackend];
   return (
@@ -52,11 +51,7 @@ function BackendChip() {
         "px-1.5 py-[1px] border rounded-[2px] font-mono text-[9px] uppercase tracking-wider",
         color,
       )}
-      title={
-        feedBackend === "hybrid"
-          ? "Sources, hashtags & tweets are live from Supabase. Congresses, sessions, abstracts & summaries still mock."
-          : `Feed backend: ${label}`
-      }
+      title={`Feed backend: ${label}`}
     >
       {label}
     </span>

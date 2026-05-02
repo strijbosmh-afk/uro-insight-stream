@@ -287,6 +287,32 @@ export function IngestionSettings() {
           </div>
         )}
       </section>
+
+      {/* Tweet → session matcher */}
+      <section className="border border-border bg-panel p-4 relative">
+        <div className="absolute top-0 left-0 h-0.5 w-12 bg-cyan-400" />
+        <h3 className="font-mono text-sm uppercase tracking-wide mb-3">
+          Tweet matcher
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
+          <div>
+            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">unmatched</div>
+            <div className="text-base">{data.matcher?.unmatched ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">matched · 24h</div>
+            <div className="text-base">{data.matcher?.matchedLast24h ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">llm calls · 24h</div>
+            <div className="text-base">{data.matcher?.llmCallsLast24h ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">llm tokens · 24h</div>
+            <div className="text-base">{data.matcher?.llmTokensLast24h ?? 0}</div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

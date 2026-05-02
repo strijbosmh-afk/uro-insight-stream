@@ -1,6 +1,5 @@
 import type { Tweet, Summary } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { mockSummaries } from "@/data/mock";
 
 export type SummarizeContext = {
   type: "session" | "abstract" | "congress";
@@ -59,19 +58,6 @@ function genericSummary(
 export const mockAiService: AiService = {
   async summarize({ tweets, context, options }) {
     await new Promise((r) => setTimeout(r, 400));
-    // Try canned summary first.
-    const canned = mockSummaries.find(
-      (s) => s.targetType === context.type && s.targetId === context.targetId,
-    );
-    if (canned) {
-      return {
-        ...canned,
-        id: `${canned.id}_re_${Date.now().toString(36)}`,
-        tweetCount: tweets.length || canned.tweetCount,
-        generatedAt: new Date().toISOString(),
-        modelUsed: `mock:${options.tone}`,
-      };
-    }
     return genericSummary(context, tweets, options);
   },
   async ping(model) {
