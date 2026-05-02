@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ArrowUpDown, FileText } from "lucide-react";
+import { Search, ArrowUpDown, FileText, FileSearch } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,11 +21,16 @@ import {
 } from "@/components/ui/table";
 import { feedService } from "@/services/feedService";
 import { cn } from "@/lib/utils";
-import type { Summary, Session, Abstract, Congress } from "@/types";
+import type { Summary, Session, Abstract } from "@/types";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
+import { ExportMenu } from "./ExportMenu";
+import type { SummaryExportInput } from "@/services/exportSummary";
 
 type EnrichedSummary = Summary & {
   title: string;
   context?: string;
+  exportInput: SummaryExportInput;
   navTarget?:
     | { kind: "session"; sessionId: string }
     | { kind: "congress"; congressId: string };
@@ -60,6 +65,14 @@ export function SummariesIndex() {
     queryKey: ["all-summaries"],
     queryFn: () => feedService.listSummaries(),
   });
+  const { data: sources = [] } = useQuery({
+    queryKey: ["sources"],
+    queryFn: () => feedService.listSources(),
+  });
+  const sourceMap = React.useMemo(
+    () => new Map(sources.map((s) => [s.id, s])),
+    [sources],
+  );
   const { data: congresses = [] } = useQuery({
     queryKey: ["congresses"],
     queryFn: () => feedService.listCongresses(),
@@ -137,6 +150,13 @@ export function SummariesIndex() {
           ...s,
           title: sess?.title ?? s.targetId,
           context: cong ? `${cong.shortCode} · ${sess?.track ?? ""}` : undefined,
+          exportInput: {
+            summary: s,
+            title: sess?.title ?? s.targetId,
+            congress: cong,
+            session: sess,
+            sourceLookup: sourceMap,
+          },
           navTarget: sess
             ? { kind: "session" as const, sessionId: sess.id }
             : undefined,
@@ -152,6 +172,14 @@ export function SummariesIndex() {
           context: cong
             ? `${cong.shortCode} · ${abs?.abstractNumber ?? ""}`
             : undefined,
+          exportInput: {
+            summary: s,
+            title: abs?.title ?? s.targetId,
+            congress: cong,
+            session: sess,
+            abstract: abs,
+            sourceLookup: sourceMap,
+          },
           navTarget: sess
             ? { kind: "session" as const, sessionId: sess.id }
             : undefined,
@@ -163,12 +191,18 @@ export function SummariesIndex() {
         ...s,
         title: cong?.name ?? s.targetId,
         context: cong?.city,
+        exportInput: {
+          summary: s,
+          title: cong?.name ?? s.targetId,
+          congress: cong,
+          sourceLookup: sourceMap,
+        },
         navTarget: cong
           ? { kind: "congress" as const, congressId: cong.id }
           : undefined,
       };
     });
-  }, [summaries, sessionMap, abstractMap, congressMap]);
+  }, [summaries, sessionMap, abstractMap, congressMap, sourceMap]);
 
   const filtered = React.useMemo(() => {
     let out = enriched;
@@ -270,9 +304,14 @@ export function SummariesIndex() {
               <TableHead className="w-20 text-[10px] text-right">Tweets</TableHead>
               <TableHead className="w-40 text-[10px]">Generated</TableHead>
               <TableHead className="w-40 text-[10px]">Model</TableHead>
+              <TableHead className="w-24 text-[10px] text-right">Export</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isLoading &&
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRowSkeleton key={`sk-${i}`} cols={7} />
+              ))}
             {filtered.map((s) => {
               const onOpen = () => {
                 if (!s.navTarget) return;
@@ -330,16 +369,47 @@ export function SummariesIndex() {
                   <TableCell className="text-[11px] font-mono text-text-muted">
                     {s.modelUsed}
                   </TableCell>
+                  <TableCell
+                    className="text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExportMenu
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2"
+                      label=""
+                      resolve={() => s.exportInput}
+                    />
+                  </TableCell>
                 </TableRow>
               );
             })}
             {filtered.length === 0 && !isLoading && (
               <TableRow className="border-border hover:bg-transparent">
                 <TableCell
-                  colSpan={6}
-                  className="py-10 text-center text-[12px] font-mono text-text-muted"
+                  colSpan={7}
+                  className="py-6"
                 >
-                  no summaries match the current filters
+                  <EmptyState
+                    icon={FileSearch}
+                    caption={
+                      enriched.length === 0
+                        ? "No summaries yet · Generate one from any session detail page · they'll show up here automatically."
+                        : "No summaries match the current filters."
+                    }
+                    secondary={
+                      enriched.length > 0
+                        ? {
+                            label: "reset filters",
+                            onClick: () => {
+                              setQ("");
+                              setType("all");
+                              setSentiment("all");
+                            },
+                          }
+                        : undefined
+                    }
+                  />
                 </TableCell>
               </TableRow>
             )}
