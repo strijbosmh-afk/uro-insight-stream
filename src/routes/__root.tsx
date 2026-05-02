@@ -62,8 +62,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
     // Bypass redirects for /lovable/* server routes (auth email webhook, preview, etc.)
     if (location.pathname.startsWith("/lovable/")) return;
-    // DEV BYPASS: auth disabled for local testing. Remove to re-enable login redirects.
-    return;
     // Server-side / loader-side guard. Runs on every navigation including
     // initial deep-link. We only enforce on the client because the Supabase
     // session lives in browser storage; during SSR there's no session to
@@ -112,15 +110,11 @@ function RootComponent() {
 
 function AuthGate() {
   const { user, loading } = useAuth();
-  // DEV BYPASS: skip the unauthenticated redirect so the app shell renders
-  // without a Supabase session. Remove the `|| true` to re-enable.
-  const BYPASS_AUTH = true;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onAuthRoute = pathname === "/auth";
 
   React.useEffect(() => {
     if (loading) return;
-    if (BYPASS_AUTH) return;
     if (!user && !onAuthRoute) {
       // Preserve the originally-requested URL so we can bounce back after sign-in.
       const here = window.location.pathname + window.location.search;
@@ -143,9 +137,8 @@ function AuthGate() {
   // /auth route: render its own component (no shell).
   if (onAuthRoute) return <Outlet />;
 
-  // No user — normally we'd render nothing while redirecting, but the dev
-  // bypass lets the AppShell render anyway so you can click around.
-  if (!user && !BYPASS_AUTH) return null;
+  // No user — render nothing while AuthGate redirects to /auth.
+  if (!user) return null;
 
   return <AppShell />;
 }
