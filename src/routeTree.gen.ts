@@ -20,6 +20,8 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 
@@ -78,6 +80,16 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksTweetIngestRoute =
   ApiPublicHooksTweetIngestRouteImport.update({
     id: '/api/public/hooks/tweet-ingest',
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -120,6 +134,8 @@ export interface FileRoutesByTo {
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -136,6 +152,8 @@ export interface FileRoutesById {
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -153,6 +171,8 @@ export interface FileRouteTypes {
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,6 +188,8 @@ export interface FileRouteTypes {
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
   id:
     | '__root__'
     | '/'
@@ -183,6 +205,8 @@ export interface FileRouteTypes {
     | '/sessions/$sessionId'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/tweet-ingest'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,6 +222,8 @@ export interface RootRouteChildren {
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -279,6 +305,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
     }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/tweet-ingest': {
       id: '/api/public/hooks/tweet-ingest'
       path: '/api/public/hooks/tweet-ingest'
@@ -321,16 +361,9 @@ const rootRouteChildren: RootRouteChildren = {
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
