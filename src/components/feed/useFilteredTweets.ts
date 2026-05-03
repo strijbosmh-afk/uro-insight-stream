@@ -108,6 +108,7 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
       if (sessIdsForCongress && (!t.sessionId || !sessIdsForCongress.has(t.sessionId)))
         return false;
       if (allowedSourceIds && !allowedSourceIds.has(t.sourceId)) return false;
+      if (filters.sourceId && t.sourceId !== filters.sourceId) return false;
       if (wantTags) {
         const ok = t.hashtags.some((h) => wantTags.has(h.toLowerCase()));
         if (!ok) return false;
