@@ -27,6 +27,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
+import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
@@ -123,6 +124,12 @@ const ApiPublicHooksTweetIngestRoute =
     path: '/api/public/hooks/tweet-ingest',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksTestHierarchyParseRoute =
+  ApiPublicHooksTestHierarchyParseRouteImport.update({
+    id: '/api/public/hooks/test-hierarchy-parse',
+    path: '/api/public/hooks/test-hierarchy-parse',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSummarizeJobRoute =
   ApiPublicHooksSummarizeJobRouteImport.update({
     id: '/api/public/hooks/summarize-job',
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -183,6 +191,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
+  '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -278,6 +290,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
+    | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -301,6 +314,7 @@ export interface RootRouteChildren {
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
+  ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -435,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksTweetIngestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/test-hierarchy-parse': {
+      id: '/api/public/hooks/test-hierarchy-parse'
+      path: '/api/public/hooks/test-hierarchy-parse'
+      fullPath: '/api/public/hooks/test-hierarchy-parse'
+      preLoaderRoute: typeof ApiPublicHooksTestHierarchyParseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/summarize-job': {
       id: '/api/public/hooks/summarize-job'
       path: '/api/public/hooks/summarize-job'
@@ -489,6 +510,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
+  ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
