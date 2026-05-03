@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/server/onboarding.functions";
 import { Link } from "@tanstack/react-router";
+import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
+import { feedService } from "@/services/feedService";
 
 const STEPS = [
   "Welcome",
