@@ -23,6 +23,7 @@ import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$c
 import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-congress'
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
+import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -103,6 +104,11 @@ const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
   path: '/admin/recommendations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIngestionRoute = AdminIngestionRouteImport.update({
+  id: '/admin/ingestion',
+  path: '/admin/ingestion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
+  '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
@@ -320,6 +332,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
+  AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRecommendationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/ingestion': {
+      id: '/admin/ingestion'
+      path: '/admin/ingestion'
+      fullPath: '/admin/ingestion'
+      preLoaderRoute: typeof AdminIngestionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -523,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
+  AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
