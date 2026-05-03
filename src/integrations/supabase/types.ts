@@ -936,12 +936,17 @@ export type Database = {
           like_count: number
           match_method: string | null
           media_urls: string[]
+          parent_handle: string | null
+          parent_in_db_id: string | null
+          parent_text: string | null
+          parent_tweet_external_id: string | null
           raw: Json | null
           reply_count: number
           retweet_count: number
           session_id: string | null
           source_id: string | null
           text: string
+          tweet_type: string
         }
         Insert: {
           abstract_id?: string | null
@@ -957,12 +962,17 @@ export type Database = {
           like_count?: number
           match_method?: string | null
           media_urls?: string[]
+          parent_handle?: string | null
+          parent_in_db_id?: string | null
+          parent_text?: string | null
+          parent_tweet_external_id?: string | null
           raw?: Json | null
           reply_count?: number
           retweet_count?: number
           session_id?: string | null
           source_id?: string | null
           text: string
+          tweet_type?: string
         }
         Update: {
           abstract_id?: string | null
@@ -978,14 +988,27 @@ export type Database = {
           like_count?: number
           match_method?: string | null
           media_urls?: string[]
+          parent_handle?: string | null
+          parent_in_db_id?: string | null
+          parent_text?: string | null
+          parent_tweet_external_id?: string | null
           raw?: Json | null
           reply_count?: number
           retweet_count?: number
           session_id?: string | null
           source_id?: string | null
           text?: string
+          tweet_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tweets_parent_in_db_id_fkey"
+            columns: ["parent_in_db_id"]
+            isOneToOne: false
+            referencedRelation: "tweets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       urology_specialties: {
         Row: {
