@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, GripVertical } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +21,34 @@ import { useCanEdit } from "@/auth/permissions";
 import type { Congress } from "@/types";
 
 const ALL = "__all__";
+const ORDER_KEY = "urofeed:congress-order:v1";
+
+function loadOrder(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(ORDER_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+function saveOrder(ids: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function CongressGrid() {
   const canEdit = useCanEdit();
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
   const [openNew, setOpenNew] = React.useState(false);
+  const [order, setOrder] = React.useState<string[]>(() => loadOrder());
+  const [dragId, setDragId] = React.useState<string | null>(null);
+  const [overId, setOverId] = React.useState<string | null>(null);
 
   const { data: congresses = [], isLoading } = useQuery({
     queryKey: ["congresses"],
@@ -66,6 +88,38 @@ export function CongressGrid() {
     }
     return true;
   });
+
+  // Apply user-defined order; new congresses appear at the end.
+  const orderedFiltered = React.useMemo(() => {
+    const idx = new Map(order.map((id, i) => [id, i] as const));
+    return [...filtered].sort((a, b) => {
+      const ai = idx.has(a.id) ? (idx.get(a.id) as number) : Number.MAX_SAFE_INTEGER;
+      const bi = idx.has(b.id) ? (idx.get(b.id) as number) : Number.MAX_SAFE_INTEGER;
+      if (ai !== bi) return ai - bi;
+      return 0;
+    });
+  }, [filtered, order]);
+
+  const reorder = React.useCallback(
+    (sourceId: string, targetId: string) => {
+      if (sourceId === targetId) return;
+      const allIds = orderedFiltered.map((c) => c.id);
+      // Build a full ordered list including unfiltered congresses (preserve their relative position).
+      const fullCurrent = [
+        ...orderedFiltered.map((c) => c.id),
+        ...congresses.filter((c) => !allIds.includes(c.id)).map((c) => c.id),
+      ];
+      const from = fullCurrent.indexOf(sourceId);
+      const to = fullCurrent.indexOf(targetId);
+      if (from === -1 || to === -1) return;
+      const next = [...fullCurrent];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      setOrder(next);
+      saveOrder(next);
+    },
+    [orderedFiltered, congresses],
+  );
 
   const computeSourceCount = (c: Congress) => {
     const ids = c.sourceListIds;
@@ -168,19 +222,67 @@ export function CongressGrid() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filtered.map((c) => {
+            {orderedFiltered.map((c) => {
               const sess = sessionsById[c.id] ?? [];
               const lastSync = sess.length
                 ? sess.map((s) => s.endTime).sort().reverse()[0]
                 : undefined;
               return (
-                <CongressCard
+                <div
                   key={c.id}
-                  congress={c}
-                  sourceCount={computeSourceCount(c)}
-                  sessionCount={sess.length}
-                  lastSyncIso={lastSync}
-                />
+                  draggable
+                  onDragStart={(e) => {
+                    setDragId(c.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    try {
+                      e.dataTransfer.setData("text/plain", c.id);
+                    } catch {
+                      /* some browsers require this */
+                    }
+                  }}
+                  onDragEnter={() => {
+                    if (dragId && dragId !== c.id) setOverId(c.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (dragId) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (overId === c.id) setOverId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const src = dragId ?? e.dataTransfer.getData("text/plain");
+                    if (src) reorder(src, c.id);
+                    setDragId(null);
+                    setOverId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setOverId(null);
+                  }}
+                  className={cn(
+                    "relative group/drag transition-opacity",
+                    dragId === c.id && "opacity-40",
+                    overId === c.id && dragId && dragId !== c.id && "ring-2 ring-accent rounded-[4px]",
+                  )}
+                >
+                  <span
+                    className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing opacity-0 group-hover/drag:opacity-100 transition-opacity bg-panel-elevated border border-border rounded-[2px] p-0.5"
+                    title="Drag to reorder"
+                    aria-hidden
+                  >
+                    <GripVertical className="w-3 h-3 text-text-muted" />
+                  </span>
+                  <CongressCard
+                    congress={c}
+                    sourceCount={computeSourceCount(c)}
+                    sessionCount={sess.length}
+                    lastSyncIso={lastSync}
+                  />
+                </div>
               );
             })}
           </div>
