@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -178,7 +179,7 @@ export function HandleChip({ handle, className, variant = "default", children }:
         )}
       </span>
       {menuPos && (
-        <HandleMenu
+        <HandleMenuPortal
           pos={menuPos}
           handle={cleanHandle}
           isFollowing={isFollowing}
@@ -196,6 +197,11 @@ export function HandleChip({ handle, className, variant = "default", children }:
       )}
     </>
   );
+}
+
+function HandleMenuPortal(props: React.ComponentProps<typeof HandleMenu>) {
+  if (typeof document === "undefined") return null;
+  return createPortal(<HandleMenu {...props} />, document.body);
 }
 
 function HandleMenu({
