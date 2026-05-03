@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { enqueueUserSources, getUserIngestStatus } from "@/server/onboarding.functions";
+import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/server/onboarding.functions";
 import { Link } from "@tanstack/react-router";
 
 const STEPS = [
@@ -947,6 +947,7 @@ function ProvisioningStep({
   onRestart: () => void;
 }) {
   const fetchStatus = useServerFn(getUserIngestStatus);
+  const processQueue = useServerFn(processUserIngestQueue);
   const { data, refetch } = useQuery({
     queryKey: ["onboarding-ingest-status"],
     queryFn: () => fetchStatus(),
@@ -983,6 +984,24 @@ function ProvisioningStep({
       return () => clearTimeout(t);
     }
   }, [allDone, onDone]);
+
+  React.useEffect(() => {
+    if (!data || allDone || nothingToDo || (data.processing ?? 0) > 0 || (data.queued ?? 0) === 0) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await processQueue({ data: { limit: 5 } });
+        await refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to provision sources");
+      }
+    }, 1200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [allDone, data, nothingToDo, processQueue, refetch]);
 
   return (
     <div className="space-y-6">
