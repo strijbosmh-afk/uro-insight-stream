@@ -718,6 +718,7 @@ export type Database = {
           congress_id: string
           created_at: string
           end_time: string
+          entities: string[]
           id: string
           room: string
           seeded_from_mock: boolean
@@ -733,6 +734,7 @@ export type Database = {
           congress_id: string
           created_at?: string
           end_time: string
+          entities?: string[]
           id: string
           room?: string
           seeded_from_mock?: boolean
@@ -748,6 +750,7 @@ export type Database = {
           congress_id?: string
           created_at?: string
           end_time?: string
+          entities?: string[]
           id?: string
           room?: string
           seeded_from_mock?: boolean
