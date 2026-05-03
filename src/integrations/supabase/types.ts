@@ -1296,6 +1296,7 @@ export type Database = {
       }
       release_ingest_queue_lock: { Args: never; Returns: boolean }
       release_tweet_matcher_lock: { Args: never; Returns: boolean }
+      sync_cron_job_secret: { Args: { _secret: string }; Returns: boolean }
       try_ingest_queue_lock: { Args: never; Returns: boolean }
       try_tweet_matcher_lock: { Args: never; Returns: boolean }
     }
