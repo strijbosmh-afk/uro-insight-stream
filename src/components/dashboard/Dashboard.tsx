@@ -402,6 +402,34 @@ function Kpi({
   );
 }
 
+function CronHealthRow({
+  job,
+}: {
+  job: Awaited<ReturnType<typeof getIngestionCronHealth>>[number];
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border border-border rounded-[3px] bg-panel-elevated/30 px-3 py-2">
+      <div className="min-w-0">
+        <div className="text-[11px] font-mono text-text-primary truncate">
+          {job.jobname}
+        </div>
+        <div className="mt-0.5 text-[10px] font-mono text-text-muted">
+          {job.schedule} · every {fmtAge(job.expected_interval_seconds)}
+        </div>
+      </div>
+      <div
+        className={cn(
+          "text-right font-mono text-[11px] shrink-0",
+          job.is_stale ? "text-danger" : "text-success",
+        )}
+      >
+        <div>{job.last_success_at ? fmtTime(job.last_success_at) : "never"}</div>
+        <div className="text-[10px]">{fmtAge(job.age_seconds)}</div>
+      </div>
+    </div>
+  );
+}
+
 function NowHappeningCard({
   session,
   congress,
