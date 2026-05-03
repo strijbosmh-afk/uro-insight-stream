@@ -792,7 +792,9 @@ export type Database = {
           handle: string
           last_seen_at: string | null
           mention_count: number
+          quote_count: number
           reply_count: number
+          signal_breakdown: Json
           total_signal: number
           updated_at: string
           verified: boolean
@@ -811,7 +813,9 @@ export type Database = {
           handle: string
           last_seen_at?: string | null
           mention_count?: number
+          quote_count?: number
           reply_count?: number
+          signal_breakdown?: Json
           total_signal?: number
           updated_at?: string
           verified?: boolean
@@ -830,7 +834,9 @@ export type Database = {
           handle?: string
           last_seen_at?: string | null
           mention_count?: number
+          quote_count?: number
           reply_count?: number
+          signal_breakdown?: Json
           total_signal?: number
           updated_at?: string
           verified?: boolean
