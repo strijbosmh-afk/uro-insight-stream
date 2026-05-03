@@ -418,7 +418,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
             />
           )}
           {stepName === "Provisioning" && (
-            <ProvisioningStep onDone={handleProvisioningDone} isAdmin={isAdmin} />
+            <ProvisioningStep
+              onDone={handleProvisioningDone}
+              isAdmin={isAdmin}
+              onRestart={async () => {
+                setStepIndex(1);
+                await persistStep(1);
+              }}
+            />
           )}
         </div>
 
