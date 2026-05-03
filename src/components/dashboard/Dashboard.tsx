@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getNewRecommendedSourcesCount } from "@/server/onboarding.functions";
+import { useAuth } from "@/auth/AuthProvider";
 import {
   Activity,
   Radio,
@@ -47,10 +48,18 @@ function relTime(iso: string, nowMs: number) {
 }
 
 export function Dashboard() {
+  const { user } = useAuth();
   const fetchNewRecs = useServerFn(getNewRecommendedSourcesCount);
   const { data: newRecs } = useQuery({
-    queryKey: ["new-recommended-sources-count"],
-    queryFn: () => fetchNewRecs(),
+    queryKey: ["new-recommended-sources-count", user?.id ?? null],
+    enabled: !!user,
+    queryFn: async () => {
+      try {
+        return await fetchNewRecs();
+      } catch {
+        return { count: 0 };
+      }
+    },
     staleTime: 60_000,
   });
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
