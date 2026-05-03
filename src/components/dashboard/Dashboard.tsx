@@ -17,6 +17,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
+import { HandleChip } from "@/components/handles/HandleChip";
 import { feedService } from "@/services/feedService";
 import { useLiveKpis } from "@/hooks/useLiveKpis";
 import { feedNowMs, initFeedClock } from "@/components/feed/feedClock";
@@ -460,9 +461,10 @@ function ActivityRow({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-[11px]">
-          <span className="font-mono text-accent truncate">
-            @{source?.handle.replace(/^@/, "") ?? "unknown"}
-          </span>
+          <HandleChip
+            handle={source?.handle.replace(/^@/, "") ?? "unknown"}
+            className="truncate"
+          />
           <span className="ml-auto font-mono text-[10px] text-text-muted shrink-0">
             {relTime(tweet.createdAt, nowMs)}
           </span>
