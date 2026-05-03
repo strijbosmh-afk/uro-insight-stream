@@ -1,11 +1,35 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, PlayCircle, Plus, Search, Database } from "lucide-react";
+import {
+  CheckCircle2,
+  PlayCircle,
+  Plus,
+  Search,
+  Database,
+  MoreHorizontal,
+  Trash2,
+  Check,
+} from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/shell/EmptyState";
 import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import {
@@ -21,8 +45,14 @@ import { RoleBadge } from "./RoleBadge";
 import { SourceDrawer } from "./SourceDrawer";
 import { AddSourceDialog } from "./AddSourceDialog";
 import type { Source, SourceList } from "@/types";
-import { useCanEdit } from "@/auth/permissions";
+import { useCanEdit, useCanAdmin } from "@/auth/permissions";
 import { recordAudit } from "@/services/auditService";
+import { useAuth } from "@/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  useFollowSource,
+  useUnfollowSource,
+} from "@/hooks/useHandleActions";
 
 const ALL = "__all__";
 
@@ -40,16 +70,36 @@ function formatLastSeen(iso?: string) {
 export function SourcesTable() {
   const qc = useQueryClient();
   const canEdit = useCanEdit();
+  const canAdmin = useCanAdmin();
+  const { user } = useAuth();
   const [query, setQuery] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState<string>(ALL);
   const [listFilter, setListFilter] = React.useState<string>(ALL);
   const [openAdd, setOpenAdd] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<Source | null>(null);
 
   const { data: sources = [], isLoading } = useQuery({
     queryKey: ["sources"],
     queryFn: () => feedService.listSources(),
   });
+
+  const { data: subSourceIds = new Set<string>() } = useQuery({
+    queryKey: ["user-subscribed-sources", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_subscribed_sources")
+        .select("source_id")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return new Set((data ?? []).map((r) => r.source_id as string));
+    },
+  });
+
+  const followMut = useFollowSource();
+  const unfollowMut = useUnfollowSource();
+
   const { data: lists = [] } = useQuery({
     queryKey: ["source-lists"],
     queryFn: () => feedService.listSourceLists(),
@@ -98,6 +148,21 @@ export function SourcesTable() {
     },
     onError: () => toast.error("Source test failed"),
   });
+
+  const onToggleFollow = async (s: Source) => {
+    const isSub = subSourceIds.has(s.id);
+    try {
+      if (isSub) {
+        await unfollowMut.mutateAsync({ handle: s.handle });
+        toast.success(`Unfollowed @${s.handle}`);
+      } else {
+        await followMut.mutateAsync({ handle: s.handle, needsLookup: false });
+        toast.success(`Now following @${s.handle}`);
+      }
+    } catch {
+      toast.error("Couldn't update follow state");
+    }
+  };
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -180,6 +245,7 @@ export function SourcesTable() {
           <table className="w-full text-[12px]">
             <thead className="bg-panel-elevated sticky top-0 z-10">
               <tr className="text-left text-[10px] uppercase tracking-wider text-text-muted">
+                <th className="px-3 py-2 font-medium">Following</th>
                 <th className="px-3 py-2 font-medium">Handle</th>
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Role</th>
@@ -195,17 +261,27 @@ export function SourcesTable() {
             <tbody>
               {isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRowSkeleton key={`sk-${i}`} cols={10} />
+                  <TableRowSkeleton key={`sk-${i}`} cols={11} />
                 ))}
               {filtered.map((s) => (
                 <tr
                   key={s.id}
                   className={cn(
-                    "border-t border-border hover:bg-panel-elevated/40 cursor-pointer transition-colors",
+                    "group border-t border-border hover:bg-panel-elevated/40 cursor-pointer transition-colors",
                     !s.active && "opacity-60",
                   )}
                   onClick={() => setActiveId(s.id)}
                 >
+                  <td
+                    className="px-3 py-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <FollowToggle
+                      isFollowing={subSourceIds.has(s.id)}
+                      disabled={!user || followMut.isPending || unfollowMut.isPending}
+                      onClick={() => onToggleFollow(s)}
+                    />
+                  </td>
                   <td className="px-3 py-1.5 font-mono text-accent whitespace-nowrap">
                     @{s.handle}
                   </td>
@@ -275,22 +351,47 @@ export function SourcesTable() {
                     className="px-3 py-1.5 text-right"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={() => test.mutate(s.id)}
-                      disabled={test.isPending || !canEdit}
-                    >
-                      <PlayCircle className="h-3 w-3 mr-1" />
-                      Test
-                    </Button>
+                    <div className="inline-flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => test.mutate(s.id)}
+                        disabled={test.isPending || !canEdit}
+                      >
+                        <PlayCircle className="h-3 w-3 mr-1" />
+                        Test
+                      </Button>
+                      {canAdmin && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+                              aria-label="More actions"
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(s)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Delete source…
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && !isLoading && (
                 <tr>
-                  <td colSpan={10} className="p-4">
+                  <td colSpan={11} className="p-4">
                     <EmptyState
                       icon={Database}
                       caption={
@@ -337,6 +438,178 @@ export function SourcesTable() {
         open={!!activeSource}
         onOpenChange={(v) => !v && setActiveId(null)}
       />
+      <DeleteSourceDialog
+        source={deleteTarget}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        onDone={() => {
+          setDeleteTarget(null);
+          qc.invalidateQueries({ queryKey: ["sources"] });
+        }}
+      />
     </>
+  );
+}
+
+function FollowToggle({
+  isFollowing,
+  disabled,
+  onClick,
+}: {
+  isFollowing: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "group/btn inline-flex items-center gap-1 h-6 px-2 rounded-sm border font-mono text-[11px] transition-colors",
+        isFollowing
+          ? "border-accent/40 text-accent bg-accent/10 hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive"
+          : "border-border text-text-muted hover:border-accent/40 hover:text-accent hover:bg-accent/10",
+        disabled && "opacity-50 cursor-not-allowed",
+      )}
+      title={isFollowing ? "Click to unfollow" : "Click to follow"}
+    >
+      {isFollowing ? (
+        <>
+          <Check className="h-3 w-3 group-hover/btn:hidden" />
+          <Trash2 className="h-3 w-3 hidden group-hover/btn:block" />
+          <span className="group-hover/btn:hidden">Following</span>
+          <span className="hidden group-hover/btn:inline">Unfollow</span>
+        </>
+      ) : (
+        <>
+          <Plus className="h-3 w-3" />
+          Follow
+        </>
+      )}
+    </button>
+  );
+}
+
+function DeleteSourceDialog({
+  source,
+  onOpenChange,
+  onDone,
+}: {
+  source: Source | null;
+  onOpenChange: (open: boolean) => void;
+  onDone: () => void;
+}) {
+  const [confirm, setConfirm] = React.useState("");
+  const [hardDelete, setHardDelete] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [tweetCount, setTweetCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    setConfirm("");
+    setHardDelete(false);
+    setTweetCount(null);
+    if (!source) return;
+    let cancelled = false;
+    void supabase
+      .from("tweets")
+      .select("id", { count: "exact", head: true })
+      .eq("source_id", source.id)
+      .then(({ count }) => {
+        if (!cancelled) setTweetCount(count ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source]);
+
+  if (!source) return null;
+  const handle = source.handle;
+  const matches = confirm.trim().toLowerCase() === handle.toLowerCase();
+
+  const onSubmit = async () => {
+    if (!matches || busy) return;
+    setBusy(true);
+    try {
+      if (hardDelete) {
+        const { error } = await supabase.from("sources").delete().eq("id", source.id);
+        if (error) throw error;
+        await recordAudit({
+          action: "source.delete",
+          target_type: "source",
+          target_id: source.id,
+          summary: `Hard-deleted @${handle} and ${tweetCount ?? 0} ingested tweets`,
+          before: { handle, active: source.active, tweetCount },
+          after: { deleted: true, hard: true },
+        });
+        toast.success(`Deleted @${handle} and ${tweetCount ?? 0} tweets`);
+      } else {
+        const { error } = await supabase
+          .from("sources")
+          .update({ active: false })
+          .eq("id", source.id);
+        if (error) throw error;
+        await recordAudit({
+          action: "source.update",
+          target_type: "source",
+          target_id: source.id,
+          summary: `Soft-deleted (deactivated) @${handle}`,
+          before: { active: source.active },
+          after: { active: false, soft_delete: true },
+        });
+        toast.success(`Deactivated @${handle}`);
+      }
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!source} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete @{handle}?</DialogTitle>
+          <DialogDescription>
+            By default this deactivates the source (soft delete). Tweets are kept,
+            ingestion stops. Type the handle to confirm.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <Input
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder={`Type "${handle}" to confirm`}
+            autoFocus
+          />
+          <label className="flex items-start gap-2 cursor-pointer">
+            <Checkbox
+              checked={hardDelete}
+              onCheckedChange={(v) => setHardDelete(v === true)}
+              className="mt-0.5"
+            />
+            <span className="text-[12px] leading-snug">
+              Also permanently delete this source and all{" "}
+              <span className="font-mono">{tweetCount ?? "…"}</span> ingested
+              tweets.{" "}
+              <span className="text-destructive">This cannot be undone.</span>
+            </span>
+          </label>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant={hardDelete ? "destructive" : "default"}
+            onClick={onSubmit}
+            disabled={!matches || busy}
+          >
+            {busy ? "Working…" : hardDelete ? "Permanently delete" : "Deactivate"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
