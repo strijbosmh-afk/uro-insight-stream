@@ -937,7 +937,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // ---------------- Provisioning ----------------
-function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: boolean }) {
+function ProvisioningStep({
+  onDone,
+  isAdmin,
+  onRestart,
+}: {
+  onDone: () => void;
+  isAdmin: boolean;
+  onRestart: () => void;
+}) {
   const fetchStatus = useServerFn(getUserIngestStatus);
   const { data, refetch } = useQuery({
     queryKey: ["onboarding-ingest-status"],
@@ -967,6 +975,7 @@ function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: bo
   const done = (data?.completed ?? 0) + (data?.failed ?? 0);
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
   const allDone = total > 0 && done === total;
+  const nothingToDo = !!data && total === 0;
 
   React.useEffect(() => {
     if (allDone) {
@@ -974,16 +983,6 @@ function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: bo
       return () => clearTimeout(t);
     }
   }, [allDone, onDone]);
-
-  // Nothing to provision (no sources subscribed, or queue already drained
-  // before this step mounted) — auto-advance after a short grace period so
-  // the user isn't stuck on a 0% bar forever.
-  React.useEffect(() => {
-    if (data && total === 0) {
-      const t = setTimeout(() => onDone(), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [data, total, onDone]);
 
   return (
     <div className="space-y-6">
@@ -1014,13 +1013,49 @@ function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: bo
         <Stat label="Failed" value={data?.failed ?? 0} />
       </div>
 
+      {nothingToDo && (
+        <div
+          className="p-4"
+          style={{
+            background: "color-mix(in oklab, var(--accent) 8%, var(--panel))",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-text-primary">
+                No sources to provision
+              </h3>
+              <p className="text-xs text-text-secondary">
+                You haven't subscribed to any sources yet. Restart the wizard
+                to pick some, or add them later from the Sources page.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Button size="sm" variant="outline" onClick={onRestart}>
+              <ArrowLeft className="h-3 w-3 mr-1" /> Restart wizard
+            </Button>
+            <Link
+              to="/sources"
+              onClick={onDone}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase"
+              style={{ background: "var(--accent)", color: "var(--accent-foreground, #000)" }}
+            >
+              Go to Sources <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       {allDone && (
         <div className="text-center text-sm text-accent flex items-center justify-center gap-2">
           <Check className="h-4 w-4" /> All sources provisioned. Redirecting to your dashboard…
         </div>
       )}
 
-      {!allDone && (
+      {!allDone && !nothingToDo && (
         <div className="flex justify-center">
           <Button variant="ghost" size="sm" onClick={onDone}>
             Skip waiting — go to dashboard
