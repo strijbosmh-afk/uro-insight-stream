@@ -112,6 +112,7 @@ export function useFollowSource() {
       const id = vars.handle.replace(/^@/, "").toLowerCase();
       qc.invalidateQueries({ queryKey: ["handle-sub-state", id] });
       qc.invalidateQueries({ queryKey: ["user-subscribed-sources", user?.id] });
+      qc.invalidateQueries({ queryKey: ["user-subscribed-source-ids", user?.id] });
       qc.invalidateQueries({ queryKey: ["sources"] });
     },
   });
@@ -135,6 +136,7 @@ export function useUnfollowSource() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["handle-sub-state", res.id] });
       qc.invalidateQueries({ queryKey: ["user-subscribed-sources", user?.id] });
+      qc.invalidateQueries({ queryKey: ["user-subscribed-source-ids", user?.id] });
     },
   });
 }
