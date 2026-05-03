@@ -5,7 +5,7 @@ import { Loader2, UserPlus, X, BadgeCheck, Users } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useFollowSource } from "@/hooks/useHandleActions";
@@ -46,7 +46,6 @@ function formatFollowers(n: number | null): string {
 
 function DiscoverPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const qc = useQueryClient();
   const followMut = useFollowSource();
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -111,11 +110,11 @@ function DiscoverPage() {
   const handleFollow = async (handle: string) => {
     try {
       await followMut.mutateAsync({ handle, needsLookup: true });
-      toast({ title: `Following @${handle}` });
+      toast.success(`Following @${handle}`);
       qc.invalidateQueries({ queryKey: ["source-candidates"] });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast({ title: "Couldn't follow", description: msg, variant: "destructive" });
+      toast.error("Couldn't follow", { description: msg });
     }
   };
 
@@ -133,11 +132,11 @@ function DiscoverPage() {
     }
     setSelected(new Set());
     qc.invalidateQueries({ queryKey: ["source-candidates"] });
-    toast({
-      title: `Followed ${okCount}`,
-      description: failCount > 0 ? `${failCount} failed` : undefined,
-      variant: failCount > 0 ? "destructive" : "default",
-    });
+    if (failCount > 0) {
+      toast.error(`Followed ${okCount}`, { description: `${failCount} failed` });
+    } else {
+      toast.success(`Followed ${okCount}`);
+    }
   };
 
   if (authLoading) {
