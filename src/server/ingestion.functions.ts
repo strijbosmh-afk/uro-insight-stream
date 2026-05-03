@@ -19,6 +19,34 @@ async function assertEditor(supabase: SupabaseClient, userId: string) {
   }
 }
 
+export type CronHealthRow = {
+  jobname: string;
+  schedule: string;
+  expected_interval_seconds: number;
+  last_success_at: string | null;
+  age_seconds: number | null;
+  is_stale: boolean;
+};
+
+let cronHealthCache: { expiresAt: number; rows: CronHealthRow[] } | null = null;
+
+export const getIngestionCronHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const now = Date.now();
+    if (cronHealthCache && cronHealthCache.expiresAt > now) return cronHealthCache.rows;
+
+    const rpcClient = supabaseAdmin as unknown as {
+      rpc: (fn: string) => Promise<{ data: CronHealthRow[] | null; error: { message: string } | null }>;
+    };
+    const { data, error } = await rpcClient.rpc("get_ingestion_cron_health");
+    if (error) throw new Error(error.message);
+
+    const rows = data ?? [];
+    cronHealthCache = { expiresAt: now + 30_000, rows };
+    return rows;
+  });
+
 export const triggerIngestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => TargetSchema.parse(data))

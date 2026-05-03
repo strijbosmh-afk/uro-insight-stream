@@ -1270,6 +1270,17 @@ export type Database = {
         Returns: number
       }
       get_cron_job_secret: { Args: never; Returns: string }
+      get_ingestion_cron_health: {
+        Args: never
+        Returns: {
+          age_seconds: number
+          expected_interval_seconds: number
+          is_stale: boolean
+          jobname: string
+          last_success_at: string
+          schedule: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1296,6 +1307,7 @@ export type Database = {
       }
       release_ingest_queue_lock: { Args: never; Returns: boolean }
       release_tweet_matcher_lock: { Args: never; Returns: boolean }
+      sync_cron_job_secret: { Args: { _secret: string }; Returns: boolean }
       try_ingest_queue_lock: { Args: never; Returns: boolean }
       try_tweet_matcher_lock: { Args: never; Returns: boolean }
     }
