@@ -36,9 +36,12 @@ export async function recentSearch(query: string, sinceISO: string, token: strin
   url.searchParams.set("start_time", sinceISO);
   url.searchParams.set(
     "tweet.fields",
-    "created_at,lang,public_metrics,entities,author_id,attachments",
+    "created_at,lang,public_metrics,entities,author_id,attachments,referenced_tweets",
   );
-  url.searchParams.set("expansions", "author_id,attachments.media_keys");
+  url.searchParams.set(
+    "expansions",
+    "author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id",
+  );
   url.searchParams.set("user.fields", "username,name");
   url.searchParams.set("media.fields", "url,preview_image_url");
 
