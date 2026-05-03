@@ -31,6 +31,7 @@ import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/a
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
+import { Route as ApiPublicHooksDiagSecretHashRouteImport } from './routes/api/public/hooks/diag-secret-hash'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 
 const SummariesRoute = SummariesRouteImport.update({
@@ -149,6 +150,12 @@ const ApiPublicHooksMatchTweetsToSessionsRoute =
     path: '/api/public/hooks/match-tweets-to-sessions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDiagSecretHashRoute =
+  ApiPublicHooksDiagSecretHashRouteImport.update({
+    id: '/api/public/hooks/diag-secret-hash',
+    path: '/api/public/hooks/diag-secret-hash',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksBackfillHierarchyRecentRoute =
   ApiPublicHooksBackfillHierarchyRecentRouteImport.update({
     id: '/api/public/hooks/backfill-hierarchy-recent',
@@ -172,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/diag-secret-hash': typeof ApiPublicHooksDiagSecretHashRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -197,6 +205,7 @@ export interface FileRoutesByTo {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/diag-secret-hash': typeof ApiPublicHooksDiagSecretHashRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -223,6 +232,7 @@ export interface FileRoutesById {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/diag-secret-hash': typeof ApiPublicHooksDiagSecretHashRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/diag-secret-hash'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/diag-secret-hash'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -300,6 +312,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/diag-secret-hash'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -325,6 +338,7 @@ export interface RootRouteChildren {
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  ApiPublicHooksDiagSecretHashRoute: typeof ApiPublicHooksDiagSecretHashRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
@@ -491,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMatchTweetsToSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/diag-secret-hash': {
+      id: '/api/public/hooks/diag-secret-hash'
+      path: '/api/public/hooks/diag-secret-hash'
+      fullPath: '/api/public/hooks/diag-secret-hash'
+      preLoaderRoute: typeof ApiPublicHooksDiagSecretHashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/backfill-hierarchy-recent': {
       id: '/api/public/hooks/backfill-hierarchy-recent'
       path: '/api/public/hooks/backfill-hierarchy-recent'
@@ -529,6 +550,7 @@ const rootRouteChildren: RootRouteChildren = {
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   ApiPublicHooksBackfillHierarchyRecentRoute:
     ApiPublicHooksBackfillHierarchyRecentRoute,
+  ApiPublicHooksDiagSecretHashRoute: ApiPublicHooksDiagSecretHashRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
