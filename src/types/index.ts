@@ -76,6 +76,11 @@ export type Tweet = {
   sessionId?: string;
   abstractId?: string;
   lang: string;
+  tweetType?: "original" | "reply" | "quote" | "retweet";
+  parentTweetExternalId?: string;
+  parentHandle?: string;
+  parentText?: string;
+  parentInDbId?: string;
 };
 
 export type Summary = {
