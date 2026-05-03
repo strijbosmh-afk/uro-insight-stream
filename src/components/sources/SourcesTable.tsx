@@ -368,7 +368,7 @@ export function SourcesTable() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+                              className="h-6 w-6 text-text-muted hover:text-destructive"
                               aria-label="More actions"
                             >
                               <MoreHorizontal className="h-3.5 w-3.5" />
