@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import "@/auth/serverFnFetchPatch";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
