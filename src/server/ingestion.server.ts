@@ -43,6 +43,25 @@ async function upsertTweets(
   congressTagMap: Map<string, string>,
 ): Promise<number> {
   if (tweets.length === 0) return 0;
+
+  // For replies/quotes, look up which parent ids we already have in our DB
+  // so we can fill parent_in_db_id (best-effort link to local card).
+  const parentExternalIds = Array.from(
+    new Set(
+      tweets
+        .map((t) => t.parentTweetExternalId)
+        .filter((id): id is string => !!id),
+    ),
+  );
+  const localParentIds = new Set<string>();
+  if (parentExternalIds.length > 0) {
+    const { data: existing } = await supabaseAdmin
+      .from("tweets")
+      .select("id")
+      .in("id", parentExternalIds);
+    (existing ?? []).forEach((r) => localParentIds.add(r.id as string));
+  }
+
   const rows = tweets.map((t) => ({
     id: t.id,
     source_id: t.sourceId ?? null,
@@ -57,6 +76,14 @@ async function upsertTweets(
     media_urls: t.mediaUrls,
     hashtags: t.hashtags,
     congress_id: tagCongressId(t, congressTagMap),
+    tweet_type: t.tweetType,
+    parent_tweet_external_id: t.parentTweetExternalId ?? null,
+    parent_handle: t.parentHandle ?? null,
+    parent_text: t.parentText ?? null,
+    parent_in_db_id:
+      t.parentTweetExternalId && localParentIds.has(t.parentTweetExternalId)
+        ? t.parentTweetExternalId
+        : null,
     raw: (t.raw ?? null) as never,
   }));
   const { error, count } = await supabaseAdmin

@@ -18,6 +18,7 @@ function makeTweet(handle: string, tag: string | null, i: number): NormalizedTwe
     replyCount: Math.floor(Math.random() * 5),
     mediaUrls: [],
     hashtags: tag ? [tag.replace(/^#/, "").toLowerCase()] : [],
+    tweetType: "original",
   };
 }
 
