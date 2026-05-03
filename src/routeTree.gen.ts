@@ -31,6 +31,7 @@ import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/a
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
+import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -148,6 +149,12 @@ const ApiPublicHooksMatchTweetsToSessionsRoute =
     path: '/api/public/hooks/match-tweets-to-sessions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksBackfillHierarchyRecentRoute =
+  ApiPublicHooksBackfillHierarchyRecentRouteImport.update({
+    id: '/api/public/hooks/backfill-hierarchy-recent',
+    path: '/api/public/hooks/backfill-hierarchy-recent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -213,6 +222,7 @@ export interface FileRoutesById {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -287,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/summarize-job'
@@ -311,6 +324,7 @@ export interface RootRouteChildren {
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
@@ -477,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMatchTweetsToSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/backfill-hierarchy-recent': {
+      id: '/api/public/hooks/backfill-hierarchy-recent'
+      path: '/api/public/hooks/backfill-hierarchy-recent'
+      fullPath: '/api/public/hooks/backfill-hierarchy-recent'
+      preLoaderRoute: typeof ApiPublicHooksBackfillHierarchyRecentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -506,6 +527,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksBackfillHierarchyRecentRoute:
+    ApiPublicHooksBackfillHierarchyRecentRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
