@@ -12,6 +12,7 @@ import {
 import { feedService } from "@/services/feedService";
 import { AI_TONES, AI_LANGUAGES } from "@/hooks/useAiSettings";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const DEFAULTS: UserPreferences = {
   default_congress_id: null,
@@ -21,6 +22,40 @@ const DEFAULTS: UserPreferences = {
   theme_density: "comfortable",
   polling_interval_seconds: 30,
 };
+
+type Density = UserPreferences["theme_density"];
+const DENSITY_OPTIONS: ReadonlyArray<{
+  value: Density;
+  label: string;
+  caption: string;
+  isDefault?: boolean;
+  // mini preview tweet body sizing
+  tweet: number;
+  lineHeight: number;
+}> = [
+  {
+    value: "compact",
+    label: "Compact",
+    caption: "Tightest layout. Maximum information density.",
+    tweet: 13,
+    lineHeight: 1.45,
+  },
+  {
+    value: "comfortable",
+    label: "Comfortable",
+    caption: "Recommended for most monitors.",
+    isDefault: true,
+    tweet: 15,
+    lineHeight: 1.55,
+  },
+  {
+    value: "spacious",
+    label: "Spacious",
+    caption: "Larger text and more breathing room. Best for large displays at 100% scaling.",
+    tweet: 16,
+    lineHeight: 1.65,
+  },
+];
 
 export function PreferencesSettings() {
   const { user, prefs, reload } = useAuth();
@@ -42,6 +77,31 @@ export function PreferencesSettings() {
 
   const update = <K extends keyof UserPreferences>(k: K, v: UserPreferences[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+
+  const persistDensity = async (next: Density) => {
+    update("theme_density", next);
+    // Apply class instantly (don't wait for round trip).
+    if (typeof document !== "undefined") {
+      document.body.classList.remove(
+        "density-compact",
+        "density-comfortable",
+        "density-spacious",
+      );
+      document.body.classList.add(`density-${next}`);
+    }
+    if (!user) return;
+    const { error } = await supabase
+      .from("user_preferences")
+      .upsert(
+        [{ user_id: user.id, ...draft, theme_density: next }],
+        { onConflict: "user_id" },
+      );
+    if (error) {
+      toast.error("Could not save density");
+    } else {
+      void reload();
+    }
+  };
 
   const save = async () => {
     if (!user) return;
@@ -141,21 +201,6 @@ export function PreferencesSettings() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[12px]">Theme density</Label>
-            <Select
-              value={draft.theme_density}
-              onValueChange={(v) =>
-                update("theme_density", v as UserPreferences["theme_density"])
-              }
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="comfortable">Comfortable</SelectItem>
-                <SelectItem value="compact">Compact</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
             <Label className="text-[12px]">Polling interval (seconds)</Label>
             <Input
               type="number"
@@ -169,6 +214,64 @@ export function PreferencesSettings() {
               }}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="border border-border rounded-[3px] bg-panel p-4 space-y-3">
+        <div>
+          <h2 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+            Display density
+          </h2>
+          <p className="text-[12px] text-text-muted mt-1">
+            Scales tweet, summary, and title text. Chrome (sidebar, status bar,
+            panel headers) stays unchanged. Saved instantly.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {DENSITY_OPTIONS.map((opt) => {
+            const selected = draft.theme_density === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => void persistDensity(opt.value)}
+                className={cn(
+                  "w-[160px] text-left p-2.5 rounded-[3px] border transition-colors",
+                  selected
+                    ? "border-accent bg-accent/10"
+                    : "border-border hover:border-accent/40 bg-panel-elevated/30",
+                )}
+              >
+                {/* Mini preview */}
+                <div className="border border-border/60 rounded-[2px] p-1.5 bg-panel mb-2">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-text-muted/30 rounded-[1px]"
+                      style={{
+                        height: `${Math.max(4, opt.tweet - 9)}px`,
+                        marginTop: i === 0 ? 0 : `${(opt.lineHeight - 1) * 6}px`,
+                        width: i === 2 ? "60%" : "100%",
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-semibold text-text-primary">
+                    {opt.label}
+                  </span>
+                  {opt.isDefault && (
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-text-muted">
+                      default
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-text-muted mt-1 leading-snug">
+                  {opt.caption}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </section>
 
