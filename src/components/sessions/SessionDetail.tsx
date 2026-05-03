@@ -405,7 +405,7 @@ export function SessionDetail({ sessionId }: Props) {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="text-[11px] font-mono text-accent">
-                            @{src?.handle.replace(/^@/, "") ?? "unknown"}
+                            <HandleChip handle={src?.handle.replace(/^@/, "") ?? "unknown"} />
                             <span className="ml-2 text-text-muted opacity-0 group-hover:opacity-100">
                               jump →
                             </span>
