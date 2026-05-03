@@ -5,6 +5,7 @@ export type FeedFilters = {
   congressId: string | null;
   sessionId: string | null;
   sourceListId: string | null;
+  sourceId: string | null;
   hashtags: string[];
   /** ISO date string (yyyy-mm-dd) or null. */
   dateFrom: string | null;
@@ -18,6 +19,7 @@ const DEFAULT: FeedFilters = {
   congressId: null,
   sessionId: null,
   sourceListId: null,
+  sourceId: null,
   hashtags: [],
   dateFrom: null,
   dateTo: null,
@@ -60,6 +62,17 @@ export function FeedFilterProvider({ children }: { children: React.ReactNode }) 
     }),
     [filters],
   );
+
+  // Cross-component requests to filter by a single source (e.g. HandleChip).
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ sourceId: string | null }>).detail;
+      setFilters((cur) => ({ ...cur, sourceId: detail?.sourceId ?? null }));
+    };
+    window.addEventListener("feed:filter-source", handler as EventListener);
+    return () => window.removeEventListener("feed:filter-source", handler as EventListener);
+  }, []);
+
   return (
     <FeedFilterContext.Provider value={value}>
       {children}
