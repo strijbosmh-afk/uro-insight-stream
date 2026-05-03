@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getNewRecommendedSourcesCount } from "@/server/onboarding.functions";
+import { getIngestionCronHealth } from "@/server/ingestion.functions";
 import { useAuth } from "@/auth/AuthProvider";
 import {
   Activity,
@@ -15,6 +16,7 @@ import {
   Heart,
   Repeat2,
   MessageCircle,
+  ServerCog,
 } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { HandleChip } from "@/components/handles/HandleChip";
@@ -47,10 +49,20 @@ function relTime(iso: string, nowMs: number) {
   if (h < 48) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+function fmtAge(seconds: number | null) {
+  if (seconds == null) return "never";
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
 
 export function Dashboard() {
   const { user } = useAuth();
   const fetchNewRecs = useServerFn(getNewRecommendedSourcesCount);
+  const fetchCronHealth = useServerFn(getIngestionCronHealth);
   const { data: newRecs } = useQuery({
     queryKey: ["new-recommended-sources-count", user?.id ?? null],
     enabled: !!user,
@@ -75,6 +87,13 @@ export function Dashboard() {
   const { data: allTweets = [] } = useQuery({
     queryKey: ["dashboard-tweets"],
     queryFn: () => feedService.listTweets({ limit: 1000 }),
+  });
+  const { data: cronHealth = [] } = useQuery({
+    queryKey: ["ingestion-cron-health"],
+    enabled: !!user,
+    queryFn: () => fetchCronHealth(),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   // Sessions across all congresses
@@ -237,6 +256,22 @@ export function Dashboard() {
       {/* Main 2-column area */}
       <div className="flex-1 min-h-0 grid grid-cols-12 gap-3">
         <div className="col-span-12 xl:col-span-8 flex flex-col gap-3 min-h-0">
+          <Panel
+            title={
+              <span className="flex items-center gap-2">
+                <ServerCog className="w-3 h-3 text-accent" />
+                Ingestion
+              </span>
+            }
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {cronHealth.map((job) => (
+                <CronHealthRow key={job.jobname} job={job} />
+              ))}
+              {cronHealth.length === 0 && <EmptyState text="No cron health data yet." />}
+            </div>
+          </Panel>
+
           {/* Now happening */}
           <Panel
             title={
