@@ -968,6 +968,16 @@ function ProvisioningStep({ onDone, isAdmin }: { onDone: () => void; isAdmin: bo
     }
   }, [allDone, onDone]);
 
+  // Nothing to provision (no sources subscribed, or queue already drained
+  // before this step mounted) — auto-advance after a short grace period so
+  // the user isn't stuck on a 0% bar forever.
+  React.useEffect(() => {
+    if (data && total === 0) {
+      const t = setTimeout(() => onDone(), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [data, total, onDone]);
+
   return (
     <div className="space-y-6">
       <div>
