@@ -1,11 +1,12 @@
 import * as React from "react";
-import { CheckCircle2, Heart, MessageCircle, Repeat2, ExternalLink } from "lucide-react";
+import { CheckCircle2, Heart, MessageCircle, Repeat2, ExternalLink, CornerDownRight } from "lucide-react";
 import { RoleBadge } from "@/components/sources/RoleBadge";
 import { cn } from "@/lib/utils";
 import type { Source, Tweet } from "@/types";
 import { feedNowMs } from "./feedClock";
 import { HandleChip } from "@/components/handles/HandleChip";
 import { TweetMedia } from "./TweetMedia";
+import { ParentPreview } from "./ParentPreview";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -74,15 +75,37 @@ export const TweetCard = React.memo(function TweetCard({
   const handle = source?.handle.replace(/^@/, "") ?? "unknown";
   const display = source?.displayName ?? "Unknown source";
   const tweetUrl = `https://x.com/${handle}/status/${tweet.id}`;
+  const tweetType = tweet.tweetType ?? "original";
+  const isReply = tweetType === "reply";
+  const isQuote = tweetType === "quote";
+  const isRetweet = tweetType === "retweet";
 
   return (
     <article
+      id={`tweet-${tweet.id}`}
       className={cn(
         "relative border border-border bg-panel rounded-[3px] p-3",
         "hover:border-accent/40 transition-colors",
+        isReply && "border-l-2 border-l-accent/60",
         isNew && "tweet-new",
       )}
     >
+      {isReply && tweet.parentHandle && (
+        <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          <CornerDownRight className="w-3 h-3" />
+          <span>replying to</span>
+          <span className="text-accent normal-case tracking-normal">
+            @{tweet.parentHandle}
+          </span>
+        </div>
+      )}
+      {isRetweet && tweet.parentHandle && (
+        <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          <Repeat2 className="w-3 h-3" />
+          <span>retweeted by</span>
+          <span className="text-accent normal-case tracking-normal">@{handle}</span>
+        </div>
+      )}
       <div className="flex gap-3">
         <img
           src={source?.avatarUrl}
@@ -108,11 +131,29 @@ export const TweetCard = React.memo(function TweetCard({
             </span>
           </div>
 
+          {isReply && (
+            <ParentPreview
+              parentHandle={tweet.parentHandle}
+              parentText={tweet.parentText}
+              parentInDbId={tweet.parentInDbId}
+              variant="reply"
+            />
+          )}
+
           <p className="mt-1.5 text-[13px] leading-relaxed text-text-primary whitespace-pre-wrap break-words">
             {highlight(tweet.text)}
           </p>
 
           <TweetMedia urls={tweet.mediaUrls} tweetUrl={tweetUrl} />
+
+          {isQuote && (tweet.parentHandle || tweet.parentText) && (
+            <ParentPreview
+              parentHandle={tweet.parentHandle}
+              parentText={tweet.parentText}
+              parentInDbId={tweet.parentInDbId}
+              variant="quote"
+            />
+          )}
 
           <div className="mt-2 flex items-center gap-4 text-[11px] font-mono text-text-muted">
             <span className="flex items-center gap-1">
