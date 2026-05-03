@@ -252,12 +252,9 @@ export const Route = createFileRoute("/api/public/hooks/match-tweets-to-sessions
           const { data: sessRows } = await supabaseAdmin
             .from("sessions")
             .select(
-              "id, congress_id, title, track, session_hashtag, start_time, end_time, chairs, abstract_ids",
+              "id, congress_id, title, track, session_hashtag, start_time, end_time, chairs, entities, abstract_ids",
             );
-          const sessions = ((sessRows ?? []) as unknown as SessionRow[]).map((s) => ({
-            ...s,
-            entities: s.entities ?? [],
-          }));
+          const sessions = (sessRows ?? []) as SessionRow[];
           const sessionById = new Map(sessions.map((s) => [s.id, s]));
 
           const { data: congRows } = await supabaseAdmin
