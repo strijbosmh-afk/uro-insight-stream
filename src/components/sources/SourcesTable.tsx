@@ -85,7 +85,7 @@ export function SourcesTable() {
   });
 
   const { data: subSourceIds = new Set<string>() } = useQuery({
-    queryKey: ["user-subscribed-sources", user?.id],
+    queryKey: ["user-subscribed-source-ids", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
