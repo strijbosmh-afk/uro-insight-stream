@@ -13,6 +13,7 @@ import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as FeedRouteImport } from './routes/feed'
+import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -53,6 +54,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const FeedRoute = FeedRouteImport.update({
   id: '/feed',
   path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/congresses'
     | '/dashboard'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/congresses'
     | '/dashboard'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/congresses'
     | '/dashboard'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -341,6 +353,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CongressesRoute: typeof CongressesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
+  DiscoverRoute: typeof DiscoverRoute
   FeedRoute: typeof FeedRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/feed'
       fullPath: '/feed'
       preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CongressesRoute: CongressesRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  DiscoverRoute: DiscoverRoute,
   FeedRoute: FeedRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
