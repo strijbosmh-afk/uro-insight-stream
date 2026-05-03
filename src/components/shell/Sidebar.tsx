@@ -12,6 +12,7 @@ import {
   Activity,
   Sparkles,
   RadioTower,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -35,6 +36,7 @@ const BASE_SECTIONS: NavSection[] = [
       { label: "Congresses", to: "/congresses", icon: CalendarRange },
       { label: "Live Feed", to: "/feed", icon: Radio },
       { label: "Summaries", to: "/summaries", icon: FileText },
+      { label: "Discover", to: "/discover", icon: Compass },
     ],
   },
   {
