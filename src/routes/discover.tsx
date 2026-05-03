@@ -32,9 +32,18 @@ type Candidate = {
   followers_count: number | null;
   bio: string | null;
   reply_count: number;
+  quote_count: number;
   mention_count: number;
   total_signal: number;
   enrichment_status: string;
+  signal_breakdown: {
+    reply?: number;
+    reply_recent?: number;
+    quote?: number;
+    quote_recent?: number;
+    mention?: number;
+    mention_recent?: number;
+  } | null;
 };
 
 function formatFollowers(n: number | null): string {
@@ -44,11 +53,41 @@ function formatFollowers(n: number | null): string {
   return String(n);
 }
 
+type RankMode = "all" | "interactions" | "mentions";
+
+/** Dominant-signal sentence for a candidate. */
+function reasonFor(c: Candidate): string {
+  const interactions = c.reply_count + c.quote_count;
+  const mentions = c.mention_count;
+  const total = interactions + mentions;
+  if (total === 0) return "Surfaced from recent activity";
+  const intShare = interactions / total;
+  const intText =
+    interactions === 1
+      ? "1× by sources you follow"
+      : `${interactions}× by sources you follow`;
+  const menText =
+    mentions === 1 ? "1× in your feed" : `${mentions}× in your feed`;
+  const verb =
+    c.reply_count >= c.quote_count ? "Replied to" : "Quoted";
+  // Roughly equal → show both, otherwise dominant only.
+  if (intShare > 0.6) return `${verb} ${intText}`;
+  if (intShare < 0.4) return `Mentioned ${menText}`;
+  return `${verb} ${intText} · mentioned ${menText}`;
+}
+
+function scoreByMode(c: Candidate, mode: RankMode): number {
+  if (mode === "interactions") return c.reply_count * 3 + c.quote_count * 3;
+  if (mode === "mentions") return c.mention_count;
+  return c.total_signal;
+}
+
 function DiscoverPage() {
   const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
   const followMut = useFollowSource();
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [rankMode, setRankMode] = React.useState<RankMode>("all");
 
   const candidatesQuery = useQuery({
     queryKey: ["source-candidates", user?.id ?? "anon"],
@@ -85,6 +124,18 @@ function DiscoverPage() {
       );
     },
   });
+
+  const candidates = React.useMemo(() => {
+    const list = candidatesQuery.data ?? [];
+    const sorted = [...list].sort((a, b) => scoreByMode(b, rankMode) - scoreByMode(a, rankMode));
+    if (rankMode === "interactions") {
+      return sorted.filter((c) => c.reply_count + c.quote_count > 0);
+    }
+    if (rankMode === "mentions") {
+      return sorted.filter((c) => c.mention_count > 0);
+    }
+    return sorted;
+  }, [candidatesQuery.data, rankMode]);
 
   const dismissMut = useMutation({
     mutationFn: async (handle: string) => {
@@ -156,7 +207,6 @@ function DiscoverPage() {
     );
   }
 
-  const candidates = candidatesQuery.data ?? [];
   const isLoading = candidatesQuery.isLoading;
 
   return (
@@ -184,6 +234,23 @@ function DiscoverPage() {
           </Button>
         )}
       </header>
+
+      <div className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider">
+        {(["all", "interactions", "mentions"] as RankMode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setRankMode(m)}
+            className={
+              "px-2.5 h-7 rounded-[3px] border transition-colors " +
+              (rankMode === m
+                ? "bg-accent/10 border-accent/40 text-text-primary"
+                : "border-border text-text-muted hover:text-text-primary")
+            }
+          >
+            {m === "all" ? "All signals" : m === "interactions" ? "Replies + quotes" : "Mentions"}
+          </button>
+        ))}
+      </div>
 
       <Panel title="Candidates">
         {isLoading ? (
@@ -234,14 +301,14 @@ function DiscoverPage() {
                     {c.bio && (
                       <p className="text-sm text-text-muted mt-0.5 line-clamp-2">{c.bio}</p>
                     )}
-                    <div className="flex items-center gap-3 mt-1.5 text-[11px] font-mono uppercase tracking-wider text-text-muted">
+                    <div className="text-[12px] text-text-secondary mt-1">{reasonFor(c)}</div>
+                    <div className="flex items-center gap-3 mt-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" /> {formatFollowers(c.followers_count)}
                       </span>
-                      <span title="Replies from sources you follow">
-                        {c.reply_count} replies
-                      </span>
-                      <span title="Mentions in your feed">{c.mention_count} mentions</span>
+                      <span title="Replies">{c.reply_count} rpl</span>
+                      <span title="Quotes">{c.quote_count} qt</span>
+                      <span title="Mentions">{c.mention_count} mn</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
