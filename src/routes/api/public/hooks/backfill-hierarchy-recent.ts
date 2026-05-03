@@ -25,8 +25,11 @@ export const Route = createFileRoute("/api/public/hooks/backfill-hierarchy-recen
         }
 
         const url = new URL(request.url);
-        const days = Math.min(Number(url.searchParams.get("days") ?? "14"), 14);
-        const sinceISO = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        // X recent-search API only allows up to 7 days back; cap accordingly.
+        const requestedDays = Number(url.searchParams.get("days") ?? "7");
+        const days = Math.min(Number.isFinite(requestedDays) ? requestedDays : 7, 7);
+        // Pull back from 6.9 days to leave a safety margin against the 7-day cutoff.
+        const sinceISO = new Date(Date.now() - days * 24 * 60 * 60 * 1000 + 60_000).toISOString();
 
         // 1. Sweep pure retweets that snuck in before the filter was added.
         const { data: rtRows, error: rtSelErr } = await supabaseAdmin
