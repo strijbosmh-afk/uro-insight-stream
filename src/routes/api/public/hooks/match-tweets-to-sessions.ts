@@ -252,9 +252,12 @@ export const Route = createFileRoute("/api/public/hooks/match-tweets-to-sessions
           const { data: sessRows } = await supabaseAdmin
             .from("sessions")
             .select(
-              "id, congress_id, title, track, session_hashtag, start_time, end_time, chairs, entities, abstract_ids",
+              "id, congress_id, title, track, session_hashtag, start_time, end_time, chairs, abstract_ids",
             );
-          const sessions = (sessRows ?? []) as SessionRow[];
+          const sessions = ((sessRows ?? []) as unknown as SessionRow[]).map((s) => ({
+            ...s,
+            entities: s.entities ?? [],
+          }));
           const sessionById = new Map(sessions.map((s) => [s.id, s]));
 
           const { data: congRows } = await supabaseAdmin
@@ -410,6 +413,16 @@ export const Route = createFileRoute("/api/public/hooks/match-tweets-to-sessions
               const sess = sessionById.get(assignedSessionId);
               if (sess && !tweet.congress_id) patch.congress_id = sess.congress_id;
             }
+            // Even without a session match, if exactly one congress is
+            // implicated by the tweet's hashtags (or it already had one),
+            // tag the tweet's congress_id so congress-day summaries pick it up.
+            if (
+              !patch.congress_id &&
+              !tweet.congress_id &&
+              candidateCongressIds.size === 1
+            ) {
+              patch.congress_id = Array.from(candidateCongressIds)[0];
+            }
             await supabaseAdmin
               .from("tweets")
               .update(patch as never)
@@ -463,7 +476,11 @@ export const Route = createFileRoute("/api/public/hooks/match-tweets-to-sessions
  * created_at, inherit. Bounded sweep — at most 500 propagations per tick.
  */
 async function runThreadPropagation(): Promise<number> {
-  const { data, error } = await supabaseAdmin.rpc("propagate_session_id_via_thread");
+  const { data, error } = await (supabaseAdmin.rpc as unknown as (
+    name: string,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>)(
+    "propagate_session_id_via_thread",
+  );
   if (error) {
     // RPC may not exist yet (first deploy of this migration). Fall back to
     // a JS-side sweep so we still get the win on day-zero.
