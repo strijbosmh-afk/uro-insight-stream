@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
+import { HandleChip } from "@/components/handles/HandleChip";
 import { feedService } from "@/services/feedService";
 import type {
   Abstract,
