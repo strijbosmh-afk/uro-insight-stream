@@ -33,6 +33,7 @@ import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
+import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
 
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
@@ -161,6 +162,12 @@ const ApiPublicHooksBackfillHierarchyRecentRoute =
     path: '/api/public/hooks/backfill-hierarchy-recent',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAggregateSourceCandidatesRoute =
+  ApiPublicHooksAggregateSourceCandidatesRouteImport.update({
+    id: '/api/public/hooks/aggregate-source-candidates',
+    path: '/api/public/hooks/aggregate-source-candidates',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -204,6 +212,7 @@ export interface FileRoutesByTo {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -231,6 +240,7 @@ export interface FileRoutesById {
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
@@ -311,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
+    | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
@@ -337,6 +350,7 @@ export interface RootRouteChildren {
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
@@ -518,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBackfillHierarchyRecentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/aggregate-source-candidates': {
+      id: '/api/public/hooks/aggregate-source-candidates'
+      path: '/api/public/hooks/aggregate-source-candidates'
+      fullPath: '/api/public/hooks/aggregate-source-candidates'
+      preLoaderRoute: typeof ApiPublicHooksAggregateSourceCandidatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -548,6 +569,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicHooksAggregateSourceCandidatesRoute:
+    ApiPublicHooksAggregateSourceCandidatesRoute,
   ApiPublicHooksBackfillHierarchyRecentRoute:
     ApiPublicHooksBackfillHierarchyRecentRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
