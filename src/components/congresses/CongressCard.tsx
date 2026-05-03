@@ -55,7 +55,10 @@ export function CongressCard({
           <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-text-muted">
             {congress.shortCode}
           </div>
-          <h3 className="mt-1 text-[14px] font-semibold text-text-primary leading-tight truncate">
+          <h3
+            className="mt-1 font-semibold text-text-primary leading-tight truncate"
+            style={{ fontSize: "var(--text-size-title)" }}
+          >
             {congress.name}
           </h3>
         </div>

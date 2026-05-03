@@ -376,7 +376,11 @@ export function SessionDetail({ sessionId }: Props) {
                   {summary.bulletPoints.slice(0, prefs.maxBullets).map((b, i) => (
                     <li
                       key={i}
-                      className="flex gap-2 text-[13px] text-text-primary"
+                      className="flex gap-2 text-text-primary"
+                      style={{
+                        fontSize: "var(--text-size-bullet)",
+                        lineHeight: "var(--line-height-content)",
+                      }}
                     >
                       <span className="font-mono text-accent text-[11px] mt-0.5">
                         {String(i + 1).padStart(2, "0")}
@@ -411,7 +415,13 @@ export function SessionDetail({ sessionId }: Props) {
                               jump →
                             </span>
                           </div>
-                          <p className="mt-0.5 text-[12px] italic text-text-primary">
+                          <p
+                            className="mt-0.5 italic text-text-primary"
+                            style={{
+                              fontSize: "var(--text-size-bullet)",
+                              lineHeight: "var(--line-height-content)",
+                            }}
+                          >
                             “{q.quote}”
                           </p>
                         </div>
@@ -546,7 +556,10 @@ function SessionMeta({ session }: { session: Session }) {
           {session.track}
         </div>
       </div>
-      <h1 className="text-[15px] font-semibold text-text-primary leading-snug">
+      <h1
+        className="font-semibold text-text-primary leading-snug"
+        style={{ fontSize: "var(--text-size-title)" }}
+      >
         {session.title}
       </h1>
       <div className="space-y-1.5 text-[12px] text-text-muted">
@@ -601,7 +614,10 @@ function AbstractRow({
           {abstract.abstractNumber}
         </span>
       </div>
-      <div className="text-text-primary text-[12px] leading-snug mt-0.5">
+      <div
+        className="text-text-primary leading-snug mt-0.5"
+        style={{ fontSize: "calc(var(--text-size-tweet) - 1px)" }}
+      >
         {abstract.title}
       </div>
       <div className="text-[10px] font-mono text-text-muted mt-1 truncate">

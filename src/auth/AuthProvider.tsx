@@ -10,7 +10,7 @@ export interface UserPreferences {
   default_source_list_id: string | null;
   summary_tone: string;
   summary_language: string;
-  theme_density: "compact" | "comfortable";
+  theme_density: "compact" | "comfortable" | "spacious";
   polling_interval_seconds: number;
 }
 
@@ -53,6 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = React.useState<AppRole[]>([]);
   const [prefs, setPrefs] = React.useState<UserPreferences | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  // Apply density body class. Default to `comfortable` to avoid a
+  // first-paint flash of the compact (root) sizes for new users.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const d = prefs?.theme_density ?? "comfortable";
+    const body = document.body;
+    body.classList.remove("density-compact", "density-comfortable", "density-spacious");
+    body.classList.add(`density-${d}`);
+  }, [prefs?.theme_density]);
 
   const loadAux = React.useCallback(async (uid: string) => {
     const [{ data: prof }, { data: roleRows }, { data: pref }] = await Promise.all([

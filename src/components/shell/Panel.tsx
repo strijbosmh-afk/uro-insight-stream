@@ -44,9 +44,14 @@ export function Panel({
       <div
         className={cn(
           "flex-1 min-h-0",
-          !noPadding && "p-4",
+          !noPadding && "px-4",
           bodyClassName,
         )}
+        style={
+          !noPadding
+            ? { paddingBlock: "var(--panel-padding-y)" }
+            : undefined
+        }
       >
         {children}
       </div>

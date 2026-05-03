@@ -70,6 +70,18 @@
 :root {
   --radius: 0.25rem;
 
+  /* Density-driven content text scale.
+   * Chrome (sidebar nav, panel headers, status bar, mono) stays fixed.
+   * Default (no class) === compact, but AuthProvider applies
+   * `density-comfortable` on first paint to avoid the "compact flash". */
+  --text-size-tweet: 13px;
+  --text-size-bullet: 14px;
+  --text-size-title: 16px;
+  --text-size-chrome: 13px;
+  --text-size-status: 12px;
+  --line-height-content: 1.45;
+  --panel-padding-y: 10px;
+
   /* RayStation palette — clinical dark */
   --bg: #0E1116;
   --panel: #1B2230;
@@ -115,6 +127,24 @@
   --sidebar-accent-foreground: var(--text-primary);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--accent);
+}
+
+body.density-compact {
+  /* matches :root defaults */
+}
+body.density-comfortable {
+  --text-size-tweet: 15px;
+  --text-size-bullet: 16px;
+  --text-size-title: 18px;
+  --line-height-content: 1.55;
+  --panel-padding-y: 12px;
+}
+body.density-spacious {
+  --text-size-tweet: 16px;
+  --text-size-bullet: 17px;
+  --text-size-title: 19px;
+  --line-height-content: 1.65;
+  --panel-padding-y: 16px;
 }
 
 @layer base {
