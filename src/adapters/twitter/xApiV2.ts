@@ -55,8 +55,15 @@ async function recentSearch(query: string, sinceISO: string, token: string): Pro
   json.includes?.users?.forEach((u) => usersById.set(u.id, u));
   const mediaByKey = new Map<string, XMedia>();
   json.includes?.media?.forEach((m) => mediaByKey.set(m.media_key, m));
+  const referencedById = new Map<string, XTweet>();
+  json.includes?.tweets?.forEach((t) => referencedById.set(t.id, t));
 
-  return json.data.map((t): NormalizedTweet => {
+  const out: NormalizedTweet[] = [];
+  for (const t of json.data) {
+    const ref = t.referenced_tweets?.[0];
+    // Defense in depth: drop pure retweets at the parser level too.
+    if (ref?.type === "retweeted") continue;
+
     const user = t.author_id ? usersById.get(t.author_id) : undefined;
     const tagsFromEntities = t.entities?.hashtags?.map((h) => h.tag.toLowerCase()) ?? [];
     const hashtags = tagsFromEntities.length ? tagsFromEntities : extractHashtags(t.text);
@@ -64,7 +71,25 @@ async function recentSearch(query: string, sinceISO: string, token: string): Pro
       .map((k) => mediaByKey.get(k))
       .map((m) => m?.url ?? m?.preview_image_url)
       .filter((u): u is string => !!u);
-    return {
+
+    let tweetType: NormalizedTweet["tweetType"] = "original";
+    let parentTweetExternalId: string | undefined;
+    let parentHandle: string | undefined;
+    let parentText: string | undefined;
+    if (ref?.type === "replied_to") tweetType = "reply";
+    else if (ref?.type === "quoted") tweetType = "quote";
+    if (ref && tweetType !== "original") {
+      parentTweetExternalId = ref.id;
+      const parent = referencedById.get(ref.id);
+      if (parent) {
+        parentText = parent.text ? parent.text.slice(0, 280) : undefined;
+        if (parent.author_id) {
+          parentHandle = usersById.get(parent.author_id)?.username;
+        }
+      }
+    }
+
+    out.push({
       id: t.id,
       sourceId: user?.username?.toLowerCase(),
       authorHandle: user?.username ?? t.author_id ?? "unknown",
@@ -77,9 +102,14 @@ async function recentSearch(query: string, sinceISO: string, token: string): Pro
       replyCount: t.public_metrics?.reply_count ?? 0,
       mediaUrls,
       hashtags,
+      tweetType,
+      parentTweetExternalId,
+      parentHandle,
+      parentText,
       raw: t,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 export function createXApiV2Adapter(token: string): TwitterAdapter {
