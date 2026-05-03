@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { feedService } from "@/services/feedService";
+import { cn } from "@/lib/utils";
 import { CongressCard } from "./CongressCard";
 import { NewCongressDialog } from "./NewCongressDialog";
 import { useCanEdit } from "@/auth/permissions";
