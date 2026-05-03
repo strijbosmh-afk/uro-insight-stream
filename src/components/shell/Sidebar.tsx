@@ -11,6 +11,7 @@ import {
   ChevronsRight,
   Activity,
   Sparkles,
+  RadioTower,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -49,6 +50,7 @@ const ADMIN_SECTION: NavSection = {
   label: "Admin",
   items: [
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
+    { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
   ],
 };
 
