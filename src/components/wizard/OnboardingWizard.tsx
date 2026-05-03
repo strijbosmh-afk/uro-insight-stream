@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/server/onboarding.functions";
 import { Link } from "@tanstack/react-router";
+import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
+import { feedService } from "@/services/feedService";
 
 const STEPS = [
   "Welcome",
@@ -1300,6 +1302,7 @@ function CongressTypeahead({
   onAdd: (id: string) => void;
 }) {
   const [query, setQuery] = React.useState("");
+  const qc = useQueryClient();
   const { data: results = [] } = useQuery({
     queryKey: ["wizard-congress-typeahead", query],
     enabled: query.trim().length >= 2,
@@ -1314,6 +1317,36 @@ function CongressTypeahead({
         .filter((r) => !excludeIds.includes(r.id));
     },
   });
+  const { data: suggest, isFetching } = useCongressSuggest(query);
+  const aiMatches = (suggest?.matches ?? []).filter(
+    (m) => !m.existing_id || !excludeIds.includes(m.existing_id),
+  );
+
+  const pickAi = async (m: CongressSuggestion) => {
+    if (m.already_exists && m.existing_id) {
+      onAdd(m.existing_id);
+      setQuery("");
+      return;
+    }
+    try {
+      const created = await feedService.addCongress({
+        name: m.name,
+        shortCode: m.short_code.toUpperCase(),
+        city: m.city,
+        country: m.country,
+        startDate: m.start_date,
+        endDate: m.end_date,
+        status: m.status,
+        primaryHashtags: (m.primary_hashtags ?? []).map((t) => "#" + t.replace(/^#/, "")),
+      });
+      qc.invalidateQueries({ queryKey: ["congresses"] });
+      onAdd(created.id);
+      setQuery("");
+    } catch {
+      toast.error("Could not create congress");
+    }
+  };
+
   return (
     <div className="mt-3 space-y-2">
       <Input
@@ -1322,6 +1355,12 @@ function CongressTypeahead({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+      {isFetching && query.trim().length >= 3 && results.length === 0 && aiMatches.length === 0 && (
+        <div className="text-[11px] font-mono text-cyan-400 flex items-center gap-2 px-1">
+          <span className="inline-block h-3 w-3 border border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          looking up congress …
+        </div>
+      )}
       {results.length > 0 && (
         <div className="border border-border divide-y divide-border">
           {results.map((r) => (
@@ -1341,6 +1380,41 @@ function CongressTypeahead({
               <span className="font-mono text-[10px] text-accent uppercase">{r.short_code}</span>
             </button>
           ))}
+        </div>
+      )}
+      {aiMatches.length > 0 && (
+        <div className="border border-border divide-y divide-border">
+          {aiMatches.map((m, i) => {
+            const conf =
+              m.confidence === "high"
+                ? "text-cyan-400"
+                : m.confidence === "low"
+                  ? "text-red-400"
+                  : "text-amber-400";
+            return (
+              <button
+                key={`ai-${m.short_code}-${i}`}
+                type="button"
+                onClick={() => pickAi(m)}
+                className="w-full px-3 py-2 text-left text-xs hover:bg-panel-elevated/60 flex items-center justify-between gap-3"
+              >
+                <span className="flex-1 min-w-0">
+                  <span className="text-text-primary flex items-center gap-1.5">
+                    <Sparkles className={"h-3 w-3 " + conf} />
+                    {m.name}
+                    {m.already_exists && (
+                      <span className="text-[10px] font-mono text-text-muted">· in database</span>
+                    )}
+                  </span>
+                  <span className="text-text-muted text-[10px] font-mono block mt-0.5">
+                    {m.start_date && m.end_date ? `${m.start_date} → ${m.end_date}` : "dates tbd"}
+                    {m.city ? ` · ${m.city}` : ""}
+                  </span>
+                </span>
+                <span className={"font-mono text-[10px] uppercase " + conf}>{m.short_code}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
