@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import "@/auth/serverFnFetchPatch";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -69,6 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+      if (typeof window !== "undefined") {
+        (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
+          s?.access_token ?? null;
+      }
       if (s?.user) {
         // Defer to avoid recursion in the auth callback.
         setTimeout(() => {
@@ -83,6 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      if (typeof window !== "undefined") {
+        (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
+          data.session?.access_token ?? null;
+      }
       if (data.session?.user) {
         void loadAux(data.session.user.id).finally(() => setLoading(false));
       } else {
