@@ -76,6 +76,15 @@ export function useFollowSource() {
     }) => {
       if (!user) throw new Error("not_authenticated");
       const id = handle.replace(/^@/, "").toLowerCase();
+      // Belt-and-braces: if cache already says we're subscribed, no-op.
+      const cached = qc.getQueryData<HandleSubState>([
+        "handle-sub-state",
+        id,
+        user.id,
+      ]);
+      if (cached?.isSubscribed) {
+        return { id, backfilled: false, alreadyFollowing: true as const };
+      }
       if (needsLookup) {
         await lookupAndPersist(id);
         // Enqueue an initial backfill — fire-and-forget RLS insert.
