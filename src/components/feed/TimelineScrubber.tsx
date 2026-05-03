@@ -32,7 +32,7 @@ export function TimelineScrubber() {
   React.useEffect(() => setMounted(true), []);
   const { data: allTweets = [] } = useQuery({
     queryKey: ["live-tweets"],
-    queryFn: () => feedService.listTweets({ limit: 1000 }),
+    queryFn: () => feedService.listTweets({ limit: 250 }),
   });
 
   // Window: last 24h of feed-time

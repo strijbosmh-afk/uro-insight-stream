@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loadConfig, runIngestionForTarget } from "@/server/ingestion.server";
+import { requireCronAuth } from "@/server/cron-auth.server";
 
 // Cron-triggered tweet ingestion. Iterates over active sources + hashtags
 // using the configured adapter and the configured lookback window.
@@ -9,16 +10,8 @@ export const Route = createFileRoute("/api/public/hooks/tweet-ingest")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          // Authenticate the caller (pg_cron passes a shared secret in the
-          // Authorization header). Public route, but not world-callable.
-          const expected = process.env.X_JOB_SECRET;
-          const got = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-          if (!expected || got !== expected) {
-            return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
-              status: 401,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
+        const auth = await requireCronAuth(request);
+        if (auth) return auth;
           const cfg = await loadConfig();
           if (!cfg.enabled) {
             return Response.json({ ok: true, skipped: "ingestion_disabled" });

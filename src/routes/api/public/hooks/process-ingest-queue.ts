@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runIngestionForTarget } from "@/server/ingestion.server";
+import { requireCronAuth } from "@/server/cron-auth.server";
 
 const MAX_JOBS_PER_TICK = 10;
 
@@ -82,13 +83,8 @@ export const Route = createFileRoute("/api/public/hooks/process-ingest-queue")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Auth: shared X_JOB_SECRET, same pattern as tweet-ingest
-        const expected = process.env.X_JOB_SECRET;
-        const got = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        if (!expected || got !== expected) {
-          return jsonResponse({ ok: false, error: "unauthorized" }, { status: 401 });
-        }
-
+        const auth = await requireCronAuth(request);
+        if (auth) return auth;
         // Fast no-op when queue is empty
         const { data: peek } = await supabaseAdmin
           .from("ingest_queue")

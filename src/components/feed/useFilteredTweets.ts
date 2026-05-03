@@ -17,10 +17,16 @@ export interface FeedDataset {
   lastUpdatedMs: number;
 }
 
+const SERVER_FETCH_LIMIT = 250;
+
 /**
- * Centralised data layer for the live feed. Polls every 30s, advances the
- * virtual clock, and applies all active filters client-side so the rest of
- * the feed UI just consumes a list of `Tweet`s.
+ * Centralised data layer for the live feed. Polls every 30s and applies
+ * filters server-side via feedService.listTweets — only client-side filters
+ * are the virtual-clock check and the brush-window scrubber.
+ *
+ * Audit fix H1: previous version pulled `limit: 1000` and filtered
+ * client-side for sessionId/sourceListId/hashtags. As corpus grew this
+ * became a per-poll bandwidth hog. Filters now go to the server.
  */
 export function useFilteredTweets(intervalMs?: number): FeedDataset {
   const qc = useQueryClient();
@@ -48,21 +54,40 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
     enabled: Boolean(filters.congressId),
   });
 
-  // Source-list scoping: which source IDs are allowed by the active list?
+  // Resolve allowed source ids for the active source list (still client-side
+  // because list membership is in `sources.list_ids` text[]).
   const allowedSourceIds = React.useMemo(() => {
     if (!filters.sourceListId) return null;
-    const set = new Set(
-      sources
-        .filter((s) => s.listIds?.includes(filters.sourceListId!))
-        .map((s) => s.id),
-    );
-    return set;
+    return sources
+      .filter((s) => s.listIds?.includes(filters.sourceListId!))
+      .map((s) => s.id);
   }, [filters.sourceListId, sources]);
 
-  // Live tweet list — refetch every 30s, advance the virtual clock each tick.
+  // Build server filter payload. Date range, session, source, hashtags,
+  // language go server-side. Brush + virtual-clock stay client-side.
+  const serverFilter = React.useMemo(() => {
+    const f: {
+      sessionId?: string;
+      sourceIds?: string[];
+      hashtags?: string[];
+      since?: string;
+      until?: string;
+      limit?: number;
+    } = { limit: SERVER_FETCH_LIMIT };
+    if (filters.sessionId) f.sessionId = filters.sessionId;
+    if (filters.sourceId) f.sourceIds = [filters.sourceId];
+    else if (allowedSourceIds && allowedSourceIds.length > 0)
+      f.sourceIds = allowedSourceIds;
+    if (filters.hashtags.length) f.hashtags = filters.hashtags;
+    if (filters.dateFrom) f.since = filters.dateFrom + "T00:00:00Z";
+    if (filters.dateTo) f.until = filters.dateTo + "T23:59:59Z";
+    return f;
+  }, [filters, allowedSourceIds]);
+
+  // Live tweet list — server-filtered, refetched every 30s.
   const tweetQuery = useLiveData(
-    ["live-tweets"],
-    async () => feedService.listTweets({ limit: 1000 }),
+    ["live-tweets", serverFilter],
+    async () => feedService.listTweets(serverFilter),
     effectiveInterval,
   );
 
@@ -72,29 +97,20 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
     }
   }, [tweetQuery.data]);
 
-  // Each successful poll: advance the virtual clock so more tweets become
-  // visible (simulates new arrivals).
   React.useEffect(() => {
     if (tweetQuery.dataUpdatedAt > 0) advanceFeedClock(120);
   }, [tweetQuery.dataUpdatedAt]);
 
-  // Apply all filters client-side. The list arrives newest-first.
+  // Apply the remaining client-only filters (brush window, virtual clock,
+  // language, congress→sessions filter, language) and the session-set check
+  // for "all sessions in this congress" mode.
   const tweets = React.useMemo(() => {
     const all = tweetQuery.data ?? [];
     const nowMs = feedNowMs();
-    const dateFromMs = filters.dateFrom
-      ? new Date(filters.dateFrom + "T00:00:00Z").getTime()
-      : null;
-    const dateToMs = filters.dateTo
-      ? new Date(filters.dateTo + "T23:59:59Z").getTime()
-      : null;
     const sessIdsForCongress =
       filters.congressId && !filters.sessionId
         ? new Set(allCongressSessions.map((s) => s.id))
         : null;
-    const wantTags = filters.hashtags.length
-      ? new Set(filters.hashtags.map((h) => h.toLowerCase()))
-      : null;
 
     return all.filter((t) => {
       const ms = new Date(t.createdAt).getTime();
@@ -102,21 +118,12 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
       if (filters.brush) {
         if (ms < filters.brush.sinceMs || ms > filters.brush.untilMs) return false;
       }
-      if (dateFromMs !== null && ms < dateFromMs) return false;
-      if (dateToMs !== null && ms > dateToMs) return false;
-      if (filters.sessionId && t.sessionId !== filters.sessionId) return false;
       if (sessIdsForCongress && (!t.sessionId || !sessIdsForCongress.has(t.sessionId)))
         return false;
-      if (allowedSourceIds && !allowedSourceIds.has(t.sourceId)) return false;
-      if (filters.sourceId && t.sourceId !== filters.sourceId) return false;
-      if (wantTags) {
-        const ok = t.hashtags.some((h) => wantTags.has(h.toLowerCase()));
-        if (!ok) return false;
-      }
       if (filters.language && t.lang !== filters.language) return false;
       return true;
     });
-  }, [tweetQuery.data, filters, allCongressSessions, allowedSourceIds]);
+  }, [tweetQuery.data, filters.brush, filters.language, filters.congressId, filters.sessionId, allCongressSessions]);
 
   return {
     tweets,

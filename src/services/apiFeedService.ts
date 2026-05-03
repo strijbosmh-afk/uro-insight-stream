@@ -222,8 +222,23 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToSource);
   },
   async addSource(input) {
-    const row = { ...sourceToRow(input as Source), id: id("src") } as never;
-    const { data, error } = await supabase.from("sources").insert(row).select("*").single();
+    // C4/M5 fix: source.id is the canonical lowercased handle (matches
+    // ingestion adapter and lookup-handle path). Without this, manually
+    // added sources never link with their ingested tweets.
+    if (!input.handle) throw new Error("handle is required");
+    const normalizedHandle = input.handle.replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9_]{1,15}$/.test(normalizedHandle)) {
+      throw new Error("invalid handle format");
+    }
+    const row = {
+      ...sourceToRow({ ...input, handle: normalizedHandle } as Source),
+      id: normalizedHandle,
+    } as never;
+    const { data, error } = await supabase
+      .from("sources")
+      .upsert(row, { onConflict: "id", ignoreDuplicates: false })
+      .select("*")
+      .single();
     if (error) throw new Error(error.message);
     return rowToSource(data);
   },

@@ -87,7 +87,7 @@ export function Dashboard() {
   });
   const { data: allTweets = [] } = useQuery({
     queryKey: ["dashboard-tweets"],
-    queryFn: () => feedService.listTweets({ limit: 1000 }),
+    queryFn: () => feedService.listTweets({ limit: 250 }),
   });
   const { data: cronHealth = [] } = useQuery({
     queryKey: ["ingestion-cron-health"],
