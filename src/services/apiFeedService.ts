@@ -78,6 +78,11 @@ function rowToTweet(r: {
   abstract_id: string | null;
   lang: string | null;
   author_handle: string;
+  tweet_type?: string | null;
+  parent_tweet_external_id?: string | null;
+  parent_handle?: string | null;
+  parent_text?: string | null;
+  parent_in_db_id?: string | null;
 }): Tweet {
   return {
     id: r.id,
@@ -92,6 +97,11 @@ function rowToTweet(r: {
     sessionId: r.session_id ?? undefined,
     abstractId: r.abstract_id ?? undefined,
     lang: r.lang ?? "en",
+    tweetType: (r.tweet_type as Tweet["tweetType"]) ?? "original",
+    parentTweetExternalId: r.parent_tweet_external_id ?? undefined,
+    parentHandle: r.parent_handle ?? undefined,
+    parentText: r.parent_text ?? undefined,
+    parentInDbId: r.parent_in_db_id ?? undefined,
   };
 }
 
