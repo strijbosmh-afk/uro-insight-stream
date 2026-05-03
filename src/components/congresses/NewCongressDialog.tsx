@@ -22,6 +22,9 @@ import { feedService } from "@/services/feedService";
 import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, SourceList } from "@/types";
 import { recordAudit } from "@/services/auditService";
+import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
+import { CongressSuggestionCard } from "./CongressSuggestionCard";
+import { Sparkles } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -40,6 +43,50 @@ export function NewCongressDialog({ open, onOpenChange, lists }: Props) {
   const [hashtags, setHashtags] = React.useState("");
   const [status, setStatus] = React.useState<Congress["status"]>("upcoming");
   const [listIds, setListIds] = React.useState<string[]>([]);
+  const [aiFields, setAiFields] = React.useState<Record<string, { confidence: string }>>({});
+  const [suggestionDismissed, setSuggestionDismissed] = React.useState(false);
+
+  const { data: suggest, isFetching, debounced } = useCongressSuggest(name, !suggestionDismissed);
+  const showLoading = isFetching && debounced.length >= 3;
+  const matches = suggest?.matches ?? [];
+
+  const markAi = (fields: string[], conf: Record<string, string>) => {
+    const m: Record<string, { confidence: string }> = {};
+    for (const f of fields) m[f] = { confidence: conf[f] ?? "medium" };
+    setAiFields(m);
+  };
+
+  const applySuggestion = (s: CongressSuggestion) => {
+    setName(s.name);
+    setShortCode(s.short_code);
+    setCity(s.city);
+    setCountry(s.country);
+    setStartDate(s.start_date);
+    setEndDate(s.end_date);
+    setHashtags((s.primary_hashtags ?? []).map((t) => "#" + t.replace(/^#/, "")).join(", "));
+    setStatus(s.status);
+    markAi(
+      ["name", "shortCode", "city", "country", "startDate", "endDate", "hashtags"],
+      {
+        name: s.confidence,
+        shortCode: s.confidence,
+        city: s.field_confidence?.city ?? s.confidence,
+        country: s.field_confidence?.city ?? s.confidence,
+        startDate: s.field_confidence?.dates ?? s.confidence,
+        endDate: s.field_confidence?.dates ?? s.confidence,
+        hashtags: s.field_confidence?.hashtags ?? s.confidence,
+      },
+    );
+    setSuggestionDismissed(true);
+  };
+
+  const clearAi = (key: string) =>
+    setAiFields((prev) => {
+      if (!prev[key]) return prev;
+      const n = { ...prev };
+      delete n[key];
+      return n;
+    });
 
   const reset = () => {
     setName("");
@@ -51,6 +98,8 @@ export function NewCongressDialog({ open, onOpenChange, lists }: Props) {
     setHashtags("");
     setStatus("upcoming");
     setListIds([]);
+    setAiFields({});
+    setSuggestionDismissed(false);
   };
 
   const create = useMutation({
@@ -117,12 +166,37 @@ export function NewCongressDialog({ open, onOpenChange, lists }: Props) {
             New congress
           </DialogTitle>
         </DialogHeader>
+        {(showLoading || matches.length > 0) && !suggestionDismissed && (
+          <div className="mb-2">
+            <CongressSuggestionCard
+              matches={matches}
+              loading={showLoading && matches.length === 0}
+              fromCache={!!suggest?.from_cache}
+              onApply={applySuggestion}
+              onDismiss={() => setSuggestionDismissed(true)}
+            />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Name" full>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="EAU27 — Annual Meeting" />
+          <Field label="Name" full ai={aiFields.name}>
+            <Input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearAi("name");
+                setSuggestionDismissed(false);
+              }}
+              placeholder="EAU27 — Annual Meeting"
+              className={aiFields.name ? "border-l-2 border-l-cyan-400 italic" : ""}
+            />
           </Field>
-          <Field label="Short code">
-            <Input value={shortCode} onChange={(e) => setShortCode(e.target.value)} placeholder="EAU27" className="font-mono uppercase" />
+          <Field label="Short code" ai={aiFields.shortCode}>
+            <Input
+              value={shortCode}
+              onChange={(e) => { setShortCode(e.target.value); clearAi("shortCode"); }}
+              placeholder="EAU27"
+              className={"font-mono uppercase " + (aiFields.shortCode ? "border-l-2 border-l-cyan-400" : "")}
+            />
           </Field>
           <Field label="Status">
             <Select value={status} onValueChange={(v) => setStatus(v as Congress["status"])}>
@@ -134,24 +208,24 @@ export function NewCongressDialog({ open, onOpenChange, lists }: Props) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="City">
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Madrid" />
+          <Field label="City" ai={aiFields.city}>
+            <Input value={city} onChange={(e) => { setCity(e.target.value); clearAi("city"); }} placeholder="Madrid" className={aiFields.city ? "border-l-2 border-l-cyan-400 italic" : ""} />
           </Field>
-          <Field label="Country">
-            <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Spain" />
+          <Field label="Country" ai={aiFields.country}>
+            <Input value={country} onChange={(e) => { setCountry(e.target.value); clearAi("country"); }} placeholder="Spain" className={aiFields.country ? "border-l-2 border-l-cyan-400 italic" : ""} />
           </Field>
-          <Field label="Start date">
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <Field label="Start date" ai={aiFields.startDate}>
+            <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); clearAi("startDate"); }} className={aiFields.startDate ? "border-l-2 border-l-cyan-400" : ""} />
           </Field>
-          <Field label="End date">
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <Field label="End date" ai={aiFields.endDate}>
+            <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); clearAi("endDate"); }} className={aiFields.endDate ? "border-l-2 border-l-cyan-400" : ""} />
           </Field>
-          <Field label="Primary hashtags" full>
+          <Field label="Primary hashtags" full ai={aiFields.hashtags}>
             <Input
               value={hashtags}
-              onChange={(e) => setHashtags(e.target.value)}
+              onChange={(e) => { setHashtags(e.target.value); clearAi("hashtags"); }}
               placeholder="#EAU27, #UroSoMe"
-              className="font-mono"
+              className={"font-mono " + (aiFields.hashtags ? "border-l-2 border-l-cyan-400" : "")}
             />
           </Field>
           <Field label="Linked source lists" full>
@@ -201,15 +275,31 @@ function Field({
   label,
   children,
   full = false,
+  ai,
 }: {
   label: string;
   children: React.ReactNode;
   full?: boolean;
+  ai?: { confidence: string };
 }) {
   return (
     <div className={"grid gap-1.5 " + (full ? "col-span-2" : "")}>
-      <Label className="text-[10px] uppercase tracking-wider text-text-muted">
+      <Label className="text-[10px] uppercase tracking-wider text-text-muted flex items-center gap-1">
         {label}
+        {ai && (
+          <span
+            title={`AI confidence: ${ai.confidence}${ai.confidence === "low" ? " · verify against official source" : " · safe to use"}`}
+            className={
+              ai.confidence === "high"
+                ? "text-cyan-400"
+                : ai.confidence === "low"
+                  ? "text-red-400"
+                  : "text-amber-400"
+            }
+          >
+            <Sparkles className="h-3 w-3 inline" />
+          </span>
+        )}
       </Label>
       {children}
     </div>
