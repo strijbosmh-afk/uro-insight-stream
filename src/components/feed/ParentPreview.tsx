@@ -72,9 +72,13 @@ export function ParentPreview({
       {parentText && (
         <p
           className={cn(
-            "text-[12px] leading-snug text-text-muted whitespace-pre-wrap break-words",
+            "text-text-muted whitespace-pre-wrap break-words",
             !expanded && "line-clamp-2",
           )}
+          style={{
+            fontSize: "calc(var(--text-size-tweet) - 1px)",
+            lineHeight: "var(--line-height-content)",
+          }}
         >
           {parentText}
         </p>
