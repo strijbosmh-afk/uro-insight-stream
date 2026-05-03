@@ -759,6 +759,84 @@ export type Database = {
         }
         Relationships: []
       }
+      source_candidate_dismissals: {
+        Row: {
+          created_at: string
+          handle: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      source_candidates: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          enrichment_attempted_at: string | null
+          enrichment_error: string | null
+          enrichment_status: string
+          external_user_id: string | null
+          first_seen_at: string
+          followers_count: number | null
+          handle: string
+          last_seen_at: string | null
+          mention_count: number
+          reply_count: number
+          total_signal: number
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          enrichment_attempted_at?: string | null
+          enrichment_error?: string | null
+          enrichment_status?: string
+          external_user_id?: string | null
+          first_seen_at?: string
+          followers_count?: number | null
+          handle: string
+          last_seen_at?: string | null
+          mention_count?: number
+          reply_count?: number
+          total_signal?: number
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          enrichment_attempted_at?: string | null
+          enrichment_error?: string | null
+          enrichment_status?: string
+          external_user_id?: string | null
+          first_seen_at?: string
+          followers_count?: number | null
+          handle?: string
+          last_seen_at?: string | null
+          mention_count?: number
+          reply_count?: number
+          total_signal?: number
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       sources: {
         Row: {
           active: boolean
