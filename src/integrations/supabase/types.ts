@@ -125,6 +125,27 @@ export type Database = {
         }
         Relationships: []
       }
+      congress_suggestion_cache: {
+        Row: {
+          created_at: string
+          hits: number
+          query_normalized: string
+          response_json: Json
+        }
+        Insert: {
+          created_at?: string
+          hits?: number
+          query_normalized: string
+          response_json: Json
+        }
+        Update: {
+          created_at?: string
+          hits?: number
+          query_normalized?: string
+          response_json?: Json
+        }
+        Relationships: []
+      }
       congresses: {
         Row: {
           city: string | null
@@ -487,6 +508,27 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rate_limit_congress_suggest: {
+        Row: {
+          count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
