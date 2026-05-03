@@ -156,6 +156,20 @@ export function TweetStream({ data }: { data: FeedDataset }) {
               {items.map((vi) => {
                 const t = tweets[vi.index];
                 if (!t) return null;
+                const prev = vi.index > 0 ? tweets[vi.index - 1] : undefined;
+                const next = vi.index < tweets.length - 1 ? tweets[vi.index + 1] : undefined;
+                // Self-thread: this tweet replies to the previous tweet from the same author.
+                const continuesThread =
+                  !!prev &&
+                  prev.sourceId === t.sourceId &&
+                  !!t.parentInDbId &&
+                  t.parentInDbId === prev.id;
+                // Next tweet continues from this one in a self-thread.
+                const startsThread =
+                  !!next &&
+                  next.sourceId === t.sourceId &&
+                  !!next.parentInDbId &&
+                  next.parentInDbId === t.id;
                 return (
                   <div
                     key={vi.key}
@@ -170,6 +184,17 @@ export function TweetStream({ data }: { data: FeedDataset }) {
                       paddingBottom: 8,
                     }}
                   >
+                    {(continuesThread || startsThread) && (
+                      <div
+                        aria-hidden
+                        className="absolute left-[27px] w-px bg-border"
+                        style={{
+                          top: continuesThread ? -8 : 36,
+                          bottom: startsThread ? 0 : "auto",
+                          height: startsThread && !continuesThread ? "calc(100% - 36px)" : undefined,
+                        }}
+                      />
+                    )}
                     <TweetCard
                       tweet={t}
                       source={sourcesById[t.sourceId]}
