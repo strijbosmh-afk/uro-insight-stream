@@ -20,6 +20,7 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-congress'
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -85,6 +86,11 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
 } as any)
+const ApiSuggestCongressRoute = ApiSuggestCongressRouteImport.update({
+  id: '/api/suggest-congress',
+  path: '/api/suggest-congress',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLookupHandleRoute = ApiLookupHandleRouteImport.update({
   id: '/api/lookup-handle',
   path: '/api/lookup-handle',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
+  '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
+  '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/summaries': typeof SummariesRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
+  '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/admin/recommendations'
     | '/api/lookup-handle'
+    | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/admin/recommendations'
     | '/api/lookup-handle'
+    | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/summaries'
     | '/admin/recommendations'
     | '/api/lookup-handle'
+    | '/api/suggest-congress'
     | '/congresses/$congressId'
     | '/sessions/$sessionId'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   SummariesRoute: typeof SummariesRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
+  ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/congresses/$congressId'
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
+    }
+    '/api/suggest-congress': {
+      id: '/api/suggest-congress'
+      path: '/api/suggest-congress'
+      fullPath: '/api/suggest-congress'
+      preLoaderRoute: typeof ApiSuggestCongressRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/lookup-handle': {
       id: '/api/lookup-handle'
@@ -463,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   SummariesRoute: SummariesRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
+  ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
