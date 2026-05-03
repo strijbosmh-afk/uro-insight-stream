@@ -1092,6 +1092,13 @@ export type Database = {
             referencedRelation: "tweets"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tweets_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
         ]
       }
       urology_specialties: {
