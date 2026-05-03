@@ -19,16 +19,17 @@ type XTweet = {
   public_metrics?: { like_count: number; retweet_count: number; reply_count: number };
   entities?: { hashtags?: { tag: string }[] };
   attachments?: { media_keys?: string[] };
+  referenced_tweets?: { type: "retweeted" | "replied_to" | "quoted"; id: string }[];
 };
 type XUser = { id: string; username: string; name?: string };
 type XMedia = { media_key: string; url?: string; preview_image_url?: string };
 type XResponse = {
   data?: XTweet[];
-  includes?: { users?: XUser[]; media?: XMedia[] };
+  includes?: { users?: XUser[]; media?: XMedia[]; tweets?: XTweet[] };
   errors?: { message: string }[];
 };
 
-async function recentSearch(query: string, sinceISO: string, token: string): Promise<NormalizedTweet[]> {
+export async function recentSearch(query: string, sinceISO: string, token: string): Promise<NormalizedTweet[]> {
   const url = new URL(`${API}/tweets/search/recent`);
   url.searchParams.set("query", query);
   url.searchParams.set("max_results", "100");
