@@ -4,6 +4,7 @@ import { RoleBadge } from "@/components/sources/RoleBadge";
 import { cn } from "@/lib/utils";
 import type { Source, Tweet } from "@/types";
 import { feedNowMs } from "./feedClock";
+import { HandleChip } from "@/components/handles/HandleChip";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -38,11 +39,13 @@ function highlight(text: string) {
         </span>
       );
     }
-    if (/^@[A-Za-z0-9_]+$/.test(part)) {
+    const m = /^@([A-Za-z0-9_]{1,15})([.,!?:;]*)$/.exec(part);
+    if (m) {
       return (
-        <span key={i} className="text-accent/80 font-mono">
-          {part}
-        </span>
+        <React.Fragment key={i}>
+          <HandleChip handle={m[1]} variant="inline" />
+          {m[2]}
+        </React.Fragment>
       );
     }
     return <React.Fragment key={i}>{part}</React.Fragment>;
@@ -87,7 +90,7 @@ export const TweetCard = React.memo(function TweetCard({
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[12px] flex-wrap">
-            <span className="font-mono text-accent">@{handle}</span>
+            <HandleChip handle={handle} />
             {source?.verified && (
               <CheckCircle2 className="w-3 h-3 text-accent" />
             )}
