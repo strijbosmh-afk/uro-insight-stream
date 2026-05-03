@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { recentSearch } from "@/adapters/twitter/xApiV2";
+import { requireCronAuth } from "@/server/cron-auth.server";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -13,12 +14,8 @@ export const Route = createFileRoute("/api/public/hooks/backfill-hierarchy-recen
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env.X_JOB_SECRET;
-        const got = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        if (!expected || got !== expected) {
-          return jsonResponse({ ok: false, error: "unauthorized" }, { status: 401 });
-        }
-
+        const auth = await requireCronAuth(request);
+        if (auth) return auth;
         const token = process.env.X_BEARER_TOKEN;
         if (!token) {
           return jsonResponse({ ok: false, error: "missing_x_bearer_token" }, { status: 500 });
