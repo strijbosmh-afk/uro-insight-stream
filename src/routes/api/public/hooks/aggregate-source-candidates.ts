@@ -11,6 +11,14 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 const NORMALIZE = (h: string) => h.replace(/^@/, "").trim().toLowerCase();
 const VALID = (h: string) => /^[a-z0-9_]{1,15}$/.test(h);
 
+// Scoring weights — see Discover spec.
+const W_REPLY = 3;
+const W_QUOTE = 3;
+const W_MENTION = 1;
+const RECENCY_MULT = 2;
+const RECENCY_DAYS = 7;
+const MENTIONS_PER_TWEET_CAP = 3;
+
 /**
  * Aggregates handle activity from tweets into `source_candidates`, then
  * enriches a small batch via X v2 users/by. Idempotent — safe to run on a cron.
@@ -42,9 +50,26 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
 
         // 2) Scan tweets for parent_handle and entities.mentions.
         // Cap at 5000 rows per run (Supabase default is 1000; we paginate).
-        const replyCounts = new Map<string, number>();
-        const mentionCounts = new Map<string, number>();
+        // Per-handle counters with recent (last 7d) breakdown.
+        type Counters = {
+          reply: number;
+          reply_recent: number;
+          quote: number;
+          quote_recent: number;
+          mention: number;
+          mention_recent: number;
+        };
+        const counters = new Map<string, Counters>();
         const lastSeen = new Map<string, string>();
+        const recentCutoff = Date.now() - RECENCY_DAYS * 24 * 60 * 60 * 1000;
+        const ensure = (h: string): Counters => {
+          let c = counters.get(h);
+          if (!c) {
+            c = { reply: 0, reply_recent: 0, quote: 0, quote_recent: 0, mention: 0, mention_recent: 0 };
+            counters.set(h, c);
+          }
+          return c;
+        };
 
         const PAGE = 1000;
         const MAX_PAGES = 5;
@@ -52,7 +77,7 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
         for (let page = 0; page < MAX_PAGES; page++) {
           const { data: tweets, error } = await supabaseAdmin
             .from("tweets")
-            .select("created_at, parent_handle, raw")
+            .select("created_at, parent_handle, tweet_type, raw")
             .gte("created_at", sinceISO)
             .order("created_at", { ascending: false })
             .range(offset, offset + PAGE - 1);
@@ -62,22 +87,46 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
           if (!tweets || tweets.length === 0) break;
           for (const t of tweets) {
             const ts = t.created_at as unknown as string;
-            if (t.parent_handle) {
+            const isRecent = new Date(ts).getTime() >= recentCutoff;
+            const tt = (t.tweet_type as string | null) ?? "original";
+
+            // Reply / Quote → parent_handle is the strong signal.
+            if (t.parent_handle && (tt === "reply" || tt === "quote")) {
               const h = NORMALIZE(String(t.parent_handle));
               if (VALID(h) && !existing.has(h)) {
-                replyCounts.set(h, (replyCounts.get(h) ?? 0) + 1);
+                const c = ensure(h);
+                if (tt === "reply") {
+                  c.reply++;
+                  if (isRecent) c.reply_recent++;
+                } else {
+                  c.quote++;
+                  if (isRecent) c.quote_recent++;
+                }
                 if (!lastSeen.has(h) || lastSeen.get(h)! < ts) lastSeen.set(h, ts);
               }
             }
+
+            // Mentions — capped at 3 per tweet, dedup within tweet, exclude parent_handle so it
+            // doesn't double-count an already-credited reply/quote target.
             const mentionsRaw = (t.raw as { entities?: { mentions?: Array<{ username?: string }> } } | null)
               ?.entities?.mentions;
             if (Array.isArray(mentionsRaw)) {
+              const parentH = t.parent_handle ? NORMALIZE(String(t.parent_handle)) : null;
+              const seen = new Set<string>();
+              let credited = 0;
               for (const m of mentionsRaw) {
+                if (credited >= MENTIONS_PER_TWEET_CAP) break;
                 const uname = m?.username;
                 if (typeof uname !== "string") continue;
                 const h = NORMALIZE(uname);
                 if (!VALID(h) || existing.has(h)) continue;
-                mentionCounts.set(h, (mentionCounts.get(h) ?? 0) + 1);
+                if (seen.has(h)) continue;
+                if (parentH && h === parentH) continue;
+                seen.add(h);
+                credited++;
+                const c = ensure(h);
+                c.mention++;
+                if (isRecent) c.mention_recent++;
                 if (!lastSeen.has(h) || lastSeen.get(h)! < ts) lastSeen.set(h, ts);
               }
             }
@@ -86,21 +135,34 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
           if (tweets.length < PAGE) break;
         }
 
-        const allHandles = new Set<string>([...replyCounts.keys(), ...mentionCounts.keys()]);
+        const allHandles = new Set<string>(counters.keys());
 
         // 3) Upsert candidates with refreshed signal counts.
         let upserts = 0;
         if (allHandles.size > 0) {
           const rows = Array.from(allHandles).map((h) => {
-            const reply = replyCounts.get(h) ?? 0;
-            const mention = mentionCounts.get(h) ?? 0;
-            // Replies are stronger signal than mentions: weight 3 vs 1.
-            const total = reply * 3 + mention;
+            const c = counters.get(h)!;
+            // Score = base*weight + recent*weight (extra so recent counts 2x total).
+            const score =
+              W_REPLY * c.reply +
+              W_QUOTE * c.quote +
+              W_MENTION * c.mention +
+              (RECENCY_MULT - 1) *
+                (W_REPLY * c.reply_recent + W_QUOTE * c.quote_recent + W_MENTION * c.mention_recent);
             return {
               handle: h,
-              reply_count: reply,
-              mention_count: mention,
-              total_signal: total,
+              reply_count: c.reply,
+              quote_count: c.quote,
+              mention_count: c.mention,
+              total_signal: score,
+              signal_breakdown: {
+                reply: c.reply,
+                reply_recent: c.reply_recent,
+                quote: c.quote,
+                quote_recent: c.quote_recent,
+                mention: c.mention,
+                mention_recent: c.mention_recent,
+              },
               last_seen_at: lastSeen.get(h) ?? null,
               updated_at: new Date().toISOString(),
             };
