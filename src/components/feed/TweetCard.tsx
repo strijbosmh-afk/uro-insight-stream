@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Source, Tweet } from "@/types";
 import { feedNowMs } from "./feedClock";
 import { HandleChip } from "@/components/handles/HandleChip";
+import { TweetMedia } from "./TweetMedia";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -72,6 +73,7 @@ export const TweetCard = React.memo(function TweetCard({
 }: Props) {
   const handle = source?.handle.replace(/^@/, "") ?? "unknown";
   const display = source?.displayName ?? "Unknown source";
+  const tweetUrl = `https://x.com/${handle}/status/${tweet.id}`;
 
   return (
     <article
@@ -110,18 +112,7 @@ export const TweetCard = React.memo(function TweetCard({
             {highlight(tweet.text)}
           </p>
 
-          {tweet.mediaUrls.length > 0 && (
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              {tweet.mediaUrls.slice(0, 4).map((url, i) => (
-                <div
-                  key={i}
-                  className="aspect-video bg-panel-elevated border border-border rounded-[2px] flex items-center justify-center text-[10px] font-mono text-text-muted uppercase tracking-wider"
-                >
-                  media · {i + 1}
-                </div>
-              ))}
-            </div>
-          )}
+          <TweetMedia urls={tweet.mediaUrls} tweetUrl={tweetUrl} />
 
           <div className="mt-2 flex items-center gap-4 text-[11px] font-mono text-text-muted">
             <span className="flex items-center gap-1">
@@ -140,8 +131,9 @@ export const TweetCard = React.memo(function TweetCard({
               {tweet.lang}
             </span>
             <a
-              href="#"
-              onClick={(e) => e.preventDefault()}
+              href={tweetUrl}
+              target="_blank"
+              rel="noreferrer noopener"
               className="flex items-center gap-1 text-text-muted hover:text-accent"
             >
               View thread
