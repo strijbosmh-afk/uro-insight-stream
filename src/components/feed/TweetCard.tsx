@@ -140,7 +140,13 @@ export const TweetCard = React.memo(function TweetCard({
             />
           )}
 
-          <p className="mt-1.5 text-[13px] leading-relaxed text-text-primary whitespace-pre-wrap break-words">
+          <p
+            className="mt-1.5 text-text-primary whitespace-pre-wrap break-words"
+            style={{
+              fontSize: "var(--text-size-tweet)",
+              lineHeight: "var(--line-height-content)",
+            }}
+          >
             {highlight(tweet.text)}
           </p>
 
