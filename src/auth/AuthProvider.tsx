@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import "@/auth/serverFnFetchPatch";
+import { claimInvitation } from "@/serverFns/admin-users";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Defer to avoid recursion in the auth callback.
         setTimeout(() => {
           void loadAux(s.user.id);
+          void maybeClaimInvitation(s.user, () => loadAux(s.user.id));
         }, 0);
       } else {
         setProfile(null);
