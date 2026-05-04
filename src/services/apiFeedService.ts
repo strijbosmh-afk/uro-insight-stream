@@ -12,6 +12,7 @@ import type {
   Session,
   Abstract,
   Summary,
+  SourceList,
 } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mockFeedService } from "./mockFeedService";
