@@ -12,6 +12,7 @@ import type {
   Session,
   Abstract,
   Summary,
+  SourceList,
 } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mockFeedService } from "./mockFeedService";
@@ -267,11 +268,64 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToTweet);
   },
 
-  // ---------- Source lists (still mock — no schema yet) ----------
-  listSourceLists: () => mockFeedService.listSourceLists(),
-  addSourceList: (i) => mockFeedService.addSourceList(i),
-  updateSourceList: (i, p) => mockFeedService.updateSourceList(i, p),
-  removeSourceList: (i) => mockFeedService.removeSourceList(i),
+  // ---------- Source lists (per-user) ----------
+  async listSourceLists(): Promise<SourceList[]> {
+    const { data, error } = await supabase
+      .from("source_lists")
+      .select("id,name,description,color")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description ?? undefined,
+      color: r.color ?? undefined,
+    }));
+  },
+  async addSourceList(input): Promise<SourceList> {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) throw new Error("Not authenticated");
+    const { data, error } = await supabase
+      .from("source_lists")
+      .insert({
+        user_id: u.user.id,
+        name: input.name,
+        description: input.description ?? null,
+        color: input.color ?? null,
+      })
+      .select("id,name,description,color")
+      .single();
+    if (error) throw new Error(error.message);
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description ?? undefined,
+      color: data.color ?? undefined,
+    };
+  },
+  async updateSourceList(idArg, patch): Promise<SourceList> {
+    const { data, error } = await supabase
+      .from("source_lists")
+      .update({
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.color !== undefined ? { color: patch.color } : {}),
+      })
+      .eq("id", idArg)
+      .select("id,name,description,color")
+      .single();
+    if (error) throw new Error(error.message);
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description ?? undefined,
+      color: data.color ?? undefined,
+    };
+  },
+  async removeSourceList(idArg): Promise<void> {
+    const { error } = await supabase.from("source_lists").delete().eq("id", idArg);
+    if (error) throw new Error(error.message);
+  },
 
   // ---------- Hashtags ----------
   async listHashtags(): Promise<Hashtag[]> {

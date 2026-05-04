@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Trash2,
   Check,
+  FolderCog,
 } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { RoleBadge } from "./RoleBadge";
 import { SourceDrawer } from "./SourceDrawer";
 import { AddSourceDialog } from "./AddSourceDialog";
+import { ManageListsDialog } from "./ManageListsDialog";
 import type { Source, SourceList } from "@/types";
 import { useCanEdit, useCanAdmin } from "@/auth/permissions";
 import { recordAudit } from "@/services/auditService";
@@ -76,6 +78,7 @@ export function SourcesTable() {
   const [roleFilter, setRoleFilter] = React.useState<string>(ALL);
   const [listFilter, setListFilter] = React.useState<string>(ALL);
   const [openAdd, setOpenAdd] = React.useState(false);
+  const [openLists, setOpenLists] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Source | null>(null);
 
@@ -229,6 +232,16 @@ export function SourcesTable() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => setOpenLists(true)}
+            title="Create, rename, or delete your lists"
+          >
+            <FolderCog className="h-3.5 w-3.5 mr-1" />
+            Lists
+          </Button>
           <Button
             size="sm"
             className="h-8"
@@ -432,6 +445,7 @@ export function SourcesTable() {
       </Panel>
 
       <AddSourceDialog open={openAdd} onOpenChange={setOpenAdd} />
+      <ManageListsDialog open={openLists} onOpenChange={setOpenLists} />
       <SourceDrawer
         source={activeSource}
         lists={lists}
