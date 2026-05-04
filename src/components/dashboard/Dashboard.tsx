@@ -2,9 +2,9 @@ import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getNewRecommendedSourcesCount } from "@/server/onboarding.functions";
-import { getIngestionCronHealth } from "@/server/ingestion.functions";
-import type { CronHealthRow as CronHealthRowData } from "@/server/ingestion.functions";
+import { getNewRecommendedSourcesCount } from "@/serverFns/onboarding";
+import { getIngestionCronHealth } from "@/serverFns/ingestion";
+import type { CronHealthRow as CronHealthRowData } from "@/serverFns/ingestion";
 import { useAuth } from "@/auth/AuthProvider";
 import {
   Activity,

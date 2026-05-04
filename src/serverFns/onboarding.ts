@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { runIngestionForTarget } from "./ingestion.server";
+import { runIngestionForTarget } from "@/server/ingestion.server";
 
 const EnqueueSchema = z.object({
   source_ids: z.array(z.string().min(1).max(50)).min(1).max(100),

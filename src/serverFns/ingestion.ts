@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { runIngestionForTarget, loadConfig } from "./ingestion.server";
+import { runIngestionForTarget, loadConfig } from "@/server/ingestion.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TargetSchema = z.object({

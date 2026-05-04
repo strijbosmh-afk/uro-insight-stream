@@ -26,7 +26,7 @@ import {
   getIngestionStatus,
   triggerIngestion,
   updateIngestionConfig,
-} from "@/server/ingestion.functions";
+} from "@/serverFns/ingestion";
 import { useAuth } from "@/auth/AuthProvider";
 import { toast } from "sonner";
 
