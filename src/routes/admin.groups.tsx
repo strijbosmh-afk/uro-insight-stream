@@ -15,6 +15,7 @@ import {
   PlayCircle,
   ChevronDown,
   ChevronRight,
+  Sprout,
 } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { Panel } from "@/components/shell/Panel";
@@ -68,6 +69,7 @@ import {
   listGroupsForAdmin,
   listSignals,
   rejectCandidates,
+  reseedFromCurated,
   triggerNominationRun,
   upsertSignal,
   type AdminGroupRow,
@@ -210,6 +212,7 @@ function CandidatesTab() {
   const approve = useServerFn(approveCandidates);
   const reject = useServerFn(rejectCandidates);
   const trigger = useServerFn(triggerNominationRun);
+  const reseed = useServerFn(reseedFromCurated);
   const listAreas = useServerFn(listCancerAreasAdmin);
   const listGroups = useServerFn(listGroupsForAdmin);
   const qc = useQueryClient();
@@ -286,10 +289,33 @@ function CandidatesTab() {
   });
 
   const triggerMut = useMutation({
-    mutationFn: () => trigger({ data: {} }),
+    mutationFn: () =>
+      trigger({
+        data: {
+          cancerAreaIds: areaId ? [areaId] : undefined,
+        },
+      }),
     onSuccess: (res) => {
       toast.success(
-        `Run complete: ${res.nominated} new, ${res.updated} updated (${res.runtime_ms}ms)`,
+        `Run complete${areaId ? " (scoped)" : ""}: ${res.nominated} new, ${res.updated} updated (${res.runtime_ms}ms)`,
+      );
+      qc.invalidateQueries({ queryKey: ["admin", "candidates"] });
+      qc.invalidateQueries({ queryKey: ["admin", "candidate-stats"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reseedMut = useMutation({
+    mutationFn: () =>
+      reseed({
+        data: {
+          cancerAreaIds: areaId ? [areaId] : undefined,
+          groupIds: groupId ? [groupId] : undefined,
+        },
+      }),
+    onSuccess: (res) => {
+      toast.success(
+        `Re-seeded ${res.reseeded} curated members${res.skipped ? ` (skipped ${res.skipped} already approved/rejected)` : ""}`,
       );
       qc.invalidateQueries({ queryKey: ["admin", "candidates"] });
       qc.invalidateQueries({ queryKey: ["admin", "candidate-stats"] });
@@ -365,7 +391,27 @@ function CandidatesTab() {
             ) : (
               <PlayCircle className="w-4 h-4 mr-1" />
             )}
-            Run nominations now
+            Run nominations{areaId || groupId ? " (scoped)" : " now"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (
+                confirm(
+                  "Re-seed curated members back into the review queue? Approved/rejected entries are preserved.",
+                )
+              )
+                reseedMut.mutate();
+            }}
+            disabled={reseedMut.isPending}
+          >
+            {reseedMut.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Sprout className="w-4 h-4 mr-1" />
+            )}
+            Re-seed from curated
           </Button>
         </div>
       </Panel>

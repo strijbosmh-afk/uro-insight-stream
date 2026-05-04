@@ -41,9 +41,13 @@ type Evidence = {
 };
 
 export async function nominateForGroupsByRules(
-  opts: { since?: string | null; limitPerArea?: number } = {},
+  opts: {
+    since?: string | null;
+    limitPerArea?: number;
+    cancerAreaIds?: string[];
+  } = {},
 ): Promise<NominateResult> {
-  const { since: sinceArg, limitPerArea = 50 } = opts;
+  const { since: sinceArg, limitPerArea = 50, cancerAreaIds } = opts;
   const since =
     sinceArg === null
       ? null
@@ -64,6 +68,9 @@ export async function nominateForGroupsByRules(
     value: string;
     weight: number;
   }>) {
+    if (cancerAreaIds && cancerAreaIds.length > 0 && !cancerAreaIds.includes(s.cancer_area_id)) {
+      continue;
+    }
     let d = dictByArea.get(s.cancer_area_id);
     if (!d) {
       d = { cancer_area_id: s.cancer_area_id, bio: [], hashtags: [] };

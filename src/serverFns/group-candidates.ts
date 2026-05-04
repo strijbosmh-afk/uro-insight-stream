@@ -512,6 +512,7 @@ const TriggerSchema = z
   .object({
     since: z.string().nullable().optional(),
     limitPerArea: z.number().int().min(1).max(500).optional(),
+    cancerAreaIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .default({});
 
@@ -525,8 +526,140 @@ export const triggerNominationRun = createServerFn({ method: "POST" })
     const result = await nominateForGroupsByRules({
       since: data.since ?? undefined,
       limitPerArea: data.limitPerArea ?? 50,
+      cancerAreaIds: data.cancerAreaIds,
     });
     return { ...result, runtime_ms: Date.now() - startedAt };
+  });
+
+// ---------------------------------------------------------------------------
+// reseedFromCurated — push current curated members back into the candidates
+// queue as 'pending' so admins can re-review after seed-list changes.
+// ---------------------------------------------------------------------------
+
+const ReseedSchema = z
+  .object({
+    cancerAreaIds: z.array(z.string().uuid()).max(50).optional(),
+    groupIds: z.array(z.string().uuid()).max(100).optional(),
+  })
+  .default({});
+
+export const reseedFromCurated = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReseedSchema.parse(data ?? {}))
+  .handler(async ({ data, context }): Promise<{ reseeded: number; skipped: number }> => {
+    const { userId, supabase } = context;
+    await assertAdmin(supabase, userId);
+
+    // Resolve target group IDs.
+    let targetGroupIds: string[] | null = data.groupIds ?? null;
+    if (data.cancerAreaIds && data.cancerAreaIds.length > 0) {
+      const { data: junc, error: jErr } = await supabaseAdmin
+        .from("source_group_cancer_areas")
+        .select("group_id")
+        .in("cancer_area_id", data.cancerAreaIds);
+      if (jErr) throw new Error(jErr.message);
+      const ids = ((junc ?? []) as Array<{ group_id: string }>).map((r) => r.group_id);
+      targetGroupIds = targetGroupIds
+        ? targetGroupIds.filter((g) => ids.includes(g))
+        : ids;
+    }
+
+    // Pull curated seed members (added_via in seed/admin).
+    let q = supabaseAdmin
+      .from("source_group_members")
+      .select("group_id, source_id, added_via, added_evidence")
+      .in("added_via", ["seed", "admin"]);
+    if (targetGroupIds && targetGroupIds.length > 0) {
+      q = q.in("group_id", targetGroupIds);
+    }
+    const { data: members, error } = await q;
+    if (error) throw new Error(error.message);
+
+    type Member = {
+      group_id: string;
+      source_id: string;
+      added_via: string;
+      added_evidence: Record<string, unknown> | null;
+    };
+    const rows = (members ?? []) as Member[];
+    if (rows.length === 0) return { reseeded: 0, skipped: 0 };
+
+    // Find which (group, source) pairs already have a non-pending candidate row;
+    // we won't disturb approved/rejected entries.
+    const groupIds = Array.from(new Set(rows.map((r) => r.group_id)));
+    const sIds = Array.from(new Set(rows.map((r) => r.source_id)));
+    const { data: existing } = await supabaseAdmin
+      .from("source_group_member_candidates")
+      .select("group_id, source_id, status")
+      .in("group_id", groupIds)
+      .in("source_id", sIds);
+    const skipKeys = new Set<string>();
+    for (const e of (existing ?? []) as Array<{
+      group_id: string;
+      source_id: string;
+      status: string;
+    }>) {
+      // Allow re-creating only if no row exists. Pending rows we touch via update; approved/rejected we skip.
+      if (e.status === "approved" || e.status === "rejected") {
+        skipKeys.add(`${e.group_id}:${e.source_id}`);
+      }
+    }
+    const pendingKeys = new Set<string>();
+    for (const e of (existing ?? []) as Array<{
+      group_id: string;
+      source_id: string;
+      status: string;
+    }>) {
+      if (e.status === "pending") pendingKeys.add(`${e.group_id}:${e.source_id}`);
+    }
+
+    let reseeded = 0;
+    let skipped = 0;
+    const inserts: Array<{
+      group_id: string;
+      source_id: string;
+      score: number;
+      evidence: Record<string, unknown>;
+      status: "pending";
+    }> = [];
+    for (const r of rows) {
+      const k = `${r.group_id}:${r.source_id}`;
+      if (skipKeys.has(k)) {
+        skipped++;
+        continue;
+      }
+      if (pendingKeys.has(k)) continue;
+      inserts.push({
+        group_id: r.group_id,
+        source_id: r.source_id,
+        score: 0,
+        evidence: { reseed: { from: r.added_via, original: r.added_evidence ?? null } },
+        status: "pending",
+      });
+    }
+
+    for (let i = 0; i < inserts.length; i += 500) {
+      const chunk = inserts.slice(i, i + 500);
+      const { error: insErr } = await supabaseAdmin
+        .from("source_group_member_candidates")
+        .insert(chunk.map((x) => ({ ...x, evidence: x.evidence as never })));
+      if (insErr) throw new Error(insErr.message);
+      reseeded += chunk.length;
+    }
+
+    await logMembershipAction({
+      actorUserId: userId,
+      action: "group_membership.reseed_curated",
+      metadata: {
+        group_id: targetGroupIds && targetGroupIds.length === 1 ? targetGroupIds[0] : "",
+        group_name: "",
+        source_ids: [],
+        source_handles: [],
+        evidence_summary: { reseeded, skipped, scope_groups: targetGroupIds?.length ?? "all" },
+      },
+    });
+
+    return { reseeded, skipped };
   });
 
 // ---------------------------------------------------------------------------
