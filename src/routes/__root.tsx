@@ -62,6 +62,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
     // Bypass redirects for /lovable/* server routes (auth email webhook, preview, etc.)
     if (location.pathname.startsWith("/lovable/")) return;
+    if (location.pathname === "/email/unsubscribe") return;
     // Server-side / loader-side guard. Runs on every navigation including
     // initial deep-link. We only enforce on the client because the Supabase
     // session lives in browser storage; during SSR there's no session to
