@@ -27,6 +27,7 @@ import type { Source } from "@/types";
 import { recordAudit } from "@/services/auditService";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, BadgeCheck } from "lucide-react";
+import { useAuth } from "@/auth/AuthProvider";
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ const ROLES: Source["role"][] = ["KOL", "institution", "journal", "society", "ot
 
 export function AddSourceDialog({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [tab, setTab] = React.useState<"single" | "bulk">("single");
   const [handle, setHandle] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
@@ -123,6 +125,17 @@ export function AddSourceDialog({ open, onOpenChange }: Props) {
     mutationFn: async (inputs: Array<Omit<Source, "id">>) => {
       const out: Source[] = [];
       for (const i of inputs) out.push(await feedService.addSource(i));
+      // Auto-subscribe the current user to every newly added source.
+      if (user && out.length > 0) {
+        const rows = out.map((s) => ({ user_id: user.id, source_id: s.id }));
+        const { error: subErr } = await supabase
+          .from("user_subscribed_sources")
+          .upsert(rows, { onConflict: "user_id,source_id" });
+        if (subErr) {
+          // Don't fail the whole add — just warn.
+          toast.warning("Added, but couldn't auto-follow");
+        }
+      }
       return out;
     },
     onSuccess: (added) => {
@@ -132,6 +145,11 @@ export function AddSourceDialog({ open, onOpenChange }: Props) {
           : `Added ${added.length} sources`,
       );
       qc.invalidateQueries({ queryKey: ["sources"] });
+      qc.invalidateQueries({ queryKey: ["user-subscribed-sources", user?.id] });
+      qc.invalidateQueries({ queryKey: ["user-subscribed-source-ids", user?.id] });
+      for (const s of added) {
+        qc.invalidateQueries({ queryKey: ["handle-sub-state", s.id] });
+      }
       for (const s of added) {
         void recordAudit({
           action: "source.create",
