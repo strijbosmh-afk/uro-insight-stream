@@ -155,6 +155,50 @@ export type Database = {
         }
         Relationships: []
       }
+      cancer_area_signals: {
+        Row: {
+          cancer_area_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          signal_type: string
+          updated_at: string
+          value: string
+          weight: number
+        }
+        Insert: {
+          cancer_area_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          signal_type: string
+          updated_at?: string
+          value: string
+          weight?: number
+        }
+        Update: {
+          cancer_area_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          signal_type?: string
+          updated_at?: string
+          value?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancer_area_signals_cancer_area_id_fkey"
+            columns: ["cancer_area_id"]
+            isOneToOne: false
+            referencedRelation: "cancer_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cancer_areas: {
         Row: {
           created_at: string
@@ -1042,22 +1086,82 @@ export type Database = {
           },
         ]
       }
+      source_group_member_candidates: {
+        Row: {
+          evidence: Json
+          group_id: string
+          id: string
+          nominated_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          score: number
+          source_id: string
+          status: string
+        }
+        Insert: {
+          evidence?: Json
+          group_id: string
+          id?: string
+          nominated_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number
+          source_id: string
+          status?: string
+        }
+        Update: {
+          evidence?: Json
+          group_id?: string
+          id?: string
+          nominated_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number
+          source_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_group_member_candidates_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "source_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_group_member_candidates_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_group_members: {
         Row: {
           added_at: string
           added_by: string | null
+          added_evidence: Json | null
+          added_via: string
           group_id: string
           source_id: string
         }
         Insert: {
           added_at?: string
           added_by?: string | null
+          added_evidence?: Json | null
+          added_via?: string
           group_id: string
           source_id: string
         }
         Update: {
           added_at?: string
           added_by?: string | null
+          added_evidence?: Json | null
+          added_via?: string
           group_id?: string
           source_id?: string
         }
