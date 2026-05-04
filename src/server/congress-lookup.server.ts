@@ -128,15 +128,6 @@ function parseOfficialMeetingPage(html: string, url: string) {
     }
   }
 
-  const startJson = html.match(/"startDate"\s*:\s*"([^"]+)"/i)?.[1];
-  const endJson = html.match(/"endDate"\s*:\s*"([^"]+)"/i)?.[1];
-  const locality = html.match(/"addressLocality"\s*:\s*"([^"]+)"/i)?.[1];
-  const country = html.match(/"addressCountry"\s*:\s*"([^"]+)"/i)?.[1];
-  facts.start_date ??= startJson ? parseHumanDate(startJson.slice(0, 10)) : null;
-  facts.end_date ??= endJson ? parseHumanDate(endJson.slice(0, 10)) : null;
-  facts.city ??= locality ? decodeHtml(locality).trim() : null;
-  facts.country ??= country ? decodeHtml(country).trim() : null;
-
   return facts.city || facts.country || facts.start_date || facts.end_date ? facts : null;
 }
 
