@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useFollowSource } from "@/hooks/useHandleActions";
 
-export const Route = createFileRoute("/discover")({
+export const Route = createFileRoute("/discover/")({
   head: () => ({
     meta: [
       { title: "Discover sources — UroFeed" },
