@@ -11,6 +11,7 @@ const ROUTE_LABELS: Record<string, string> = {
   sessions: "Sessions",
   feed: "Live Feed",
   summaries: "Summaries",
+  digests: "Digests",
   sources: "Sources",
   settings: "Settings",
 };
