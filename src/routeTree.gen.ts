@@ -43,6 +43,7 @@ import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/a
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
+import { Route as ApiPublicHooksNominateGroupMembersRouteImport } from './routes/api/public/hooks/nominate-group-members'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
@@ -225,6 +226,12 @@ const ApiPublicHooksProcessIngestQueueRoute =
     path: '/api/public/hooks/process-ingest-queue',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksNominateGroupMembersRoute =
+  ApiPublicHooksNominateGroupMembersRouteImport.update({
+    id: '/api/public/hooks/nominate-group-members',
+    path: '/api/public/hooks/nominate-group-members',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksMatchTweetsToSessionsRoute =
   ApiPublicHooksMatchTweetsToSessionsRouteImport.update({
     id: '/api/public/hooks/match-tweets-to-sessions',
@@ -272,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
+  '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -310,6 +318,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
+  '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -350,6 +359,7 @@ export interface FileRoutesById {
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
+  '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
+    | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
+    | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
@@ -468,6 +480,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
+    | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
@@ -505,6 +518,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
+  ApiPublicHooksNominateGroupMembersRoute: typeof ApiPublicHooksNominateGroupMembersRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
@@ -757,6 +771,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessIngestQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/nominate-group-members': {
+      id: '/api/public/hooks/nominate-group-members'
+      path: '/api/public/hooks/nominate-group-members'
+      fullPath: '/api/public/hooks/nominate-group-members'
+      preLoaderRoute: typeof ApiPublicHooksNominateGroupMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/match-tweets-to-sessions': {
       id: '/api/public/hooks/match-tweets-to-sessions'
       path: '/api/public/hooks/match-tweets-to-sessions'
@@ -835,6 +856,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksBackfillHierarchyRecentRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
+  ApiPublicHooksNominateGroupMembersRoute:
+    ApiPublicHooksNominateGroupMembersRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
