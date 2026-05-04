@@ -14,6 +14,7 @@ import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as FeedRouteImport } from './routes/feed'
+import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DigestsRouteImport } from './routes/digests'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CongressesRouteImport } from './routes/congresses'
@@ -71,6 +72,11 @@ const FeedRoute = FeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DigestsRoute = DigestsRouteImport.update({
   id: '/digests',
   path: '/digests',
@@ -102,9 +108,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverIndexRoute = DiscoverIndexRouteImport.update({
-  id: '/discover/',
-  path: '/discover/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => DiscoverRoute,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
@@ -122,9 +128,9 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverGroupsRoute = DiscoverGroupsRouteImport.update({
-  id: '/discover/groups',
-  path: '/discover/groups',
-  getParentRoute: () => rootRouteImport,
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => DiscoverRoute,
 } as any)
 const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   id: '/$congressId',
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/digests': typeof DigestsRoute
+  '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -322,6 +329,7 @@ export interface FileRoutesById {
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/digests': typeof DigestsRoute
+  '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -362,6 +370,7 @@ export interface FileRouteTypes {
     | '/congresses'
     | '/dashboard'
     | '/digests'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -438,6 +447,7 @@ export interface FileRouteTypes {
     | '/congresses'
     | '/dashboard'
     | '/digests'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -477,6 +487,7 @@ export interface RootRouteChildren {
   CongressesRoute: typeof CongressesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DigestsRoute: typeof DigestsRoute
+  DiscoverRoute: typeof DiscoverRouteWithChildren
   FeedRoute: typeof FeedRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
@@ -487,11 +498,9 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
-  DiscoverGroupsRoute: typeof DiscoverGroupsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   GroupsSlugRoute: typeof GroupsSlugRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
-  DiscoverIndexRoute: typeof DiscoverIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -545,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/digests': {
       id: '/digests'
       path: '/digests'
@@ -589,10 +605,10 @@ declare module '@tanstack/react-router' {
     }
     '/discover/': {
       id: '/discover/'
-      path: '/discover'
+      path: '/'
       fullPath: '/discover/'
       preLoaderRoute: typeof DiscoverIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DiscoverRoute
     }
     '/sessions/$sessionId': {
       id: '/sessions/$sessionId'
@@ -617,10 +633,10 @@ declare module '@tanstack/react-router' {
     }
     '/discover/groups': {
       id: '/discover/groups'
-      path: '/discover/groups'
+      path: '/groups'
       fullPath: '/discover/groups'
       preLoaderRoute: typeof DiscoverGroupsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DiscoverRoute
     }
     '/congresses/$congressId': {
       id: '/congresses/$congressId'
@@ -777,6 +793,20 @@ const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
   CongressesRouteChildren,
 )
 
+interface DiscoverRouteChildren {
+  DiscoverGroupsRoute: typeof DiscoverGroupsRoute
+  DiscoverIndexRoute: typeof DiscoverIndexRoute
+}
+
+const DiscoverRouteChildren: DiscoverRouteChildren = {
+  DiscoverGroupsRoute: DiscoverGroupsRoute,
+  DiscoverIndexRoute: DiscoverIndexRoute,
+}
+
+const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
+  DiscoverRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
@@ -784,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   CongressesRoute: CongressesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DigestsRoute: DigestsRoute,
+  DiscoverRoute: DiscoverRouteWithChildren,
   FeedRoute: FeedRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
@@ -794,11 +825,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
-  DiscoverGroupsRoute: DiscoverGroupsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   GroupsSlugRoute: GroupsSlugRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
-  DiscoverIndexRoute: DiscoverIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
     ApiPublicHooksAggregateSourceCandidatesRoute,
