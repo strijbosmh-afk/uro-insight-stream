@@ -32,6 +32,7 @@ import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
+import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -163,6 +164,11 @@ const AdminIngestionRoute = AdminIngestionRouteImport.update({
   path: '/admin/ingestion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminGroupsRoute = AdminGroupsRouteImport.update({
+  id: '/admin/groups',
+  path: '/admin/groups',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
+    | '/admin/groups'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/admin/users'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
+    | '/admin/groups'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/admin/users'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
+    | '/admin/groups'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/admin/users'
@@ -506,6 +518,7 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  AdminGroupsRoute: typeof AdminGroupsRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -694,6 +707,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIngestionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/groups': {
+      id: '/admin/groups'
+      path: '/admin/groups'
+      fullPath: '/admin/groups'
+      preLoaderRoute: typeof AdminGroupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
       path: '/lovable/email/suppression'
@@ -841,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  AdminGroupsRoute: AdminGroupsRoute,
   AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   AdminUsersRoute: AdminUsersRoute,
