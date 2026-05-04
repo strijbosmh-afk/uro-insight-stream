@@ -29,6 +29,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -41,6 +51,7 @@ import {
   updateUserRole,
   setUserActive,
   deleteUser,
+  updateUserProfile,
   type AppRole,
   type AdminUserRow,
   type PendingInvitation,
