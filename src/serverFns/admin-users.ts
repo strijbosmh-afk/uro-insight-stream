@@ -35,6 +35,14 @@ export type PendingInvitation = {
   accepted_at: string | null;
 };
 
+type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
+
 export type AdminAuditEntry = {
   id: string;
   actor_user_id: string;
@@ -42,9 +50,7 @@ export type AdminAuditEntry = {
   action: string;
   target_user_id: string | null;
   target_email: string | null;
-  // Use `unknown` so the value remains JSON-serializable for the
-  // TanStack server-fn boundary (Record<string, unknown> is rejected).
-  metadata: unknown;
+  metadata: Json | null;
   created_at: string;
 };
 
@@ -57,7 +63,7 @@ async function logAdminAction(args: {
   action: string;
   targetUserId?: string | null;
   targetEmail?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: Json | null;
 }): Promise<void> {
   const { error } = await supabaseAdmin.from("admin_audit_log").insert({
     actor_user_id: args.actorUserId,
@@ -704,9 +710,9 @@ export const claimInvitation = createServerFn({ method: "POST" })
         .from("user_roles")
         .insert({
           user_id: context.userId,
-          role: inv.role,
-          granted_by: inv.invited_by ?? null,
-        });
+          role: inv.role as AppRole,
+          granted_by: (inv.invited_by as string | null) ?? null,
+        } as never);
       if (roleErr) throw new Error(roleErr.message);
     }
 
