@@ -91,9 +91,10 @@ export function TopBar() {
               )}
               <span
                 className={
-                  last
-                    ? "text-text-primary font-medium truncate"
-                    : "text-text-muted truncate"
+                  "uppercase tracking-wider truncate " +
+                  (last
+                    ? "text-text-primary font-medium"
+                    : "text-text-muted")
                 }
               >
                 {c}
