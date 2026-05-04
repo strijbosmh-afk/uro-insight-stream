@@ -155,6 +155,39 @@ export type Database = {
         }
         Relationships: []
       }
+      cancer_areas: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_system: boolean
+          name: string
+          short_description: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_system?: boolean
+          name: string
+          short_description?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_system?: boolean
+          name?: string
+          short_description?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       congress_suggestion_cache: {
         Row: {
           created_at: string
@@ -979,6 +1012,117 @@ export type Database = {
         }
         Relationships: []
       }
+      source_group_cancer_areas: {
+        Row: {
+          cancer_area_id: string
+          group_id: string
+        }
+        Insert: {
+          cancer_area_id: string
+          group_id: string
+        }
+        Update: {
+          cancer_area_id?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_group_cancer_areas_cancer_area_id_fkey"
+            columns: ["cancer_area_id"]
+            isOneToOne: false
+            referencedRelation: "cancer_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_group_cancer_areas_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "source_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_group_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          group_id: string
+          source_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          group_id: string
+          source_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          group_id?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "source_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_group_members_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_archived: boolean
+          is_system: boolean
+          member_count: number
+          name: string
+          slug: string
+          subscriber_count: number
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          is_system?: boolean
+          member_count?: number
+          name: string
+          slug: string
+          subscriber_count?: number
+          updated_at?: string
+          visibility: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          is_system?: boolean
+          member_count?: number
+          name?: string
+          slug?: string
+          subscriber_count?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       sources: {
         Row: {
           active: boolean
@@ -1294,6 +1438,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_cancer_areas: {
+        Row: {
+          cancer_area_id: string
+          created_at: string
+          is_primary: boolean
+          user_id: string
+        }
+        Insert: {
+          cancer_area_id: string
+          created_at?: string
+          is_primary?: boolean
+          user_id: string
+        }
+        Update: {
+          cancer_area_id?: string
+          created_at?: string
+          is_primary?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_cancer_areas_cancer_area_id_fkey"
+            columns: ["cancer_area_id"]
+            isOneToOne: false
+            referencedRelation: "cancer_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_invitations: {
         Row: {
           accepted_at: string | null
@@ -1509,6 +1682,32 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscribed_groups: {
+        Row: {
+          group_id: string
+          subscribed_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          subscribed_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          subscribed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscribed_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "source_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_subscribed_hashtags: {
         Row: {
           created_at: string
@@ -1563,7 +1762,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_effective_sources: {
+        Row: {
+          group_id: string | null
+          source_id: string | null
+          user_id: string | null
+          via: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       delete_email: {
