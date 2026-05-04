@@ -155,6 +155,34 @@ export function CongressGrid() {
     return true;
   });
 
+  // Live counts per cancer area, respecting the current search + status filters
+  // (but ignoring the area filter itself, so each option shows what picking it
+  // would yield). Updates immediately as filters change.
+  const areaCounts = React.useMemo(() => {
+    const q = query.toLowerCase();
+    const matchesNonArea = (c: Congress) => {
+      if (statusFilter !== ALL && c.status !== statusFilter) return false;
+      if (q) {
+        return (
+          c.name.toLowerCase().includes(q) ||
+          c.shortCode.toLowerCase().includes(q) ||
+          c.city.toLowerCase().includes(q) ||
+          c.primaryHashtags.some((h) => h.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    };
+    const counts = new Map<string, number>();
+    let all = 0;
+    for (const c of congresses) {
+      if (!matchesNonArea(c)) continue;
+      all += 1;
+      const ids = congressAreaMap.get(c.id) ?? [];
+      for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return { counts, all };
+  }, [congresses, congressAreaMap, query, statusFilter]);
+
   // Apply user-defined order; new congresses appear at the end.
   const orderedFiltered = React.useMemo(() => {
     const idx = new Map(order.map((id, i) => [id, i] as const));
@@ -236,10 +264,17 @@ export function CongressGrid() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL}>All cancer areas</SelectItem>
-                  {areas.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.name} ({a.count})</SelectItem>
-                  ))}
+                  <SelectItem value={ALL}>
+                    All cancer areas ({areaCounts.all})
+                  </SelectItem>
+                  {areas.map((a) => {
+                    const n = areaCounts.counts.get(a.id) ?? 0;
+                    return (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name} ({n})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {areaFilter !== ALL && (
