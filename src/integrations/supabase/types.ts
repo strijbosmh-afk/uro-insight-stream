@@ -191,6 +191,109 @@ export type Database = {
         }
         Relationships: []
       }
+      digest_subscription_recipients: {
+        Row: {
+          created_at: string
+          digest_id: string
+          email: string
+          id: string
+          is_default: boolean
+        }
+        Insert: {
+          created_at?: string
+          digest_id: string
+          email: string
+          id?: string
+          is_default?: boolean
+        }
+        Update: {
+          created_at?: string
+          digest_id?: string
+          email?: string
+          id?: string
+          is_default?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digest_subscription_recipients_digest_id_fkey"
+            columns: ["digest_id"]
+            isOneToOne: false
+            referencedRelation: "digest_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digest_subscription_sources: {
+        Row: {
+          created_at: string
+          digest_id: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          digest_id: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          digest_id?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digest_subscription_sources_digest_id_fkey"
+            columns: ["digest_id"]
+            isOneToOne: false
+            referencedRelation: "digest_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digest_subscriptions: {
+        Row: {
+          created_at: string
+          day_of_week: number | null
+          frequency: string
+          id: string
+          is_active: boolean
+          last_sent_at: string | null
+          name: string
+          next_send_at: string
+          send_hour: number
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week?: number | null
+          frequency: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          name: string
+          next_send_at: string
+          send_hour?: number
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          name?: string
+          next_send_at?: string
+          send_hour?: number
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
