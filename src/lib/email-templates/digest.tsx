@@ -49,7 +49,7 @@ const DigestEmail = ({
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{digestName} — {totalTweets} highlights from your sources</Preview>
+      <Preview>{`${digestName} — ${totalTweets} highlights from your sources`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>{digestName}</Heading>
