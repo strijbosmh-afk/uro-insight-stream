@@ -305,6 +305,36 @@ function sanitizeResult(
   return out;
 }
 
+async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
+  const officialUrl = result.citations.find((c) => /(^|\.)esmo\.org$/i.test(new URL(c.url).hostname).catch?.())?.url
+    ?? result.website;
+  if (!officialUrl || !/^https:\/\/(www\.)?esmo\.org\//i.test(officialUrl)) return result;
+
+  try {
+    const res = await fetch(officialUrl, {
+      headers: { "User-Agent": "UroFeed congress lookup verifier" },
+    });
+    if (!res.ok) return result;
+    const html = await res.text();
+    const facts = parseOfficialMeetingPage(html, officialUrl);
+    if (!facts) return result;
+    const citation = { url: facts.verified_url, title: facts.verified_title };
+    return {
+      ...result,
+      start_date: facts.start_date ?? result.start_date,
+      end_date: facts.end_date ?? result.end_date,
+      city: facts.city ?? result.city,
+      country: facts.country ?? result.country,
+      website: result.website ?? officialUrl,
+      citations: [citation, ...result.citations.filter((c) => c.url !== citation.url)].slice(0, 8),
+      confidence: facts.city && facts.country ? result.confidence : "medium",
+    };
+  } catch (e) {
+    console.warn("[congress-lookup] official fact verification failed", e);
+    return result;
+  }
+}
+
 async function callGateway(query: string, slugs: string[]): Promise<CongressLookupResult | null> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
