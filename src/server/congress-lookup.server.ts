@@ -234,27 +234,92 @@ async function callGateway(query: string, slugs: string[]): Promise<CongressLook
     console.error("[congress-lookup] LOVABLE_API_KEY missing");
     return null;
   }
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+
+  // STEP 1 — grounded research call. Use Gemini's google_search tool so the
+  // model fetches real, current facts (city, dates, website, official hashtag)
+  // rather than relying on stale training data. We ask for a brief textual
+  // brief that the structured-extraction step will consume.
+  const groundingPrompt = `Research this medical/oncology congress using Google Search and produce a short factual brief.
+
+Query: "${query}"
+
+Return a concise brief (max ~250 words) with these labelled fields, EACH on its own line, using only verified facts from the search results. Use "unknown" if a fact cannot be confirmed.
+
+OFFICIAL_NAME: ...
+SHORT_CODE: ...
+START_DATE (YYYY-MM-DD): ...
+END_DATE (YYYY-MM-DD): ...
+CITY: ...
+COUNTRY: ...
+OFFICIAL_WEBSITE: ...
+OFFICIAL_HASHTAGS: #tag1, #tag2
+COMMUNITY_HASHTAGS: #tag1, #tag2
+ONE_LINE_DESCRIPTION: ...
+SOURCES: list 2-5 URLs (one per line) you actually used.
+
+Do not guess. If the venue/city has been announced for a future edition, cite the official society page.`;
+
+  const groundRes = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers,
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: "You are a precise research assistant. Only state facts confirmed by the search results. If unsure, write 'unknown'." },
+        { role: "user", content: groundingPrompt },
+      ],
+      tools: [{ type: "google_search" }],
+    }),
+  });
+  if (groundRes.status === 429 || groundRes.status === 402) {
+    throw new Error(groundRes.status === 429 ? "rate_limited" : "payment_required");
+  }
+  if (!groundRes.ok) {
+    console.error("[congress-lookup] grounding error", groundRes.status, await groundRes.text().catch(() => ""));
+    return null;
+  }
+  const groundJson = (await groundRes.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const brief = groundJson.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!brief) {
+    console.error("[congress-lookup] empty grounding brief");
+    return null;
+  }
+
+  // STEP 2 — structured extraction. Feed the grounded brief back in and force
+  // a tool call so we get strict JSON. The model must NOT add facts beyond
+  // what is in the brief (esp. city/dates/website).
+  const extractRes = await fetch(url, {
+    method: "POST",
+    headers,
     body: JSON.stringify({
       model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: buildSystemPrompt(slugs) },
-        { role: "user", content: `Identify this congress and return structured data: "${query}"` },
+        {
+          role: "user",
+          content: `Below is a verified research brief about the congress "${query}". Extract structured data ONLY from this brief — do not introduce facts that are not present in the brief. If the brief says "unknown" for a field, return null. For suggested_kols, you may add 5-10 well-known X/Twitter handles that historically cover this congress (your training knowledge is fine for KOLs).
+
+--- BRIEF ---
+${brief}
+--- END BRIEF ---`,
+        },
       ],
       tools: [TOOL],
       tool_choice: { type: "function", function: { name: "return_congress_lookup" } },
     }),
   });
-  if (res.status === 429 || res.status === 402) {
-    throw new Error(res.status === 429 ? "rate_limited" : "payment_required");
+  if (extractRes.status === 429 || extractRes.status === 402) {
+    throw new Error(extractRes.status === 429 ? "rate_limited" : "payment_required");
   }
-  if (!res.ok) {
-    console.error("[congress-lookup] gateway error", res.status, await res.text().catch(() => ""));
+  if (!extractRes.ok) {
+    console.error("[congress-lookup] extract error", extractRes.status, await extractRes.text().catch(() => ""));
     return null;
   }
-  const json = (await res.json()) as {
+  const json = (await extractRes.json()) as {
     choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
   };
   const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
