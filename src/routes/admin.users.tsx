@@ -29,6 +29,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -41,6 +51,7 @@ import {
   updateUserRole,
   setUserActive,
   deleteUser,
+  updateUserProfile,
   type AppRole,
   type AdminUserRow,
   type PendingInvitation,
@@ -209,8 +220,37 @@ function UserRow({
   const updateRoleFn = useServerFn(updateUserRole);
   const setActiveFn = useServerFn(setUserActive);
   const deleteFn = useServerFn(deleteUser);
+  const updateProfileFn = useServerFn(updateUserProfile);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [confirmText, setConfirmText] = React.useState("");
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editName, setEditName] = React.useState(user.display_name ?? "");
+  const [editNotes, setEditNotes] = React.useState(user.notes ?? "");
+
+  // Reset draft state whenever the drawer opens against a fresh row.
+  React.useEffect(() => {
+    if (editOpen) {
+      setEditName(user.display_name ?? "");
+      setEditNotes(user.notes ?? "");
+    }
+  }, [editOpen, user.display_name, user.notes]);
+
+  const profileMutation = useMutation({
+    mutationFn: () =>
+      updateProfileFn({
+        data: {
+          userId: user.id,
+          displayName: editName.trim() || null,
+          notes: editNotes.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Profile updated");
+      setEditOpen(false);
+      onChange();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const roleMutation = useMutation({
     mutationFn: (role: AppRole) => updateRoleFn({ data: { userId: user.id, role } }),
@@ -284,6 +324,9 @@ function UserRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              Edit profile…
+            </DropdownMenuItem>
             <DropdownMenuItem
               disabled={isSelf || activeMutation.isPending}
               onClick={() => activeMutation.mutate(!user.is_active)}
@@ -301,6 +344,57 @@ function UserRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Sheet open={editOpen} onOpenChange={setEditOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>Edit user</SheetTitle>
+              <SheetDescription>{user.email}</SheetDescription>
+            </SheetHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+                  Display name
+                </Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  maxLength={120}
+                  placeholder="e.g. Dr. Jane Doe"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] uppercase tracking-wider text-text-muted">
+                  Admin notes <span className="text-text-muted/60">(private)</span>
+                </Label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  maxLength={2000}
+                  rows={6}
+                  placeholder="Internal notes about this user — only visible to admins."
+                />
+                <div className="text-[10px] font-mono text-text-muted text-right">
+                  {editNotes.length}/2000
+                </div>
+              </div>
+            </div>
+            <SheetFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => profileMutation.mutate()}
+                disabled={profileMutation.isPending}
+              >
+                {profileMutation.isPending && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                )}
+                Save changes
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
 
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <DialogContent>
