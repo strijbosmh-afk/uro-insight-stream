@@ -67,7 +67,7 @@ const WeeklyDigestEmail = ({
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>
-      {digestName} — {totalTweets} posts from {groups.length} sources
+      {`${digestName} — ${totalTweets} posts from ${groups.length} sources`}
     </Preview>
     <Body style={styles.main}>
       <Container style={styles.outer}>
