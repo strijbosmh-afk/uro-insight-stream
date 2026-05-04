@@ -47,6 +47,24 @@ const DEFAULT_PREFS: UserPreferences = {
   polling_interval_seconds: 30,
 };
 
+// Claim a pending invitation if the freshly-signed-in user carries an
+// `invitation_token` in their Supabase user_metadata (set by the admin
+// inviteUserByEmail call). Idempotent — safe to call on every sign-in.
+const CLAIMED_TOKENS = new Set<string>();
+async function maybeClaimInvitation(u: User, refresh: () => Promise<void>) {
+  const token = (u.user_metadata as { invitation_token?: string } | undefined)
+    ?.invitation_token;
+  if (!token || CLAIMED_TOKENS.has(token)) return;
+  CLAIMED_TOKENS.add(token);
+  try {
+    await claimInvitation({ data: { token } });
+    await refresh();
+  } catch (e) {
+    // Swallow — invitation may already be accepted/expired. Don't block sign-in.
+    console.warn("[invite] claim failed", e);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
