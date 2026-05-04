@@ -40,6 +40,7 @@ const BASE_SECTIONS: NavSection[] = [
       { label: "Summaries", to: "/summaries", icon: FileText },
       { label: "Digests", to: "/digests", icon: Mail },
       { label: "Discover", to: "/discover", icon: Compass },
+      { label: "Discover groups", to: "/discover/groups", icon: Compass },
     ],
   },
   {
@@ -115,8 +116,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             )}
             <ul>
               {section.items.map((item) => {
+                const hasMoreSpecificSibling = section.items.some(
+                  (other) =>
+                    other.to !== item.to &&
+                    other.to.startsWith(item.to + "/") &&
+                    (pathname === other.to ||
+                      pathname.startsWith(other.to + "/")),
+                );
                 const active =
-                  pathname === item.to || pathname.startsWith(item.to + "/");
+                  !hasMoreSpecificSibling &&
+                  (pathname === item.to ||
+                    pathname.startsWith(item.to + "/"));
                 const Icon = item.icon;
                 return (
                   <li key={item.to}>

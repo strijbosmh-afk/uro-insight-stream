@@ -71,7 +71,7 @@ export function Dashboard() {
       try {
         return await fetchNewRecs();
       } catch {
-        return { count: 0 };
+        return { count: 0, sourceCount: 0, groupCount: 0 };
       }
     },
     staleTime: 60_000,
@@ -187,7 +187,7 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3 p-3 overflow-y-auto">
-      {newRecs && newRecs.count > 0 && !bannerDismissed && (
+      {newRecs && ((newRecs.sourceCount ?? newRecs.count) > 0 || (newRecs.groupCount ?? 0) > 0) && !bannerDismissed && (
         <div
           className="flex items-center justify-between px-3 py-2 shrink-0"
           style={{
@@ -197,8 +197,32 @@ export function Dashboard() {
         >
           <div className="text-[12px] text-text-primary">
             Your interests changed —{" "}
-            <span className="font-mono text-accent">{newRecs.count}</span> new sources are
-            recommended you don't follow yet.
+            {(() => {
+              const s = newRecs.sourceCount ?? newRecs.count ?? 0;
+              const g = newRecs.groupCount ?? 0;
+              const sourcesPart =
+                s > 0 ? (
+                  <>
+                    <span className="font-mono text-accent">{s}</span>{" "}
+                    new {s === 1 ? "source" : "sources"}
+                  </>
+                ) : null;
+              const groupsPart =
+                g > 0 ? (
+                  <>
+                    <span className="font-mono text-accent">{g}</span>{" "}
+                    new {g === 1 ? "group" : "groups"}
+                  </>
+                ) : null;
+              return (
+                <>
+                  {sourcesPart}
+                  {sourcesPart && groupsPart ? " and " : null}
+                  {groupsPart}
+                  {" "}available for your cancer areas.
+                </>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-3">
             <button
