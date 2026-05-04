@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { template as weeklyDigest } from './weekly-digest'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -9,5 +10,7 @@ export interface TemplateEntry {
   to?: string
 }
 
-// Templates are registered here. None yet.
-export const TEMPLATES: Record<string, TemplateEntry> = {}
+// Templates are registered here.
+export const TEMPLATES: Record<string, TemplateEntry> = {
+  'weekly-digest': weeklyDigest,
+}
