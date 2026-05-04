@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -19,6 +20,7 @@ import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SummariesDigestsRouteImport } from './routes/summaries.digests'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
@@ -35,11 +37,17 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
+import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
   path: '/summaries',
@@ -89,6 +97,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SummariesDigestsRoute = SummariesDigestsRouteImport.update({
+  id: '/digests',
+  path: '/digests',
+  getParentRoute: () => SummariesRoute,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
@@ -176,6 +189,12 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSendDigestsRoute =
+  ApiPublicHooksSendDigestsRouteImport.update({
+    id: '/api/public/hooks/send-digests',
+    path: '/api/public/hooks/send-digests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessIngestQueueRoute =
   ApiPublicHooksProcessIngestQueueRouteImport.update({
     id: '/api/public/hooks/process-ingest-queue',
@@ -211,7 +230,8 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -219,11 +239,13 @@ export interface FileRoutesByFullPath {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -243,7 +265,8 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -251,11 +274,13 @@ export interface FileRoutesByTo {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -276,7 +301,8 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -284,11 +310,13 @@ export interface FileRoutesById {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -311,6 +339,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -318,11 +347,13 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -343,6 +374,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -350,11 +382,13 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -375,6 +409,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -382,11 +417,13 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -407,7 +444,8 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
-  SummariesRoute: typeof SummariesRoute
+  SummariesRoute: typeof SummariesRouteWithChildren
+  UnsubscribeRoute: typeof UnsubscribeRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
@@ -419,6 +457,7 @@ export interface RootRouteChildren {
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
+  ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -431,6 +470,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/summaries': {
       id: '/summaries'
       path: '/summaries'
@@ -500,6 +546,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/summaries/digests': {
+      id: '/summaries/digests'
+      path: '/digests'
+      fullPath: '/summaries/digests'
+      preLoaderRoute: typeof SummariesDigestsRouteImport
+      parentRoute: typeof SummariesRoute
     }
     '/sessions/$sessionId': {
       id: '/sessions/$sessionId'
@@ -613,6 +666,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/send-digests': {
+      id: '/api/public/hooks/send-digests'
+      path: '/api/public/hooks/send-digests'
+      fullPath: '/api/public/hooks/send-digests'
+      preLoaderRoute: typeof ApiPublicHooksSendDigestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-ingest-queue': {
       id: '/api/public/hooks/process-ingest-queue'
       path: '/api/public/hooks/process-ingest-queue'
@@ -656,6 +716,18 @@ const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
   CongressesRouteChildren,
 )
 
+interface SummariesRouteChildren {
+  SummariesDigestsRoute: typeof SummariesDigestsRoute
+}
+
+const SummariesRouteChildren: SummariesRouteChildren = {
+  SummariesDigestsRoute: SummariesDigestsRoute,
+}
+
+const SummariesRouteWithChildren = SummariesRoute._addFileChildren(
+  SummariesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
@@ -666,7 +738,8 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
-  SummariesRoute: SummariesRoute,
+  SummariesRoute: SummariesRouteWithChildren,
+  UnsubscribeRoute: UnsubscribeRoute,
   AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
@@ -681,6 +754,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
+  ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
