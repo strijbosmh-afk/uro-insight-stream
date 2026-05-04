@@ -139,6 +139,16 @@ const SetActiveSchema = z.object({
   isActive: z.boolean(),
 });
 
+const BulkUpdateRoleSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+  role: RoleEnum,
+});
+
+const BulkSetActiveSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+  isActive: z.boolean(),
+});
+
 const UpdateProfileSchema = z.object({
   userId: z.string().uuid(),
   displayName: z.string().max(120).nullable().optional(),
@@ -743,4 +753,141 @@ export const claimInvitation = createServerFn({ method: "POST" })
     });
 
     return { ok: true, role: inv.role as AppRole };
+  });
+
+// ---------------------------------------------------------------------------
+// Bulk operations
+// ---------------------------------------------------------------------------
+
+type BulkResult = {
+  succeeded: string[];
+  failed: Array<{ userId: string; error: string }>;
+};
+
+export const bulkUpdateRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => BulkUpdateRoleSchema.parse(data))
+  .handler(async ({ data, context }): Promise<BulkResult> => {
+    await assertAdmin(context.supabase, context.userId);
+
+    const ids = Array.from(new Set(data.userIds));
+    const succeeded: string[] = [];
+    const failed: Array<{ userId: string; error: string }> = [];
+
+    // Pre-fetch current roles for all targets in one round-trip
+    const { data: currentRows } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role")
+      .in("user_id", ids);
+    const rolesByUser = new Map<string, AppRole[]>();
+    for (const r of (currentRows ?? []) as Array<{ user_id: string; role: AppRole }>) {
+      const arr = rolesByUser.get(r.user_id) ?? [];
+      arr.push(r.role);
+      rolesByUser.set(r.user_id, arr);
+    }
+
+    let liveAdminCount = await countAdmins();
+
+    for (const userId of ids) {
+      try {
+        const currentRoles = rolesByUser.get(userId) ?? [];
+        const wasAdmin = currentRoles.includes("admin");
+        const willBeAdmin = data.role === "admin";
+
+        if (wasAdmin && !willBeAdmin) {
+          if (liveAdminCount <= 1) {
+            throw new Error("Would remove the last remaining admin.");
+          }
+        }
+
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+        const { error: insErr } = await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: userId, role: data.role, granted_by: context.userId });
+        if (insErr) throw new Error(insErr.message);
+
+        if (wasAdmin && !willBeAdmin) liveAdminCount -= 1;
+        if (!wasAdmin && willBeAdmin) liveAdminCount += 1;
+
+        await logAdminAction({
+          actorUserId: context.userId,
+          action: "user.role_change",
+          targetUserId: userId,
+          metadata: { from: currentRoles, to: [data.role], bulk: true },
+        });
+        succeeded.push(userId);
+      } catch (e) {
+        failed.push({ userId, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    return { succeeded, failed };
+  });
+
+export const bulkSetActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => BulkSetActiveSchema.parse(data))
+  .handler(async ({ data, context }): Promise<BulkResult> => {
+    await assertAdmin(context.supabase, context.userId);
+
+    const ids = Array.from(new Set(data.userIds));
+    const succeeded: string[] = [];
+    const failed: Array<{ userId: string; error: string }> = [];
+
+    // Pre-fetch admin roles for safety check
+    const { data: roleRows } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role")
+      .in("user_id", ids)
+      .eq("role", "admin");
+    const targetIsAdmin = new Set(
+      ((roleRows ?? []) as Array<{ user_id: string }>).map((r) => r.user_id),
+    );
+
+    let liveAdminCount = await countAdmins();
+
+    for (const userId of ids) {
+      try {
+        if (userId === context.userId && !data.isActive) {
+          throw new Error("You cannot deactivate your own account.");
+        }
+        if (!data.isActive && targetIsAdmin.has(userId)) {
+          if (liveAdminCount <= 1) {
+            throw new Error("Would deactivate the last remaining admin.");
+          }
+        }
+
+        const { error: upErr } = await supabaseAdmin.from("user_profile_extras").upsert(
+          {
+            user_id: userId,
+            is_active: data.isActive,
+            deactivated_at: data.isActive ? null : new Date().toISOString(),
+            deactivated_by: data.isActive ? null : context.userId,
+          },
+          { onConflict: "user_id" },
+        );
+        if (upErr) throw new Error(upErr.message);
+
+        if (!data.isActive) {
+          if (targetIsAdmin.has(userId)) liveAdminCount -= 1;
+          try {
+            await supabaseAdmin.auth.admin.signOut(userId);
+          } catch (e) {
+            console.warn("[bulkSetActive] signOut failed", e);
+          }
+        }
+
+        await logAdminAction({
+          actorUserId: context.userId,
+          action: data.isActive ? "user.reactivate" : "user.deactivate",
+          targetUserId: userId,
+          metadata: { bulk: true },
+        });
+        succeeded.push(userId);
+      } catch (e) {
+        failed.push({ userId, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    return { succeeded, failed };
   });

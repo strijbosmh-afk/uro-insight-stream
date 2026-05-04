@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   listUsers,
@@ -52,6 +53,8 @@ import {
   setUserActive,
   deleteUser,
   updateUserProfile,
+  bulkUpdateRole,
+  bulkSetActive,
   type AppRole,
   type AdminUserRow,
   type PendingInvitation,
@@ -116,9 +119,13 @@ function UsersTab() {
   const { user: currentUser } = useAuth();
   const qc = useQueryClient();
   const listFn = useServerFn(listUsers);
+  const bulkRoleFn = useServerFn(bulkUpdateRole);
+  const bulkActiveFn = useServerFn(bulkSetActive);
   const [search, setSearch] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState<"all" | AppRole>("all");
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "deactivated">("all");
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [bulkRole, setBulkRole] = React.useState<AppRole>("viewer");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users", search, roleFilter, statusFilter],
@@ -133,6 +140,74 @@ function UsersTab() {
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-users"] });
+
+  const users = data?.users ?? [];
+  // Selectable = all users except yourself (server blocks self-destructive ops anyway,
+  // but excluding self from bulk avoids confusing "1 failed" toasts on every action).
+  const selectableIds = React.useMemo(
+    () => users.filter((u) => u.id !== currentUser?.id).map((u) => u.id),
+    [users, currentUser?.id],
+  );
+  // Drop selections that disappeared after a filter/refresh.
+  React.useEffect(() => {
+    setSelected((prev) => {
+      const visible = new Set(selectableIds);
+      const next = new Set<string>();
+      for (const id of prev) if (visible.has(id)) next.add(id);
+      return next.size === prev.size ? prev : next;
+    });
+  }, [selectableIds]);
+
+  const allSelected = selectableIds.length > 0 && selected.size === selectableIds.length;
+  const someSelected = selected.size > 0 && !allSelected;
+
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(selectableIds) : new Set());
+  };
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const reportBulk = (label: string, res: { succeeded: string[]; failed: { userId: string; error: string }[] }) => {
+    if (res.succeeded.length && !res.failed.length) {
+      toast.success(`${label}: ${res.succeeded.length} user${res.succeeded.length === 1 ? "" : "s"} updated`);
+    } else if (res.succeeded.length && res.failed.length) {
+      toast.warning(`${label}: ${res.succeeded.length} updated, ${res.failed.length} failed`, {
+        description: res.failed[0]?.error,
+      });
+    } else {
+      toast.error(`${label} failed`, { description: res.failed[0]?.error });
+    }
+  };
+
+  const bulkRoleMutation = useMutation({
+    mutationFn: () => bulkRoleFn({ data: { userIds: Array.from(selected), role: bulkRole } }),
+    onSuccess: (res) => {
+      reportBulk(`Role → ${bulkRole}`, res);
+      setSelected(new Set());
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkActiveMutation = useMutation({
+    mutationFn: (isActive: boolean) =>
+      bulkActiveFn({ data: { userIds: Array.from(selected), isActive } }),
+    onSuccess: (res, isActive) => {
+      reportBulk(isActive ? "Reactivate" : "Deactivate", res);
+      setSelected(new Set());
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkPending =
+    bulkRoleMutation.isPending || bulkActiveMutation.isPending;
 
   return (
     <Panel
@@ -167,6 +242,61 @@ function UsersTab() {
         </Select>
       </div>
 
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 p-2 rounded-md border border-border bg-panel-elevated/40">
+          <span className="text-sm font-medium">
+            {selected.size} selected
+          </span>
+          <span className="text-xs text-text-muted">
+            (your own account is excluded from bulk actions)
+          </span>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-muted">Set role:</span>
+            <Select value={bulkRole} onValueChange={(v) => setBulkRole(v as AppRole)}>
+              <SelectTrigger className="w-[110px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkPending}
+              onClick={() => bulkRoleMutation.mutate()}
+            >
+              Apply
+            </Button>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkPending}
+            onClick={() => bulkActiveMutation.mutate(true)}
+          >
+            Reactivate
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkPending}
+            onClick={() => bulkActiveMutation.mutate(false)}
+          >
+            Deactivate
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={bulkPending}
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center gap-2 text-text-muted text-sm">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading users…
@@ -176,6 +306,14 @@ function UsersTab() {
           <table className="w-full text-sm">
             <thead className="text-[11px] uppercase tracking-wider text-text-muted border-b border-border">
               <tr>
+                <th className="w-8 py-2">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={(v) => toggleAll(v === true)}
+                    aria-label="Select all users"
+                    disabled={selectableIds.length === 0}
+                  />
+                </th>
                 <th className="text-left py-2 font-medium">User</th>
                 <th className="text-left py-2 font-medium">Role</th>
                 <th className="text-left py-2 font-medium">Status</th>
@@ -185,17 +323,19 @@ function UsersTab() {
               </tr>
             </thead>
             <tbody>
-              {(data?.users ?? []).map((u) => (
+              {users.map((u) => (
                 <UserRow
                   key={u.id}
                   user={u}
                   isSelf={u.id === currentUser?.id}
                   onChange={refresh}
+                  selected={selected.has(u.id)}
+                  onSelectChange={(c) => toggleOne(u.id, c)}
                 />
               ))}
-              {(data?.users ?? []).length === 0 && (
+              {users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-text-muted">
+                  <td colSpan={7} className="py-6 text-center text-text-muted">
                     No users match those filters.
                   </td>
                 </tr>
@@ -212,10 +352,14 @@ function UserRow({
   user,
   isSelf,
   onChange,
+  selected,
+  onSelectChange,
 }: {
   user: AdminUserRow;
   isSelf: boolean;
   onChange: () => void;
+  selected: boolean;
+  onSelectChange: (checked: boolean) => void;
 }) {
   const updateRoleFn = useServerFn(updateUserRole);
   const setActiveFn = useServerFn(setUserActive);
@@ -285,6 +429,14 @@ function UserRow({
 
   return (
     <tr className="border-b border-border/60 hover:bg-panel-elevated/40">
+      <td className="py-3 align-middle">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(v) => onSelectChange(v === true)}
+          disabled={isSelf}
+          aria-label={isSelf ? "You can't bulk-action your own account" : `Select ${user.email}`}
+        />
+      </td>
       <td className="py-3">
         <div className="font-medium text-text-primary">{user.display_name ?? "—"}</div>
         <div className="text-xs text-text-muted">{user.email}</div>
