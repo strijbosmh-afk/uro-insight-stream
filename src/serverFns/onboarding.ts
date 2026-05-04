@@ -141,32 +141,97 @@ export const processUserIngestQueue = createServerFn({ method: "POST" })
   });
 
 /**
- * Returns the count of recommended sources for the user's current specialties
- * that they are NOT already subscribed to. Drives the dashboard
- * "specialty-changed" banner.
+ * Returns the count of recommended sources for the user's current cancer areas
+ * that they are NOT already covered by (directly or via a subscribed group),
+ * plus the count of unsubscribed official groups in those cancer areas.
+ * Drives the dashboard "interests changed" banner.
+ *
+ * Shape note: `count` is preserved for backward-compat (= sourceCount) so
+ * existing consumers keep working unchanged.
  */
 export const getNewRecommendedSourcesCount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const { data: specs } = await supabaseAdmin
-      .from("user_specialties")
-      .select("specialty_id")
-      .eq("user_id", userId);
-    const specialtyIds = (specs ?? []).map((r: { specialty_id: string }) => r.specialty_id);
-    if (specialtyIds.length === 0) return { count: 0 };
-    const { data: recs } = await supabaseAdmin
-      .from("recommended_sources_by_specialty")
-      .select("source_id")
-      .in("specialty_id", specialtyIds);
-    const recIds = new Set((recs ?? []).map((r: { source_id: string }) => r.source_id));
-    if (recIds.size === 0) return { count: 0 };
-    const { data: subs } = await supabaseAdmin
-      .from("user_subscribed_sources")
-      .select("source_id")
-      .eq("user_id", userId);
-    const subIds = new Set((subs ?? []).map((r: { source_id: string }) => r.source_id));
-    let missing = 0;
-    for (const id of recIds) if (!subIds.has(id)) missing += 1;
-    return { count: missing };
+
+    // ---- Sources side: legacy specialties (urology) + new cancer areas ----
+    const [specsRes, areasRes] = await Promise.all([
+      supabaseAdmin
+        .from("user_specialties")
+        .select("specialty_id")
+        .eq("user_id", userId),
+      supabaseAdmin
+        .from("user_cancer_areas")
+        .select("cancer_area_id")
+        .eq("user_id", userId),
+    ]);
+    const specialtyIds = (specsRes.data ?? []).map(
+      (r: { specialty_id: string }) => r.specialty_id,
+    );
+    const cancerAreaIds = (areasRes.data ?? []).map(
+      (r: { cancer_area_id: string }) => r.cancer_area_id,
+    );
+
+    // Recommended source IDs across both legacy + new areas
+    const recIds = new Set<string>();
+    if (specialtyIds.length > 0) {
+      const { data } = await supabaseAdmin
+        .from("recommended_sources_by_specialty")
+        .select("source_id")
+        .in("specialty_id", specialtyIds);
+      for (const r of (data ?? []) as Array<{ source_id: string }>) {
+        recIds.add(r.source_id);
+      }
+    }
+
+    // Effective coverage = direct subs + group subs, via the SQL view.
+    let sourceCount = 0;
+    if (recIds.size > 0) {
+      const { data: eff } = await supabaseAdmin
+        .from("user_effective_sources")
+        .select("source_id")
+        .eq("user_id", userId);
+      const covered = new Set(
+        ((eff ?? []) as Array<{ source_id: string }>).map((r) => r.source_id),
+      );
+      for (const id of recIds) if (!covered.has(id)) sourceCount += 1;
+    }
+
+    // ---- Groups side: unsubscribed official groups in user's cancer areas ----
+    let groupCount = 0;
+    if (cancerAreaIds.length > 0) {
+      const { data: junc } = await supabaseAdmin
+        .from("source_group_cancer_areas")
+        .select("group_id")
+        .in("cancer_area_id", cancerAreaIds);
+      const candidateIds = Array.from(
+        new Set(
+          ((junc ?? []) as Array<{ group_id: string }>).map((r) => r.group_id),
+        ),
+      );
+      if (candidateIds.length > 0) {
+        const [groupsRes, subsRes] = await Promise.all([
+          supabaseAdmin
+            .from("source_groups")
+            .select("id")
+            .in("id", candidateIds)
+            .eq("visibility", "official")
+            .eq("is_archived", false),
+          supabaseAdmin
+            .from("user_subscribed_groups")
+            .select("group_id")
+            .eq("user_id", userId),
+        ]);
+        const subscribed = new Set(
+          ((subsRes.data ?? []) as Array<{ group_id: string }>).map(
+            (r) => r.group_id,
+          ),
+        );
+        for (const g of (groupsRes.data ?? []) as Array<{ id: string }>) {
+          if (!subscribed.has(g.id)) groupCount += 1;
+        }
+      }
+    }
+
+    return { count: sourceCount, sourceCount, groupCount };
   });
