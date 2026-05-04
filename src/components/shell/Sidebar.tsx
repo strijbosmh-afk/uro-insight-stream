@@ -15,6 +15,7 @@ import {
   Compass,
   Mail,
   Users as UsersIcon,
+  Users2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -56,6 +57,7 @@ const ADMIN_SECTION: NavSection = {
   label: "Admin",
   items: [
     { label: "Users", to: "/admin/users", icon: UsersIcon },
+    { label: "Groups", to: "/admin/groups", icon: Users2 },
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
     { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
   ],
