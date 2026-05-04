@@ -435,8 +435,8 @@ export function CongressWizard({ open, onOpenChange, editId, onSaved }: Props) {
             role: k.role ?? null,
           })),
       };
-      if (editId) return updateFn({ data: payload as Parameters<typeof updateFn>[0]["data"] });
-      return createFn({ data: payload as Parameters<typeof createFn>[0]["data"] });
+      if (editId) return updateFn({ data: payload } as Parameters<typeof updateFn>[0]);
+      return createFn({ data: payload } as Parameters<typeof createFn>[0]);
     },
     onSuccess: (r) => {
       toast.success(editId ? "Congress updated" : "Congress created");
