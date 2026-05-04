@@ -26,13 +26,14 @@ export type CongressLookupResult = {
 };
 
 const CACHE_TTL_HOURS = 24;
+const LOOKUP_CACHE_VERSION = "v2-official-page-verify";
 
 function normalize(query: string): string {
   return query.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 function hashQuery(query: string): string {
-  return createHash("sha256").update(normalize(query)).digest("hex");
+  return createHash("sha256").update(`${LOOKUP_CACHE_VERSION}:${normalize(query)}`).digest("hex");
 }
 
 function emptyResult(): CongressLookupResult {
@@ -61,6 +62,77 @@ function cleanHashtag(t: string): string {
 
 function cleanHandle(h: string): string {
   return h.replace(/^@+/, "").trim();
+}
+
+const MONTHS: Record<string, string> = {
+  jan: "01", january: "01",
+  feb: "02", february: "02",
+  mar: "03", march: "03",
+  apr: "04", april: "04",
+  may: "05",
+  jun: "06", june: "06",
+  jul: "07", july: "07",
+  aug: "08", august: "08",
+  sep: "09", sept: "09", september: "09",
+  oct: "10", october: "10",
+  nov: "11", november: "11",
+  dec: "12", december: "12",
+};
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&ndash;|&mdash;/gi, "-")
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCharCode(parseInt(n, 16)));
+}
+
+function htmlToText(html: string): string {
+  return decodeHtml(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseHumanDate(value: string): string | null {
+  const iso = value.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if (iso) return iso[0];
+  const m = value.trim().match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(20\d{2})$/);
+  if (!m) return null;
+  const month = MONTHS[m[2].toLowerCase()];
+  if (!month) return null;
+  return `${m[3]}-${month}-${m[1].padStart(2, "0")}`;
+}
+
+function parseOfficialMeetingPage(html: string, url: string) {
+  const text = htmlToText(html);
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const facts: Partial<CongressLookupResult> & { verified_url: string; verified_title: string } = {
+    verified_url: url,
+    verified_title: title ? htmlToText(title).slice(0, 200) : "Official meeting page",
+  };
+
+  const labelled = text.match(
+    /Start\s*date\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+20\d{2})\s*End\s*date\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+20\d{2})\s*Location\s*([A-Za-zÀ-ÿ' .-]+,\s*[A-Za-zÀ-ÿ' .-]+)/i,
+  );
+  if (labelled) {
+    facts.start_date = parseHumanDate(labelled[1]);
+    facts.end_date = parseHumanDate(labelled[2]);
+    const [city, country] = labelled[3].split(",").map((p) => p.trim()).filter(Boolean);
+    if (city && country && city.length <= 120 && country.length <= 120) {
+      facts.city = city;
+      facts.country = country;
+    }
+  }
+
+  return facts.city || facts.country || facts.start_date || facts.end_date ? facts : null;
+}
+
+function normalizeOfficialUrl(url: string): string {
+  return url.replace("/meetings/", "/meeting-calendar/");
 }
 
 function buildSystemPrompt(slugs: string[]): string {
@@ -228,6 +300,45 @@ function sanitizeResult(
   return out;
 }
 
+async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
+  const officialUrl = normalizeOfficialUrl(
+    result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
+      ?? result.website
+      ?? "",
+  );
+  if (!officialUrl || !/^https:\/\/(www\.)?esmo\.org\//i.test(officialUrl)) return result;
+
+  try {
+    const res = await fetch(officialUrl, {
+      headers: { "User-Agent": "UroFeed congress lookup verifier" },
+    });
+    if (!res.ok) return result;
+    const html = await res.text();
+    let facts = parseOfficialMeetingPage(html, officialUrl);
+    if (!facts) {
+      const readerRes = await fetch(`https://r.jina.ai/http://${officialUrl}`, {
+        headers: { "User-Agent": "UroFeed congress lookup verifier" },
+      });
+      if (readerRes.ok) facts = parseOfficialMeetingPage(await readerRes.text(), officialUrl);
+    }
+    if (!facts) return result;
+    const citation = { url: facts.verified_url, title: facts.verified_title };
+    return {
+      ...result,
+      start_date: facts.start_date ?? result.start_date,
+      end_date: facts.end_date ?? result.end_date,
+      city: facts.city ?? result.city,
+      country: facts.country ?? result.country,
+      website: result.website ?? officialUrl,
+      citations: [citation, ...result.citations.filter((c) => c.url !== citation.url)].slice(0, 8),
+      confidence: facts.city && facts.country ? result.confidence : "medium",
+    };
+  } catch (e) {
+    console.warn("[congress-lookup] official fact verification failed", e);
+    return result;
+  }
+}
+
 async function callGateway(query: string, slugs: string[]): Promise<CongressLookupResult | null> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
@@ -325,7 +436,8 @@ ${brief}
   const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   if (!args) return null;
   try {
-    return sanitizeResult(JSON.parse(args) as Partial<CongressLookupResult>, new Set(slugs));
+    const extracted = sanitizeResult(JSON.parse(args) as Partial<CongressLookupResult>, new Set(slugs));
+    return await verifyOfficialFacts(extracted);
   } catch (e) {
     console.error("[congress-lookup] parse error", e);
     return null;
