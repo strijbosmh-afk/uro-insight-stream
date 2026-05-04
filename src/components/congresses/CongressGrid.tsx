@@ -62,10 +62,6 @@ export function CongressGrid() {
     queryKey: ["congresses"],
     queryFn: () => feedService.listCongresses(),
   });
-  const { data: lists = [] } = useQuery({
-    queryKey: ["source-lists"],
-    queryFn: () => feedService.listSourceLists(),
-  });
   const { data: allSources = [] } = useQuery({
     queryKey: ["sources"],
     queryFn: () => feedService.listSources(),
