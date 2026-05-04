@@ -301,8 +301,11 @@ function sanitizeResult(
 }
 
 async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
-  const officialUrl = normalizeOfficialUrl(result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
-    ?? result.website;
+  const officialUrl = normalizeOfficialUrl(
+    result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
+      ?? result.website
+      ?? "",
+  );
   if (!officialUrl || !/^https:\/\/(www\.)?esmo\.org\//i.test(officialUrl)) return result;
 
   try {
