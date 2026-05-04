@@ -71,7 +71,7 @@ export function Dashboard() {
       try {
         return await fetchNewRecs();
       } catch {
-        return { count: 0 };
+        return { count: 0, sourceCount: 0, groupCount: 0 };
       }
     },
     staleTime: 60_000,
