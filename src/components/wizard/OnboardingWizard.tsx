@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/server/onboarding.functions";
+import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/serverFns/onboarding";
 import { Link } from "@tanstack/react-router";
 import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
 import { feedService } from "@/services/feedService";
