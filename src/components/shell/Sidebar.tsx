@@ -40,6 +40,7 @@ const BASE_SECTIONS: NavSection[] = [
       { label: "Summaries", to: "/summaries", icon: FileText },
       { label: "Digests", to: "/digests", icon: Mail },
       { label: "Discover", to: "/discover", icon: Compass },
+      { label: "Discover groups", to: "/discover/groups", icon: Compass },
     ],
   },
   {
