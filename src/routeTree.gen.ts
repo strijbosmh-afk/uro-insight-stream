@@ -35,6 +35,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
+import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
@@ -176,6 +177,12 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSendDigestsRoute =
+  ApiPublicHooksSendDigestsRouteImport.update({
+    id: '/api/public/hooks/send-digests',
+    path: '/api/public/hooks/send-digests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessIngestQueueRoute =
   ApiPublicHooksProcessIngestQueueRouteImport.update({
     id: '/api/public/hooks/process-ingest-queue',
@@ -224,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -256,6 +264,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -289,6 +298,7 @@ export interface FileRoutesById {
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -387,6 +399,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -419,6 +432,7 @@ export interface RootRouteChildren {
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
+  ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -613,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/send-digests': {
+      id: '/api/public/hooks/send-digests'
+      path: '/api/public/hooks/send-digests'
+      fullPath: '/api/public/hooks/send-digests'
+      preLoaderRoute: typeof ApiPublicHooksSendDigestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-ingest-queue': {
       id: '/api/public/hooks/process-ingest-queue'
       path: '/api/public/hooks/process-ingest-queue'
@@ -681,6 +702,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
+  ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
