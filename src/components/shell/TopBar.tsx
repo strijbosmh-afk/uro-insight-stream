@@ -16,6 +16,10 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: "Settings",
   admin: "Admin",
   users: "Users",
+  discover: "Discover",
+  groups: "Groups",
+  recommendations: "Recommendations",
+  ingestion: "Ingestion",
 };
 
 function useBreadcrumb() {
