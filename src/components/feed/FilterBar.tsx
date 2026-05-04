@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { X, CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -8,8 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { feedService } from "@/services/feedService";
 import { useFeedFilters } from "./FeedFilterContext";
 
@@ -20,6 +27,53 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
     <span className="text-[9px] font-mono uppercase tracking-[0.14em] text-text-muted">
       {children}
     </span>
+  );
+}
+
+function DateField({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const date = value ? parseISO(value) : undefined;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "h-7 w-36 px-2 justify-start text-left text-[12px] font-mono",
+            !date && "text-text-muted"
+          )}
+        >
+          <CalendarIcon className="w-3 h-3 mr-1.5 shrink-0" />
+          {date ? format(date, "dd/MM/yyyy") : "dd/mm/yyyy"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : null)}
+          initialFocus
+          className={cn("p-3 pointer-events-auto")}
+        />
+        {date && (
+          <div className="border-t border-border p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange(null)}
+              className="h-7 w-full text-[11px]"
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -153,20 +207,16 @@ export function FilterBar() {
 
       <div className="flex flex-col gap-1">
         <FieldLabel>From</FieldLabel>
-        <Input
-          type="date"
-          value={filters.dateFrom ?? ""}
-          onChange={(e) => patch({ dateFrom: e.target.value || null })}
-          className="h-7 w-36 text-[12px] font-mono"
+        <DateField
+          value={filters.dateFrom ?? null}
+          onChange={(v) => patch({ dateFrom: v })}
         />
       </div>
       <div className="flex flex-col gap-1">
         <FieldLabel>To</FieldLabel>
-        <Input
-          type="date"
-          value={filters.dateTo ?? ""}
-          onChange={(e) => patch({ dateTo: e.target.value || null })}
-          className="h-7 w-36 text-[12px] font-mono"
+        <DateField
+          value={filters.dateTo ?? null}
+          onChange={(v) => patch({ dateTo: v })}
         />
       </div>
 
