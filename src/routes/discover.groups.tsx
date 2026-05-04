@@ -223,8 +223,16 @@ function GroupCard({
   onSubscribe: () => void;
   onUnsubscribe: () => void;
 }) {
+  const subscribed = group.is_subscribed;
   return (
-    <div className="border border-border rounded-[4px] bg-panel p-3 flex flex-col gap-2 hover:border-accent/40 transition-colors">
+    <div
+      className={
+        "rounded-[4px] p-3 flex flex-col gap-2 transition-colors border " +
+        (subscribed
+          ? "bg-accent/10 border-accent/40 text-text-primary"
+          : "bg-panel border-border hover:border-accent/40")
+      }
+    >
       <div className="flex items-start justify-between gap-2">
         <Link
           to="/groups/$slug"
@@ -233,14 +241,24 @@ function GroupCard({
         >
           {group.name}
         </Link>
-        {group.visibility === "official" && (
-          <Badge
-            variant="outline"
-            className="shrink-0 gap-1 text-[10px] uppercase tracking-wider border-accent/40 text-accent"
-          >
-            <BadgeCheck className="w-3 h-3" /> Official
-          </Badge>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {subscribed && (
+            <Badge
+              variant="outline"
+              className="gap-1 text-[10px] uppercase tracking-wider border-accent/60 bg-accent/15 text-accent"
+            >
+              <BadgeCheck className="w-3 h-3" /> Subscribed
+            </Badge>
+          )}
+          {group.visibility === "official" && (
+            <Badge
+              variant="outline"
+              className="gap-1 text-[10px] uppercase tracking-wider border-accent/40 text-accent"
+            >
+              <BadgeCheck className="w-3 h-3" /> Official
+            </Badge>
+          )}
+        </div>
       </div>
 
       {group.description && (
