@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SummariesIndex } from "@/components/summaries/SummariesIndex";
+import { Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/summaries")({
   head: () => ({ meta: [{ title: "Summaries — UroFeed" }] }),
-  component: SummariesPage,
+  component: SummariesLayout,
 });
 
-function SummariesPage() {
-  return <SummariesIndex />;
+function SummariesLayout() {
+  return <Outlet />;
 }
