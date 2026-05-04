@@ -306,7 +306,7 @@ function sanitizeResult(
 }
 
 async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
-  const officialUrl = result.citations.find((c) => /(^|\.)esmo\.org$/i.test(new URL(c.url).hostname).catch?.())?.url
+  const officialUrl = result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
     ?? result.website;
   if (!officialUrl || !/^https:\/\/(www\.)?esmo\.org\//i.test(officialUrl)) return result;
 
