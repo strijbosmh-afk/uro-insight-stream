@@ -1,0 +1,1 @@
+DELETE FROM public.congress_lookup_cache WHERE query_raw ILIKE '%esmo%2026%';
