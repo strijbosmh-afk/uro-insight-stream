@@ -307,7 +307,13 @@ async function verifyOfficialFacts(result: CongressLookupResult): Promise<Congre
     });
     if (!res.ok) return result;
     const html = await res.text();
-    const facts = parseOfficialMeetingPage(html, officialUrl);
+    let facts = parseOfficialMeetingPage(html, officialUrl);
+    if (!facts) {
+      const readerRes = await fetch(`https://r.jina.ai/http://${officialUrl}`, {
+        headers: { "User-Agent": "UroFeed congress lookup verifier" },
+      });
+      if (readerRes.ok) facts = parseOfficialMeetingPage(await readerRes.text(), officialUrl);
+    }
     if (!facts) return result;
     const citation = { url: facts.verified_url, title: facts.verified_title };
     return {
