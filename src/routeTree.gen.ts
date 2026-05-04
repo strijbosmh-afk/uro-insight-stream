@@ -21,6 +21,7 @@ import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DiscoverIndexRouteImport } from './routes/discover.index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -105,6 +106,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverIndexRoute = DiscoverIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DiscoverRoute,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/discover/': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -283,7 +290,6 @@ export interface FileRoutesByTo {
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/digests': typeof DigestsRoute
-  '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -299,6 +305,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/discover': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -338,6 +345,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/discover/': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -378,6 +386,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/sessions/$sessionId'
+    | '/discover/'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -400,7 +409,6 @@ export interface FileRouteTypes {
     | '/congresses'
     | '/dashboard'
     | '/digests'
-    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -416,6 +424,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/sessions/$sessionId'
+    | '/discover'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -454,6 +463,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/sessions/$sessionId'
+    | '/discover/'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -592,6 +602,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/discover/': {
+      id: '/discover/'
+      path: '/'
+      fullPath: '/discover/'
+      preLoaderRoute: typeof DiscoverIndexRouteImport
+      parentRoute: typeof DiscoverRoute
     }
     '/sessions/$sessionId': {
       id: '/sessions/$sessionId'
@@ -778,10 +795,12 @@ const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
 
 interface DiscoverRouteChildren {
   DiscoverGroupsRoute: typeof DiscoverGroupsRoute
+  DiscoverIndexRoute: typeof DiscoverIndexRoute
 }
 
 const DiscoverRouteChildren: DiscoverRouteChildren = {
   DiscoverGroupsRoute: DiscoverGroupsRoute,
+  DiscoverIndexRoute: DiscoverIndexRoute,
 }
 
 const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
