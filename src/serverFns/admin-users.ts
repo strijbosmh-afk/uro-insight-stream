@@ -702,7 +702,7 @@ export const claimInvitation = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("id")
       .eq("user_id", context.userId)
-      .eq("role", inv.role)
+      .eq("role", inv.role as AppRole)
       .maybeSingle();
     if (existingErr) throw new Error(existingErr.message);
     if (!existingRole) {
