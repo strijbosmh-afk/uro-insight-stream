@@ -26,7 +26,7 @@ import { isValidHandle, normalizeHandle } from "@/lib/validation";
 import type { Source } from "@/types";
 import { recordAudit } from "@/services/auditService";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, BadgeCheck } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -249,6 +249,32 @@ export function AddSourceDialog({ open, onOpenChange }: Props) {
               </div>
               {lookupError ? (
                 <span className="text-[11px] text-destructive">{lookupError}</span>
+              ) : null}
+              {!lookingUp && !lookupError && lookupAvatar ? (
+                <div className="flex items-center gap-2 rounded-sm border border-border bg-panel-elevated px-2 py-1.5">
+                  <img
+                    src={lookupAvatar}
+                    alt={displayName || handle}
+                    className="h-7 w-7 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+                    }}
+                  />
+                  <div className="flex min-w-0 flex-col">
+                    <div className="flex items-center gap-1 text-[12px] font-medium text-text-primary">
+                      <span className="truncate">{displayName || handle}</span>
+                      {lookupVerified ? (
+                        <BadgeCheck
+                          className="h-3.5 w-3.5 shrink-0 text-sky-500"
+                          aria-label="Verified"
+                        />
+                      ) : null}
+                    </div>
+                    <span className="text-[11px] font-mono text-text-muted">
+                      @{normalizeHandle(handle)}
+                    </span>
+                  </div>
+                </div>
               ) : null}
             </div>
             <div className="grid gap-1.5">
