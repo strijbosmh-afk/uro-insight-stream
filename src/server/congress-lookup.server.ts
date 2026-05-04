@@ -131,6 +131,10 @@ function parseOfficialMeetingPage(html: string, url: string) {
   return facts.city || facts.country || facts.start_date || facts.end_date ? facts : null;
 }
 
+function normalizeOfficialUrl(url: string): string {
+  return url.replace("/meetings/", "/meeting-calendar/");
+}
+
 function buildSystemPrompt(slugs: string[]): string {
   return `You identify medical / oncology congresses for a research database.
 
@@ -297,7 +301,7 @@ function sanitizeResult(
 }
 
 async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
-  const officialUrl = result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
+  const officialUrl = normalizeOfficialUrl(result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
     ?? result.website;
   if (!officialUrl || !/^https:\/\/(www\.)?esmo\.org\//i.test(officialUrl)) return result;
 
