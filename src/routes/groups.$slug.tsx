@@ -7,6 +7,7 @@ import { ArrowLeft, BadgeCheck, ExternalLink, Loader2, Users } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/shell/Panel";
+import { toTitleCase } from "@/lib/title-case";
 import {
   getGroup,
   subscribeToGroup,
