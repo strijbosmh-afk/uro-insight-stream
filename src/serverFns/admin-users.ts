@@ -42,7 +42,9 @@ export type AdminAuditEntry = {
   action: string;
   target_user_id: string | null;
   target_email: string | null;
-  metadata: Record<string, unknown> | null;
+  // Use `unknown` so the value remains JSON-serializable for the
+  // TanStack server-fn boundary (Record<string, unknown> is rejected).
+  metadata: unknown;
   created_at: string;
 };
 
@@ -690,13 +692,23 @@ export const claimInvitation = createServerFn({ method: "POST" })
     }
 
     // Grant the role (idempotent against the unique (user_id, role) index)
-    const { error: roleErr } = await supabaseAdmin
+    const { error: existingErr, data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .upsert(
-        { user_id: context.userId, role: inv.role, granted_by: inv.invited_by ?? null },
-        { onConflict: "user_id,role" },
-      );
-    if (roleErr) throw new Error(roleErr.message);
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("role", inv.role)
+      .maybeSingle();
+    if (existingErr) throw new Error(existingErr.message);
+    if (!existingRole) {
+      const { error: roleErr } = await supabaseAdmin
+        .from("user_roles")
+        .insert({
+          user_id: context.userId,
+          role: inv.role,
+          granted_by: inv.invited_by ?? null,
+        });
+      if (roleErr) throw new Error(roleErr.message);
+    }
 
     // Mark invitation accepted
     await supabaseAdmin
