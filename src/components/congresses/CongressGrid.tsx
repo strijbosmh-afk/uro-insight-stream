@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Plus, Search, GripVertical } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { feedService } from "@/services/feedService";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
+import { listCongressCancerAreas } from "@/serverFns/congresses";
 import { cn } from "@/lib/utils";
 import { CongressCard } from "./CongressCard";
-import { NewCongressDialog } from "./NewCongressDialog";
+import { CongressWizard } from "./CongressWizard";
 import { useCanEdit } from "@/auth/permissions";
 import type { Congress } from "@/types";
 
@@ -44,12 +48,15 @@ function saveOrder(ids: string[]) {
 
 export function CongressGrid() {
   const canEdit = useCanEdit();
+  const { user } = useAuth();
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
+  const [areaFilter, setAreaFilter] = React.useState<string>(ALL);
   const [openNew, setOpenNew] = React.useState(false);
   const [order, setOrder] = React.useState<string[]>(() => loadOrder());
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overId, setOverId] = React.useState<string | null>(null);
+  const fetchAreas = useServerFn(listCongressCancerAreas);
 
   const { data: congresses = [], isLoading } = useQuery({
     queryKey: ["congresses"],
@@ -63,6 +70,56 @@ export function CongressGrid() {
     queryKey: ["sources"],
     queryFn: () => feedService.listSources(),
   });
+
+  // Cancer areas (with congress counts) for the filter chips.
+  const { data: areas = [] } = useQuery({
+    queryKey: ["congress-cancer-areas"],
+    queryFn: () => fetchAreas(),
+    staleTime: 5 * 60_000,
+  });
+
+  // Map of congressId → cancer_area_ids for client-side filtering.
+  const { data: congressAreaMap = new Map<string, string[]>() } = useQuery({
+    queryKey: ["congress-area-map"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("congress_cancer_areas")
+        .select("congress_id, cancer_area_id");
+      const m = new Map<string, string[]>();
+      for (const r of (data ?? []) as Array<{ congress_id: string; cancer_area_id: string }>) {
+        const arr = m.get(r.congress_id) ?? [];
+        arr.push(r.cancer_area_id);
+        m.set(r.congress_id, arr);
+      }
+      return m;
+    },
+    staleTime: 60_000,
+  });
+
+  // Default the area filter to the user's primary cancer area on first load.
+  const { data: myAreas = [] } = useQuery({
+    queryKey: ["user-cancer-areas", user?.id ?? null],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_cancer_areas")
+        .select("cancer_area_id, is_primary")
+        .eq("user_id", user!.id);
+      return (data ?? []) as Array<{ cancer_area_id: string; is_primary: boolean }>;
+    },
+    staleTime: 60_000,
+  });
+  const defaultedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (defaultedRef.current) return;
+    if (areaFilter !== ALL) { defaultedRef.current = true; return; }
+    if (myAreas.length === 0 || areas.length === 0) return;
+    const primary = myAreas.find((r) => r.is_primary) ?? myAreas[0];
+    if (primary && areas.some((a) => a.id === primary.cancer_area_id && a.count > 0)) {
+      setAreaFilter(primary.cancer_area_id);
+    }
+    defaultedRef.current = true;
+  }, [myAreas, areas, areaFilter]);
 
   // Per-congress session lists (stable, lightweight) for counts + last sync.
   const sessionQueries = useQueries({
@@ -78,6 +135,10 @@ export function CongressGrid() {
 
   const filtered = congresses.filter((c) => {
     if (statusFilter !== ALL && c.status !== statusFilter) return false;
+    if (areaFilter !== ALL) {
+      const ids = congressAreaMap.get(c.id) ?? [];
+      if (!ids.includes(areaFilter)) return false;
+    }
     if (query) {
       const q = query.toLowerCase();
       return (
@@ -165,6 +226,17 @@ export function CongressGrid() {
                 className="h-8 pl-8 text-[12px]"
               />
             </div>
+            <Select value={areaFilter} onValueChange={(v) => { defaultedRef.current = true; setAreaFilter(v); }}>
+              <SelectTrigger className="h-8 w-44 text-[12px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All cancer areas</SelectItem>
+                {areas.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name} ({a.count})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-8 w-36 text-[12px]">
                 <SelectValue />
@@ -215,6 +287,7 @@ export function CongressGrid() {
                       onClick: () => {
                         setQuery("");
                         setStatusFilter(ALL);
+                        setAreaFilter(ALL);
                       },
                     }
                   : undefined
@@ -289,7 +362,7 @@ export function CongressGrid() {
           </div>
         </Panel>
       </div>
-      <NewCongressDialog open={openNew} onOpenChange={setOpenNew} lists={lists} />
+      <CongressWizard open={openNew} onOpenChange={setOpenNew} />
     </>
   );
 }
