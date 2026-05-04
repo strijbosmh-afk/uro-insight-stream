@@ -562,8 +562,17 @@ function SignalsTab() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [data]);
 
+  type UpsertInput = {
+    id?: string;
+    cancer_area_id: string;
+    signal_type: "bio_keyword" | "hashtag";
+    value: string;
+    weight: number;
+    is_active: boolean;
+    notes?: string | null;
+  };
   const updateMut = useMutation({
-    mutationFn: (input: Parameters<typeof upsert>[0]["data"]) => upsert({ data: input }),
+    mutationFn: (input: UpsertInput) => upsert({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "signals"] });
     },
