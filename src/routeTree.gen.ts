@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -42,6 +43,11 @@ import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './route
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SummariesRoute = SummariesRouteImport.update({
   id: '/summaries',
   path: '/summaries',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRouteWithChildren
+  '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/summaries'
+    | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
     | '/api/lookup-handle'
@@ -433,6 +445,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRouteWithChildren
+  UnsubscribeRoute: typeof UnsubscribeRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
@@ -457,6 +470,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/summaries': {
       id: '/summaries'
       path: '/summaries'
@@ -719,6 +739,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRouteWithChildren,
+  UnsubscribeRoute: UnsubscribeRoute,
   AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
