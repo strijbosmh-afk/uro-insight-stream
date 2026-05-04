@@ -139,6 +139,16 @@ const SetActiveSchema = z.object({
   isActive: z.boolean(),
 });
 
+const BulkUpdateRoleSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+  role: RoleEnum,
+});
+
+const BulkSetActiveSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(100),
+  isActive: z.boolean(),
+});
+
 const UpdateProfileSchema = z.object({
   userId: z.string().uuid(),
   displayName: z.string().max(120).nullable().optional(),
