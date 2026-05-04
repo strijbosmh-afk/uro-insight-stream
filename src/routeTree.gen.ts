@@ -19,6 +19,7 @@ import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SummariesDigestsRouteImport } from './routes/summaries.digests'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
@@ -90,6 +91,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SummariesDigestsRoute = SummariesDigestsRouteImport.update({
+  id: '/digests',
+  path: '/digests',
+  getParentRoute: () => SummariesRoute,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
@@ -218,7 +224,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -251,7 +258,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -285,7 +293,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
-  '/summaries': typeof SummariesRoute
+  '/summaries': typeof SummariesRouteWithChildren
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/summaries/digests': typeof SummariesDigestsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/email/unsubscribe'
     | '/sessions/$sessionId'
+    | '/summaries/digests'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -420,7 +432,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
-  SummariesRoute: typeof SummariesRoute
+  SummariesRoute: typeof SummariesRouteWithChildren
   AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
@@ -514,6 +526,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/summaries/digests': {
+      id: '/summaries/digests'
+      path: '/digests'
+      fullPath: '/summaries/digests'
+      preLoaderRoute: typeof SummariesDigestsRouteImport
+      parentRoute: typeof SummariesRoute
     }
     '/sessions/$sessionId': {
       id: '/sessions/$sessionId'
@@ -677,6 +696,18 @@ const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
   CongressesRouteChildren,
 )
 
+interface SummariesRouteChildren {
+  SummariesDigestsRoute: typeof SummariesDigestsRoute
+}
+
+const SummariesRouteChildren: SummariesRouteChildren = {
+  SummariesDigestsRoute: SummariesDigestsRoute,
+}
+
+const SummariesRouteWithChildren = SummariesRoute._addFileChildren(
+  SummariesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
@@ -687,7 +718,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
-  SummariesRoute: SummariesRoute,
+  SummariesRoute: SummariesRouteWithChildren,
   AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
