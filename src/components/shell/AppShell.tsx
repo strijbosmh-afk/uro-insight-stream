@@ -7,9 +7,12 @@ import { useAuth } from "@/auth/AuthProvider";
 import { useOnboardingGate } from "@/hooks/useOnboardingGate";
 import { OnboardingWizard } from "@/components/wizard/OnboardingWizard";
 import { ResumeBanner } from "@/components/wizard/ResumeBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const isMobile = useIsMobile();
   const { prefs } = useAuth();
   const density = prefs?.theme_density ?? "comfortable";
   const gate = useOnboardingGate();
@@ -19,6 +22,11 @@ export function AppShell() {
   >(undefined);
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Close the mobile drawer on route change.
+  React.useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   React.useEffect(() => {
     const handler = (
@@ -43,14 +51,36 @@ export function AppShell() {
 
   return (
     <div
-      className="h-screen w-screen flex flex-col bg-bg text-text-primary overflow-hidden"
+      className="h-[100dvh] w-screen flex flex-col bg-bg text-text-primary overflow-hidden safe-pl safe-pr"
       data-density={density}
       style={{ fontSize: density === "compact" ? "13px" : "14px" }}
     >
       <div className="flex-1 flex min-h-0">
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+        {/* Desktop sidebar */}
+        {!isMobile && (
+          <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+        )}
+
+        {/* Mobile drawer */}
+        {isMobile && mobileNavOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileNavOpen(false)}
+              aria-hidden
+            />
+            <div className="fixed inset-y-0 left-0 z-50 safe-pt safe-pb flex">
+              <Sidebar collapsed={false} onToggle={() => setMobileNavOpen(false)} />
+            </div>
+          </>
+        )}
+
         <div className="flex-1 flex flex-col min-w-0">
-          <TopBar />
+          <div className="safe-pt">
+            <TopBar
+              onOpenMobileNav={isMobile ? () => setMobileNavOpen(true) : undefined}
+            />
+          </div>
           {!wizardOpen &&
             gate.needsResumeBanner &&
             !bannerDismissed &&
@@ -60,12 +90,13 @@ export function AppShell() {
                 onDismiss={() => setBannerDismissed(true)}
               />
             )}
-          <main className="flex-1 min-h-0 overflow-auto p-3">
+          <main className="flex-1 min-h-0 overflow-auto ios-scroll p-3 sm:p-3">
             <Outlet />
           </main>
         </div>
       </div>
-      <StatusBar />
+      {!isMobile && <StatusBar />}
+      {isMobile && <div className="safe-pb bg-panel" />}
       {wizardOpen && (
         <OnboardingWizard
           initialStep={gate.currentStep}

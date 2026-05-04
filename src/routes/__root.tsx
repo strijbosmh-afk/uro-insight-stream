@@ -39,7 +39,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { title: "UroFeed — Clinical congress intelligence" },
       { name: "description", content: "AI-powered congress feed for urologists. Track EAU, AUA, SIU and ESMO-GU in real time." },
       { name: "author", content: "UroFeed" },
