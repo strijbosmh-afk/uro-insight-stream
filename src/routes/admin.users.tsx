@@ -429,6 +429,14 @@ function UserRow({
 
   return (
     <tr className="border-b border-border/60 hover:bg-panel-elevated/40">
+      <td className="py-3 align-middle">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(v) => onSelectChange(v === true)}
+          disabled={isSelf}
+          aria-label={isSelf ? "You can't bulk-action your own account" : `Select ${user.email}`}
+        />
+      </td>
       <td className="py-3">
         <div className="font-medium text-text-primary">{user.display_name ?? "—"}</div>
         <div className="text-xs text-text-muted">{user.email}</div>
