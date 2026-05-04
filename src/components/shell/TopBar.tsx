@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Menu } from "lucide-react";
 import { feedService } from "@/services/feedService";
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -78,16 +78,32 @@ function fmtTime(d: Date | null) {
   });
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onOpenMobileNav?: () => void;
+}
+
+export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
   const crumbs = useBreadcrumb();
   const now = useClock();
 
   return (
-    <header className="h-12 shrink-0 flex items-center gap-4 px-4 border-b border-border bg-panel">
+    <header className="h-12 shrink-0 flex items-center gap-2 sm:gap-4 px-2 sm:px-4 border-b border-border bg-panel">
+      {onOpenMobileNav && (
+        <button
+          type="button"
+          onClick={onOpenMobileNav}
+          aria-label="Open menu"
+          className="w-9 h-9 -ml-1 flex items-center justify-center rounded-[3px] text-text-muted hover:text-text-primary hover:bg-panel-elevated transition-colors"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-[12px] min-w-0">
+      <nav className="flex items-center gap-1.5 text-[12px] min-w-0 flex-1 sm:flex-initial">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;
+          // On mobile, only show the last (current) crumb to save space.
+          if (onOpenMobileNav && !last) return null;
           return (
             <React.Fragment key={i}>
               {i > 0 && (
@@ -108,8 +124,8 @@ export function TopBar() {
         })}
       </nav>
 
-      {/* Search */}
-      <div className="flex-1 flex justify-center">
+      {/* Search — hidden on mobile to free up space */}
+      <div className="hidden sm:flex flex-1 justify-center">
         <div className="relative w-full max-w-xl">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
           <input
@@ -123,8 +139,8 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Live status pill */}
-      <div className="flex items-center gap-2 h-7 px-2.5 border border-border rounded-[3px] bg-panel-elevated">
+      {/* Live status pill — hidden on small mobile */}
+      <div className="hidden sm:flex items-center gap-2 h-7 px-2.5 border border-border rounded-[3px] bg-panel-elevated">
         <span
           className="w-1.5 h-1.5 rounded-full bg-success"
           style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
@@ -141,7 +157,7 @@ export function TopBar() {
       {/* Avatar */}
       <button
         type="button"
-        className="w-8 h-8 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
+        className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
         aria-label="Account"
       >
         UR
