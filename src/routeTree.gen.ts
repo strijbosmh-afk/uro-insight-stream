@@ -26,6 +26,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
 import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-congress'
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
 import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -126,6 +127,11 @@ const ApiSuggestCongressRoute = ApiSuggestCongressRouteImport.update({
 const ApiLookupHandleRoute = ApiLookupHandleRouteImport.update({
   id: '/api/lookup-handle',
   path: '/api/lookup-handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/ingestion': typeof AdminIngestionRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
+    | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
     | '/congresses/$congressId'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
+    | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
     | '/congresses/$congressId'
@@ -413,6 +424,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/admin/ingestion'
     | '/admin/recommendations'
+    | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
     | '/congresses/$congressId'
@@ -449,6 +461,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
@@ -588,6 +601,13 @@ declare module '@tanstack/react-router' {
       path: '/api/lookup-handle'
       fullPath: '/api/lookup-handle'
       preLoaderRoute: typeof ApiLookupHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/recommendations': {
@@ -732,6 +752,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   AdminIngestionRoute: AdminIngestionRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
+  AdminUsersRoute: AdminUsersRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,

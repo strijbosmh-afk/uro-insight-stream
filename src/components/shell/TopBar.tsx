@@ -14,6 +14,8 @@ const ROUTE_LABELS: Record<string, string> = {
   digests: "Digests",
   sources: "Sources",
   settings: "Settings",
+  admin: "Admin",
+  users: "Users",
 };
 
 function useBreadcrumb() {
