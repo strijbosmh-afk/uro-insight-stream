@@ -172,12 +172,17 @@ export const getGroup = createServerFn({ method: "POST" })
     const { userId, supabase } = context;
     const isUuid = /^[0-9a-f-]{36}$/i.test(data.idOrSlug);
 
-    let q = supabaseAdmin.from("source_groups").select("*").limit(1);
+    let q = supabaseAdmin
+      .from("source_groups")
+      .select(
+        "id, slug, name, description, visibility, is_archived, is_system, member_count, subscriber_count, created_by, created_at",
+      )
+      .limit(1);
     q = isUuid ? q.eq("id", data.idOrSlug) : q.eq("slug", data.idOrSlug);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const g = (rows ?? [])[0] as
-      | (GroupSummary & { is_archived: boolean; is_system: boolean })
+      | Omit<GroupSummary, "cancer_areas" | "is_subscribed">
       | undefined;
     if (!g) throw new Error("Group not found");
 
