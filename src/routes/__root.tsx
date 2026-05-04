@@ -44,10 +44,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "description", content: "AI-powered congress feed for urologists. Track EAU, AUA, SIU and ESMO-GU in real time." },
       { name: "author", content: "UroFeed" },
       { property: "og:title", content: "UroFeed — Clinical congress intelligence" },
-      { property: "og:description", content: "AI-powered congress feed for urologists." },
+      { property: "og:description", content: "AI-powered congress feed for urologists. Track EAU, AUA, SIU and ESMO-GU in real time." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "UroFeed — Clinical congress intelligence" },
+      { name: "twitter:description", content: "AI-powered congress feed for urologists. Track EAU, AUA, SIU and ESMO-GU in real time." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/83512635-c9a0-4a42-b0de-e68d0fcc4122/id-preview-0f198370--b4982a9a-484b-4e14-9df5-1bcc313546ed.lovable.app-1777902572961.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/83512635-c9a0-4a42-b0de-e68d0fcc4122/id-preview-0f198370--b4982a9a-484b-4e14-9df5-1bcc313546ed.lovable.app-1777902572961.png" },
     ],
     links: [
       {
