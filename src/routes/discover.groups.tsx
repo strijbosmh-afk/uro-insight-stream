@@ -108,8 +108,8 @@ function DiscoverGroupsPage() {
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Discover groups</h1>
           <p className="text-[12px] text-text-muted mt-0.5">
-            Curated bundles of sources. Subscribe to a group to follow every
-            current and future member.
+            Curated bundles of sources by cancer area. Subscribe to follow every
+            current and future member, or open a group to see who's inside.
           </p>
         </div>
 
