@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Search, GripVertical } from "lucide-react";
+import { Plus, Search, GripVertical, X } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,17 +105,25 @@ export function CongressGrid() {
     },
     staleTime: 60_000,
   });
+  // Track the area that was auto-applied as the user's default, so we can label
+  // the reset affordance ("Showing your area") and so manual changes stick.
+  const [defaultAreaId, setDefaultAreaId] = React.useState<string | null>(null);
   const defaultedRef = React.useRef(false);
   React.useEffect(() => {
     if (defaultedRef.current) return;
+    // User already touched the filter — don't override.
     if (areaFilter !== ALL) { defaultedRef.current = true; return; }
-    if (myAreas.length === 0 || areas.length === 0) return;
+    // Wait until both queries have resolved before deciding.
+    if (areas.length === 0) return;
+    if (!user) { defaultedRef.current = true; return; }
+    if (myAreas.length === 0) { defaultedRef.current = true; return; }
     const primary = myAreas.find((r) => r.is_primary) ?? myAreas[0];
     if (primary && areas.some((a) => a.id === primary.cancer_area_id && a.count > 0)) {
       setAreaFilter(primary.cancer_area_id);
+      setDefaultAreaId(primary.cancer_area_id);
     }
     defaultedRef.current = true;
-  }, [myAreas, areas, areaFilter]);
+  }, [myAreas, areas, areaFilter, user]);
 
   // Per-congress session lists (stable, lightweight) for counts + last sync.
   const sessionQueries = useQueries({
@@ -222,17 +230,35 @@ export function CongressGrid() {
                 className="h-8 pl-8 text-[12px]"
               />
             </div>
-            <Select value={areaFilter} onValueChange={(v) => { defaultedRef.current = true; setAreaFilter(v); }}>
-              <SelectTrigger className="h-8 w-44 text-[12px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All cancer areas</SelectItem>
-                {areas.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name} ({a.count})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1">
+              <Select value={areaFilter} onValueChange={(v) => { defaultedRef.current = true; setAreaFilter(v); }}>
+                <SelectTrigger className="h-8 w-44 text-[12px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All cancer areas</SelectItem>
+                  {areas.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name} ({a.count})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {areaFilter !== ALL && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-1.5 text-[11px] text-text-muted hover:text-text"
+                  onClick={() => { defaultedRef.current = true; setAreaFilter(ALL); }}
+                  title={
+                    defaultAreaId && areaFilter === defaultAreaId
+                      ? "Showing your primary area · click to show all"
+                      : "Clear cancer-area filter"
+                  }
+                >
+                  <X className="w-3 h-3 mr-0.5" />
+                  {defaultAreaId && areaFilter === defaultAreaId ? "your area" : "clear"}
+                </Button>
+              )}
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-8 w-36 text-[12px]">
                 <SelectValue />
