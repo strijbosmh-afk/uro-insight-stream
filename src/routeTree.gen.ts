@@ -22,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
+import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DiscoverGroupsRouteImport } from './routes/discover.groups'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
@@ -108,6 +109,11 @@ const IndexRoute = IndexRouteImport.update({
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
   path: '/sessions/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupsSlugRoute = GroupsSlugRouteImport.update({
+  id: '/groups/$slug',
+  path: '/groups/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/groups/$slug': typeof GroupsSlugRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
+    | '/groups/$slug'
     | '/sessions/$sessionId'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
+    | '/groups/$slug'
     | '/sessions/$sessionId'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
+    | '/groups/$slug'
     | '/sessions/$sessionId'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -477,6 +489,7 @@ export interface RootRouteChildren {
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  GroupsSlugRoute: typeof GroupsSlugRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       path: '/sessions/$sessionId'
       fullPath: '/sessions/$sessionId'
       preLoaderRoute: typeof SessionsSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groups/$slug': {
+      id: '/groups/$slug'
+      path: '/groups/$slug'
+      fullPath: '/groups/$slug'
+      preLoaderRoute: typeof GroupsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -787,6 +807,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  GroupsSlugRoute: GroupsSlugRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
