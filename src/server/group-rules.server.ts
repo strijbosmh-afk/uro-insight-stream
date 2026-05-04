@@ -332,7 +332,7 @@ export async function nominateForGroupsByRules(
             group_id: n.group_id,
             source_id: n.source_id,
             score: n.score,
-            evidence: n.evidence as unknown as Record<string, unknown>,
+            evidence: n.evidence as never,
             status: "pending",
           })),
         );
@@ -345,7 +345,7 @@ export async function nominateForGroupsByRules(
         .from("source_group_member_candidates")
         .update({
           score: u.score,
-          evidence: u.evidence as unknown as Record<string, unknown>,
+          evidence: u.evidence as never,
           nominated_at: new Date().toISOString(),
         })
         .eq("group_id", u.group_id)
