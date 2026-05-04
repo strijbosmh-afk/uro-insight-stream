@@ -432,7 +432,8 @@ ${brief}
   const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   if (!args) return null;
   try {
-    return sanitizeResult(JSON.parse(args) as Partial<CongressLookupResult>, new Set(slugs));
+    const extracted = sanitizeResult(JSON.parse(args) as Partial<CongressLookupResult>, new Set(slugs));
+    return await verifyOfficialFacts(extracted);
   } catch (e) {
     console.error("[congress-lookup] parse error", e);
     return null;
