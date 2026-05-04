@@ -82,7 +82,7 @@ function GroupDetailPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-semibold text-text-primary">{g.name}</h1>
+              <h1 className="text-lg font-semibold text-text-primary">{toTitleCase(g.name)}</h1>
               {g.visibility === "official" && (
                 <Badge variant="outline" className="gap-1 text-[10px] uppercase border-accent/40 text-accent">
                   <BadgeCheck className="w-3 h-3" /> Official
