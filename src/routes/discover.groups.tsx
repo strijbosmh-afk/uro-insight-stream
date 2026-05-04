@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/shell/Panel";
 import { Badge } from "@/components/ui/badge";
+import { toTitleCase } from "@/lib/title-case";
 import {
   listCancerAreas,
   listGroups,
@@ -116,7 +117,7 @@ function DiscoverGroupsPage() {
         {/* Cancer-area chips */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <ChipButton active={areaId === "all"} onClick={() => setAreaId("all")}>
-            All cancers
+            All Cancers
           </ChipButton>
           {areas.map((a) => (
             <ChipButton
@@ -124,7 +125,7 @@ function DiscoverGroupsPage() {
               active={areaId === a.id}
               onClick={() => setAreaId(a.id)}
             >
-              {a.name}
+              {toTitleCase(a.name)}
             </ChipButton>
           ))}
         </div>
@@ -239,7 +240,7 @@ function GroupCard({
           params={{ slug: group.slug }}
           className="font-medium text-text-primary text-[14px] leading-tight hover:text-accent line-clamp-2"
         >
-          {group.name}
+          {toTitleCase(group.name)}
         </Link>
         <div className="flex items-center gap-1 shrink-0">
           {subscribed && (
