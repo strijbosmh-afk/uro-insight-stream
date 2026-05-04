@@ -232,6 +232,108 @@ export type Database = {
         }
         Relationships: []
       }
+      congress_cancer_areas: {
+        Row: {
+          cancer_area_id: string
+          congress_id: string
+          created_at: string
+          is_primary: boolean
+        }
+        Insert: {
+          cancer_area_id: string
+          congress_id: string
+          created_at?: string
+          is_primary?: boolean
+        }
+        Update: {
+          cancer_area_id?: string
+          congress_id?: string
+          created_at?: string
+          is_primary?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "congress_cancer_areas_cancer_area_id_fkey"
+            columns: ["cancer_area_id"]
+            isOneToOne: false
+            referencedRelation: "cancer_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "congress_cancer_areas_congress_id_fkey"
+            columns: ["congress_id"]
+            isOneToOne: false
+            referencedRelation: "congresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      congress_featured_sources: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          congress_id: string
+          display_order: number
+          role: string | null
+          source_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          congress_id: string
+          display_order?: number
+          role?: string | null
+          source_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          congress_id?: string
+          display_order?: number
+          role?: string | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "congress_featured_sources_congress_id_fkey"
+            columns: ["congress_id"]
+            isOneToOne: false
+            referencedRelation: "congresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "congress_featured_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      congress_lookup_cache: {
+        Row: {
+          expires_at: string
+          fetched_at: string
+          query_hash: string
+          query_raw: string
+          result: Json
+        }
+        Insert: {
+          expires_at?: string
+          fetched_at?: string
+          query_hash: string
+          query_raw: string
+          result: Json
+        }
+        Update: {
+          expires_at?: string
+          fetched_at?: string
+          query_hash?: string
+          query_raw?: string
+          result?: Json
+        }
+        Relationships: []
+      }
       congress_suggestion_cache: {
         Row: {
           created_at: string
@@ -256,8 +358,11 @@ export type Database = {
       congresses: {
         Row: {
           city: string | null
+          community_hashtags: string[]
           country: string | null
           created_at: string
+          created_by: string | null
+          description: string | null
           end_date: string | null
           id: string
           name: string
@@ -267,11 +372,15 @@ export type Database = {
           start_date: string | null
           status: string
           updated_at: string
+          website: string | null
         }
         Insert: {
           city?: string | null
+          community_hashtags?: string[]
           country?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           end_date?: string | null
           id?: string
           name: string
@@ -281,11 +390,15 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
+          website?: string | null
         }
         Update: {
           city?: string | null
+          community_hashtags?: string[]
           country?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           end_date?: string | null
           id?: string
           name?: string
@@ -295,6 +408,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
