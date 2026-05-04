@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/shell/Panel";
 import { Badge } from "@/components/ui/badge";
+import { toTitleCase } from "@/lib/title-case";
 import {
   listCancerAreas,
   listGroups,
