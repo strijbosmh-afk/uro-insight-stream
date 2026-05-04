@@ -34,21 +34,6 @@ export const Route = createFileRoute("/discover/groups")({
 
 type SortMode = "popular" | "recent" | "alphabetical";
 
-/**
- * Title Case a label while preserving:
- *  - all-caps tokens (acronyms: KOLs, GI, HER2, CRC, HNSCC, TNBC)
- *  - tokens with internal capitals (HER2+, HER2-positive)
- *  - tokens that contain digits (TNBC, HER2)
- */
-function toTitleCase(input: string): string {
-  return input.replace(/([A-Za-z][A-Za-z0-9+\-]*)/g, (word) => {
-    // Already has an uppercase letter beyond the first char → leave it alone.
-    if (/[A-Z]/.test(word.slice(1))) return word;
-    // All lowercase → capitalize first letter.
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  });
-}
-
 function DiscoverGroupsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
