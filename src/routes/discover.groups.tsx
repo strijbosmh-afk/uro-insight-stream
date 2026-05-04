@@ -3,7 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { BadgeCheck, Loader2, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/components/shell/Panel";
@@ -108,8 +108,8 @@ function DiscoverGroupsPage() {
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Discover groups</h1>
           <p className="text-[12px] text-text-muted mt-0.5">
-            Curated bundles of sources. Subscribe to a group to follow every
-            current and future member.
+            Curated bundles of sources by cancer area. Subscribe to follow every
+            current and future member, or open a group to see who's inside.
           </p>
         </div>
 
@@ -284,26 +284,38 @@ function GroupCard({
           </span>
           <span>{group.subscriber_count} subscribers</span>
         </div>
-        {group.is_subscribed ? (
+        <div className="flex items-center gap-1.5">
           <Button
+            asChild
             size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={onUnsubscribe}
-            className="h-7 text-[11px]"
+            variant="ghost"
+            className="h-7 text-[11px] gap-1"
           >
-            Subscribed
+            <Link to="/groups/$slug" params={{ slug: group.slug }}>
+              View <ArrowRight className="w-3 h-3" />
+            </Link>
           </Button>
-        ) : (
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={onSubscribe}
-            className="h-7 text-[11px]"
-          >
-            Subscribe
-          </Button>
-        )}
+          {group.is_subscribed ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={onUnsubscribe}
+              className="h-7 text-[11px]"
+            >
+              Subscribed
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              disabled={pending}
+              onClick={onSubscribe}
+              className="h-7 text-[11px]"
+            >
+              Subscribe
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

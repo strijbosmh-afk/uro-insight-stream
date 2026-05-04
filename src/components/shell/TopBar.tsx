@@ -16,6 +16,10 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: "Settings",
   admin: "Admin",
   users: "Users",
+  discover: "Discover",
+  groups: "Groups",
+  recommendations: "Recommendations",
+  ingestion: "Ingestion",
 };
 
 function useBreadcrumb() {
@@ -91,9 +95,10 @@ export function TopBar() {
               )}
               <span
                 className={
-                  last
-                    ? "text-text-primary font-medium truncate"
-                    : "text-text-muted truncate"
+                  "uppercase tracking-wider truncate " +
+                  (last
+                    ? "text-text-primary font-medium"
+                    : "text-text-muted")
                 }
               >
                 {c}
