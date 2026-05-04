@@ -14,6 +14,7 @@ import {
   RadioTower,
   Compass,
   Mail,
+  Users as UsersIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -53,6 +54,7 @@ const BASE_SECTIONS: NavSection[] = [
 const ADMIN_SECTION: NavSection = {
   label: "Admin",
   items: [
+    { label: "Users", to: "/admin/users", icon: UsersIcon },
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
     { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
   ],
