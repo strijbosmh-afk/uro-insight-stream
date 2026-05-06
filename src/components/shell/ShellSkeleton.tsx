@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Sidebar } from "./Sidebar";
 import { Panel } from "./Panel";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Full app shell rendered while the initial auth check is in flight.
@@ -11,11 +10,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
  * provider has resolved.
  */
 export function ShellSkeleton() {
-  const isMobile = useIsMobile();
   return (
     <div className="h-[100dvh] w-screen flex flex-col bg-bg text-text-primary overflow-hidden safe-pl safe-pr">
       <div className="flex-1 flex min-h-0">
-        {!isMobile && <Sidebar collapsed={false} onToggle={() => {}} />}
+        <div className="hidden md:block">
+          <Sidebar collapsed={false} onToggle={() => {}} />
+        </div>
         <div className="flex-1 flex flex-col min-w-0">
           {/* Static top bar shimmer */}
           <header className="h-10 shrink-0 border-b border-border bg-panel flex items-center px-3 gap-3 safe-pt">
