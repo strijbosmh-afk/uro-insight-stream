@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TweetCard } from "./TweetCard";
 import { EmptyState } from "@/components/shell/EmptyState";
 import { TweetStreamSkeleton } from "@/components/shell/Skeletons";
+import { ThreadDialog } from "./ThreadDialog";
 import type { FeedDataset } from "./useFilteredTweets";
 
 const ESTIMATED_ROW_PX = 168;
@@ -16,6 +17,7 @@ export function TweetStream({ data }: { data: FeedDataset }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = React.useState(true);
   const [pendingNew, setPendingNew] = React.useState(0);
+  const [threadId, setThreadId] = React.useState<string | null>(null);
 
   // Track which tweet IDs have been seen so we can:
   // 1. tag fresh arrivals with `isNew` for the cyan pulse
@@ -199,6 +201,7 @@ export function TweetStream({ data }: { data: FeedDataset }) {
                       tweet={t}
                       source={sourcesById[t.sourceId]}
                       isNew={newIdsRef.current.has(t.id)}
+                      onOpenThread={setThreadId}
                     />
                   </div>
                 );
@@ -207,6 +210,11 @@ export function TweetStream({ data }: { data: FeedDataset }) {
           )}
         </div>
       </div>
+      <ThreadDialog
+        tweetId={threadId}
+        sourcesById={sourcesById}
+        onClose={() => setThreadId(null)}
+      />
     </Panel>
   );
 }
