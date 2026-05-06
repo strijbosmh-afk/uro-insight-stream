@@ -65,12 +65,14 @@ interface Props {
   tweet: Tweet;
   source?: Source;
   isNew?: boolean;
+  onOpenThread?: (tweetId: string) => void;
 }
 
 export const TweetCard = React.memo(function TweetCard({
   tweet,
   source,
   isNew,
+  onOpenThread,
 }: Props) {
   const handle = source?.handle.replace(/^@/, "") ?? "unknown";
   const display = source?.displayName ?? "Unknown source";
@@ -80,12 +82,33 @@ export const TweetCard = React.memo(function TweetCard({
   const isQuote = tweetType === "quote";
   const isRetweet = tweetType === "retweet";
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (!onOpenThread) return;
+    // Don't trigger when the user clicked an interactive child (link, button, etc).
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button, [role='button'], input, textarea, select")) return;
+    // Don't hijack text selection.
+    if (window.getSelection()?.toString()) return;
+    onOpenThread(tweet.id);
+  };
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (!onOpenThread) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpenThread(tweet.id);
+    }
+  };
   return (
     <article
       id={`tweet-${tweet.id}`}
+      onClick={onOpenThread ? handleClick : undefined}
+      onKeyDown={onOpenThread ? handleKey : undefined}
+      role={onOpenThread ? "button" : undefined}
+      tabIndex={onOpenThread ? 0 : undefined}
       className={cn(
         "relative border border-border bg-panel rounded-[3px] p-3",
         "hover:border-accent/40 transition-colors",
+        onOpenThread && "cursor-pointer focus:outline-none focus:border-accent",
         isReply && "border-l-2 border-l-accent/60",
         isNew && "tweet-new",
       )}
