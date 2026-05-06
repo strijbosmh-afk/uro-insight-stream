@@ -288,6 +288,40 @@ export const mockFeedService: FeedService = {
     return out;
   },
 
+  async getTweetThread(tweetId: string) {
+    await sleep();
+    const byId = new Map(tweets.map((t) => [t.id, t]));
+    const collected = new Map<string, Tweet>();
+    const seed = byId.get(tweetId);
+    if (!seed) return [];
+    collected.set(seed.id, seed);
+    // Ancestors
+    let cursor = seed.parentInDbId;
+    let safety = 0;
+    while (cursor && !collected.has(cursor) && safety < 50) {
+      const p = byId.get(cursor);
+      if (!p) break;
+      collected.set(p.id, p);
+      cursor = p.parentInDbId;
+      safety += 1;
+    }
+    // Descendants
+    let frontier = Array.from(collected.keys());
+    let depth = 0;
+    while (frontier.length > 0 && depth < 20) {
+      const fresh = tweets.filter(
+        (t) => t.parentInDbId && frontier.includes(t.parentInDbId) && !collected.has(t.id),
+      );
+      if (fresh.length === 0) break;
+      fresh.forEach((t) => collected.set(t.id, t));
+      frontier = fresh.map((t) => t.id);
+      depth += 1;
+    }
+    return Array.from(collected.values()).sort((a, b) =>
+      a.createdAt < b.createdAt ? -1 : 1,
+    );
+  },
+
   // ---------- Summaries ----------
   async getSummary(targetType, targetId) {
     await sleep();
