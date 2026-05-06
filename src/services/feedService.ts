@@ -56,6 +56,8 @@ export interface FeedService {
 
   // Tweets & summaries
   listTweets(filter: TweetFilter): Promise<Tweet[]>;
+  /** Fetches all tweets in the same thread (root + ancestors + descendants) ordered chronologically. */
+  getTweetThread(tweetId: string): Promise<Tweet[]>;
   getSummary(
     targetType: Summary["targetType"],
     targetId: string,

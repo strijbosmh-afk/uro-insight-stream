@@ -551,6 +551,54 @@ export const apiFeedService: FeedService = {
     return (data ?? []).map(rowToTweet);
   },
 
+  async getTweetThread(tweetId: string): Promise<Tweet[]> {
+    const collected = new Map<string, Tweet>();
+    const fetchById = async (ids: string[]) => {
+      if (ids.length === 0) return [];
+      const { data } = await supabase.from("tweets").select("*").in("id", ids);
+      return (data ?? []).map(rowToTweet);
+    };
+    const fetchChildren = async (ids: string[]) => {
+      if (ids.length === 0) return [];
+      const { data } = await supabase
+        .from("tweets")
+        .select("*")
+        .in("parent_in_db_id", ids);
+      return (data ?? []).map(rowToTweet);
+    };
+
+    // Seed with the clicked tweet
+    const seed = await fetchById([tweetId]);
+    seed.forEach((t) => collected.set(t.id, t));
+
+    // Walk ancestors
+    let cursor = seed[0]?.parentInDbId;
+    let safety = 0;
+    while (cursor && !collected.has(cursor) && safety < 50) {
+      const parents = await fetchById([cursor]);
+      if (parents.length === 0) break;
+      parents.forEach((t) => collected.set(t.id, t));
+      cursor = parents[0].parentInDbId;
+      safety += 1;
+    }
+
+    // Walk descendants (BFS)
+    let frontier = Array.from(collected.keys());
+    let depth = 0;
+    while (frontier.length > 0 && depth < 20) {
+      const children = await fetchChildren(frontier);
+      const fresh = children.filter((c) => !collected.has(c.id));
+      if (fresh.length === 0) break;
+      fresh.forEach((t) => collected.set(t.id, t));
+      frontier = fresh.map((t) => t.id);
+      depth += 1;
+    }
+
+    return Array.from(collected.values()).sort((a, b) =>
+      a.createdAt < b.createdAt ? -1 : 1,
+    );
+  },
+
   // ---------- Summaries ----------
   async getSummary(targetType, targetId) {
     const { data, error } = await supabase
