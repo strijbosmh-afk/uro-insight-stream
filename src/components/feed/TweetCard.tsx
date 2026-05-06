@@ -83,6 +83,7 @@ export const TweetCard = React.memo(function TweetCard({
   const isRetweet = tweetType === "retweet";
 
   const handleClick = (e: React.MouseEvent) => {
+    console.log("[TweetCard] click", { tweetId: tweet.id, hasHandler: !!onOpenThread, target: (e.target as HTMLElement).tagName });
     if (!onOpenThread) return;
     // Don't trigger when the user clicked an interactive child (link, button, etc).
     const target = e.target as HTMLElement;
