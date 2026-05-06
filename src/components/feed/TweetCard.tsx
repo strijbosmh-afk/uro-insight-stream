@@ -86,7 +86,9 @@ export const TweetCard = React.memo(function TweetCard({
     if (!onOpenThread) return;
     // Don't trigger when the user clicked an interactive child (link, button, etc).
     const target = e.target as HTMLElement;
-    if (target.closest("a, button, [role='button'], input, textarea, select")) return;
+    // Exclude interactive descendants, but not the article itself (it has role="button").
+    const interactive = target.closest("a, button, input, textarea, select");
+    if (interactive && interactive !== e.currentTarget) return;
     // Don't hijack text selection.
     if (window.getSelection()?.toString()) return;
     onOpenThread(tweet.id);
