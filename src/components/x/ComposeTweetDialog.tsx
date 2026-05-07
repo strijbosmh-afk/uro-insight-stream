@@ -180,6 +180,45 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 {len}/280
               </span>
             </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSuggest}
+                disabled={suggestLoading || mutation.isPending}
+                className="text-[11px]"
+              >
+                {suggestLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                AI suggest {reply ? "replies" : "drafts"}
+              </Button>
+            </div>
+            {suggestions.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Suggestions — click to insert
+                </div>
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setText(s.text)}
+                    className="w-full text-left border border-border rounded-[3px] p-2 bg-panel-elevated hover:border-accent hover:bg-panel transition-colors"
+                  >
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-accent mb-1">
+                      {s.angle}
+                    </div>
+                    <div className="text-[12px] text-text-primary whitespace-pre-wrap">
+                      {s.text}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <DialogFooter>
               <Button
                 variant="ghost"
