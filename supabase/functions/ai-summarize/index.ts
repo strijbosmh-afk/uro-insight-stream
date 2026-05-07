@@ -95,19 +95,15 @@ const SUMMARY_TOOL = {
   },
 };
 
-function jsonResponse(body: unknown, status = 200, req?: Request) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...(req ? buildCorsHeaders(req) : {}),
-      "Content-Type": "application/json",
-    },
-  });
-}
-
 Deno.serve(async (req) => {
+  const cors = buildCorsHeaders(req);
+  const jsonResponse = (body: unknown, status = 200, _req?: Request) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: buildCorsHeaders(req) });
+    return new Response(null, { headers: cors });
   }
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405, req);
