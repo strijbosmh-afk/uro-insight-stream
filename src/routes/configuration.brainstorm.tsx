@@ -360,44 +360,13 @@ function ChatRoom({
     void ch.track({ display_name: currentDisplayName, typing });
   };
 
-  const onInputChange = (v: string) => {
-    setInput(v);
+  const onType = () => {
     broadcastTyping(true);
     if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = window.setTimeout(() => broadcastTyping(false), 3000);
   };
 
-  const send = async () => {
-    const content = input.trim();
-    if (!content) return;
-    if (editing) {
-      const original = editing;
-      // Snapshot for rollback if the update fails.
-      const snapshotMessages = messages;
-      const editedAt = new Date().toISOString();
-      setEditing(null);
-      setInput("");
-      // Optimistically apply the edit so the sender sees it immediately.
-      setMessages((prev) =>
-        prev.map((x) =>
-          x.id === original.id ? { ...x, content, edited_at: editedAt } : x,
-        ),
-      );
-      const { error } = await supabase
-        .from("brainstorm_messages")
-        .update({ content, edited_at: editedAt })
-        .eq("id", original.id);
-      if (error) {
-        // Roll back the optimistic edit.
-        setMessages(snapshotMessages);
-        toast.error("Failed to save edit", { description: error.message });
-        setEditing(original);
-        setInput(content);
-      }
-      return;
-    }
-    const tempInput = input;
-    setInput("");
+  const handleSend = async (content: string): Promise<boolean> => {
     broadcastTyping(false);
     const { data, error } = await supabase
       .from("brainstorm_messages")
@@ -411,13 +380,42 @@ function ChatRoom({
       .single();
     if (error) {
       toast.error("Failed to send", { description: error.message });
-      setInput(tempInput);
-    } else if (data) {
+      return false;
+    }
+    if (data) {
       setMessages((prev) =>
         prev.some((x) => x.id === data.id) ? prev : [...prev, data as Message],
       );
       setReplyTo(null);
     }
+    return true;
+  };
+
+  const handleSaveEdit = async (
+    messageId: string,
+    content: string,
+  ): Promise<boolean> => {
+    const original = messages.find((x) => x.id === messageId);
+    const snapshotMessages = messages;
+    const editedAt = new Date().toISOString();
+    // Optimistically apply edit and clear edit state.
+    setEditing(null);
+    setMessages((prev) =>
+      prev.map((x) =>
+        x.id === messageId ? { ...x, content, edited_at: editedAt } : x,
+      ),
+    );
+    const { error } = await supabase
+      .from("brainstorm_messages")
+      .update({ content, edited_at: editedAt })
+      .eq("id", messageId);
+    if (error) {
+      setMessages(snapshotMessages);
+      toast.error("Failed to save edit", { description: error.message });
+      if (original) setEditing(original);
+      return false;
+    }
+    return true;
   };
 
   const toggleReaction = async (msg: Message, emoji: Emoji) => {
@@ -469,14 +467,11 @@ function ChatRoom({
   const startEdit = (m: Message) => {
     setEditing(m);
     setReplyTo(null);
-    setInput(m.content);
-    setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
   const startReply = (m: Message) => {
     setReplyTo(m);
     setEditing(null);
-    setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
   const doDelete = async (m: Message) => {
@@ -491,22 +486,6 @@ function ChatRoom({
       setMessages(snapshot);
       toast.error("Delete failed", { description: error.message });
     }
-  };
-
-  const insertEmoji = (e: Emoji) => {
-    const el = textareaRef.current;
-    if (!el) {
-      setInput((v) => v + e);
-      return;
-    }
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const next = input.slice(0, start) + e + input.slice(end);
-    setInput(next);
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(start + e.length, start + e.length);
-    }, 0);
   };
 
   const scrollToMessage = (id: string) => {
