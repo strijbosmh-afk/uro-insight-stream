@@ -835,6 +835,7 @@ function MessageBubble({
   currentUserId,
   readers,
   totalOtherAdmins,
+  displayNameFor,
   onReply,
   onEdit,
   onDelete,
@@ -849,6 +850,7 @@ function MessageBubble({
   currentUserId: string;
   readers: ReadState[];
   totalOtherAdmins: number;
+  displayNameFor: (userId: string, fallback: string) => string;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -881,7 +883,7 @@ function MessageBubble({
       >
         {showHeader && !isOwn && (
           <div className="text-[11px] font-semibold text-accent mb-0.5">
-            {msg.user_display_name}
+            {displayNameFor(msg.user_id, msg.user_display_name)}
           </div>
         )}
         {parent && (
@@ -891,7 +893,7 @@ function MessageBubble({
             className="block w-full text-left mb-1 px-2 py-1 rounded border-l-2 border-accent/60 bg-panel/60 hover:bg-panel"
           >
             <div className="text-[10px] font-semibold text-accent">
-              {parent.user_display_name}
+              {displayNameFor(parent.user_id, parent.user_display_name)}
             </div>
             <div className="text-[11px] text-text-muted truncate">
               {parent.content}
@@ -937,7 +939,9 @@ function MessageBubble({
                       <div className="font-semibold mb-0.5">Read by</div>
                       <div className="space-y-0.5">
                         {readers.map((r) => (
-                          <div key={r.user_id}>{r.user_display_name}</div>
+                          <div key={r.user_id}>
+                            {displayNameFor(r.user_id, r.user_display_name)}
+                          </div>
                         ))}
                       </div>
                     </>
