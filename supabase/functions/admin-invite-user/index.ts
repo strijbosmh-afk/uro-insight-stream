@@ -5,18 +5,31 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function originAllowed(origin: string | null): string | null {
+  if (!origin) return null;
+  const raw = Deno.env.get("ALLOWED_ORIGINS") ?? "";
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (entry === origin) return origin;
+    if (entry.includes("*")) {
+      const re = new RegExp(
+        "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+      );
+      if (re.test(origin)) return origin;
+    }
+  }
+  return null;
+}
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = originAllowed(req.headers.get("origin"));
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+  if (allowed) headers["Access-Control-Allow-Origin"] = allowed;
+  return headers;
 }
 
 function generatePassword(): string {
@@ -28,7 +41,13 @@ function generatePassword(): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = buildCorsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
