@@ -1,5 +1,7 @@
 import * as React from "react";
 import { CheckCircle2, Heart, MessageCircle, Repeat2, ExternalLink, CornerDownRight } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { RoleBadge } from "@/components/sources/RoleBadge";
 import { cn } from "@/lib/utils";
 import type { Source, Tweet } from "@/types";
@@ -8,6 +10,7 @@ import { HandleChip } from "@/components/handles/HandleChip";
 import { TweetMedia } from "./TweetMedia";
 import { ParentPreview } from "./ParentPreview";
 import { ReplyButton } from "@/components/x/ReplyButton";
+import { engageWithTweet } from "@/serverFns/x-engagement";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -84,6 +87,53 @@ export const TweetCard = React.memo(function TweetCard({
   const isReply = tweetType === "reply";
   const isQuote = tweetType === "quote";
   const isRetweet = tweetType === "retweet";
+
+  const [liked, setLiked] = React.useState(false);
+  const [retweeted, setRetweeted] = React.useState(false);
+
+  const likeMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      engageWithTweet({
+        data: { tweetId: tweet.id, action: next ? "like" : "unlike" },
+      }),
+    onMutate: (next: boolean) => {
+      setLiked(next);
+    },
+    onSuccess: (res, next) => {
+      if (!res.ok) {
+        setLiked(!next);
+        toast.error(res.message);
+      } else {
+        toast.success(next ? "Liked on X" : "Removed like");
+      }
+    },
+    onError: (e, next) => {
+      setLiked(!next);
+      toast.error((e as Error).message);
+    },
+  });
+
+  const retweetMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      engageWithTweet({
+        data: { tweetId: tweet.id, action: next ? "retweet" : "unretweet" },
+      }),
+    onMutate: (next: boolean) => {
+      setRetweeted(next);
+    },
+    onSuccess: (res, next) => {
+      if (!res.ok) {
+        setRetweeted(!next);
+        toast.error(res.message);
+      } else {
+        toast.success(next ? "Retweeted on X" : "Removed retweet");
+      }
+    },
+    onError: (e, next) => {
+      setRetweeted(!next);
+      toast.error((e as Error).message);
+    },
+  });
 
   const handleClick = (e: React.MouseEvent) => {
     if (!onOpenThread) return;
@@ -195,14 +245,38 @@ export const TweetCard = React.memo(function TweetCard({
           )}
 
           <div className="mt-2 flex items-center gap-4 text-[11px] font-mono text-text-muted">
-            <span className="flex items-center gap-1">
-              <Heart className="w-3 h-3" />
-              {compact(tweet.likeCount)}
-            </span>
-            <span className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                likeMutation.mutate(!liked);
+              }}
+              disabled={likeMutation.isPending}
+              title={liked ? "Unlike on X" : "Like on X"}
+              className={cn(
+                "flex items-center gap-1 transition-colors hover:text-rose-400",
+                liked && "text-rose-400",
+              )}
+            >
+              <Heart className={cn("w-3 h-3", liked && "fill-current")} />
+              {compact(tweet.likeCount + (liked ? 1 : 0))}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                retweetMutation.mutate(!retweeted);
+              }}
+              disabled={retweetMutation.isPending}
+              title={retweeted ? "Undo retweet" : "Retweet on X"}
+              className={cn(
+                "flex items-center gap-1 transition-colors hover:text-emerald-400",
+                retweeted && "text-emerald-400",
+              )}
+            >
               <Repeat2 className="w-3 h-3" />
-              {compact(tweet.retweetCount)}
-            </span>
+              {compact(tweet.retweetCount + (retweeted ? 1 : 0))}
+            </button>
             <span className="flex items-center gap-1">
               <MessageCircle className="w-3 h-3" />
               {compact(tweet.replyCount)}
