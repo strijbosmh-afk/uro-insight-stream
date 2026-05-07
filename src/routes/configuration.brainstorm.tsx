@@ -662,7 +662,7 @@ function ChatRoom({
                   </span>
                 </div>
               ) : (
-                <MessageBubble
+                <MessageItem
                   key={it.key}
                   msg={it.msg}
                   parent={it.parent}
