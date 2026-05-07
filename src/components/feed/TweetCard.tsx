@@ -111,7 +111,7 @@ export const TweetCard = React.memo(function TweetCard({
         "relative border border-border bg-panel rounded-[3px] p-3",
         "transition-all duration-150",
         onOpenThread
-          ? "cursor-pointer hover:border-accent hover:bg-panel-elevated hover:shadow-[0_0_0_1px_hsl(var(--accent)/0.4)] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_hsl(var(--accent)/0.6)]"
+          ? "cursor-pointer hover:border-accent hover:bg-panel-elevated hover:ring-1 hover:ring-accent/40 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/60"
           : "hover:border-accent/40",
         isReply && "border-l-2 border-l-accent/60",
         isNew && "tweet-new",
