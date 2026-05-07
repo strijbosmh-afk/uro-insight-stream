@@ -337,22 +337,6 @@ function ChatRoom({
     };
   }, [currentUserId, currentDisplayName]);
 
-  // Auto-scroll if near bottom
-  const isNearBottomRef = React.useRef(true);
-  React.useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (isNearBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [messages]);
-
-  const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-  };
-
   const broadcastTyping = (typing: boolean) => {
     const ch = presenceRef.current;
     if (!ch) return;
