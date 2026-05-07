@@ -616,26 +616,3 @@ function ChatRoom({
     </TooltipProvider>
   );
 }
-
-
-function EmptyState() {
-  return (
-    <div className="h-full flex flex-col items-center justify-center text-center text-text-muted gap-2 py-12">
-      <Lightbulb className="w-8 h-8 text-accent" />
-      <p className="text-sm font-medium text-text-primary">No ideas yet.</p>
-      <p className="text-xs">Start the conversation — what should we improve next?</p>
-    </div>
-  );
-}
-
-
-
-function dayLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const yest = new Date();
-  yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yest.toDateString()) return "Yesterday";
-  return d.toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" });
-}
