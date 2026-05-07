@@ -1,6 +1,8 @@
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLiveKpis } from "@/hooks/useLiveKpis";
 import { feedBackend } from "@/services/feedService";
+import { getActiveUserCount } from "@/serverFns/active-users";
 import { cn } from "@/lib/utils";
 
 function useClock() {
@@ -61,6 +63,11 @@ function BackendChip() {
 export function StatusBar() {
   const now = useClock();
   const { data: kpis } = useLiveKpis(30_000);
+  const { data: activeUsers } = useQuery({
+    queryKey: ["active-user-count"],
+    queryFn: () => getActiveUserCount(),
+    refetchInterval: 30_000,
+  });
   const time = now
     ? now.toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -92,6 +99,13 @@ export function StatusBar() {
       <Cell>
         <K>24h:</K>
         <V>{kpis?.tweetsLast24h ?? "—"}</V>
+      </Cell>
+      <span className="text-border">│</span>
+      <Cell>
+        <K>users online:</K>
+        <V tone={activeUsers && activeUsers.count > 0 ? "success" : "primary"}>
+          {activeUsers?.count ?? "—"}
+        </V>
       </Cell>
       <span className="text-border">│</span>
       <Cell>

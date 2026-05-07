@@ -2176,6 +2176,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_active_user_count: { Args: never; Returns: number }
       get_cron_job_secret: { Args: never; Returns: string }
       get_ingestion_cron_health: {
         Args: never
