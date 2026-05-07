@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
           ],
         }),
       });
-      if (!resp.ok) return passThroughError(resp);
+    if (!resp.ok) return passThroughError(resp, jsonResponse);
       const data = await resp.json();
       const text =
         data?.choices?.[0]?.message?.content ?? "(no content)";
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
           tool_choice: { type: "function", function: { name: "emit_replies" } },
         }),
       });
-      if (!resp.ok) return passThroughError(resp);
+      if (!resp.ok) return passThroughError(resp, jsonResponse);
       const data = await resp.json();
       const call =
         data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!resp.ok) return passThroughError(resp);
+    if (!resp.ok) return passThroughError(resp, jsonResponse);
 
     const data = await resp.json();
     const call =
