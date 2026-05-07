@@ -62,7 +62,6 @@ type AdminUser = {
 
 type ReadState = {
   user_id: string;
-  user_display_name: string;
   last_read_at: string;
 };
 
@@ -141,7 +140,6 @@ function ChatRoom({
     const { error } = await supabase.from("brainstorm_read_state").upsert(
       {
         user_id: currentUserId,
-        user_display_name: currentDisplayName,
         last_read_at: now,
         updated_at: now,
       },
@@ -277,7 +275,9 @@ function ChatRoom({
   React.useEffect(() => {
     let cancel = false;
     void (async () => {
-      const { data } = await supabase.from("brainstorm_read_state").select("*");
+      const { data } = await supabase
+        .from("brainstorm_read_state")
+        .select("user_id, last_read_at");
       if (cancel || !data) return;
       const map: Record<string, ReadState> = {};
       for (const r of data as ReadState[]) map[r.user_id] = r;
@@ -289,14 +289,17 @@ function ChatRoom({
         "postgres_changes",
         { event: "*", schema: "public", table: "brainstorm_read_state" },
         (payload) => {
-          const r = (payload.new ?? payload.old) as ReadState | null;
+          const r = (payload.new ?? payload.old) as Partial<ReadState> | null;
           if (!r) return;
           setReadStates((prev) => {
             if (payload.eventType === "DELETE") {
-              const { [r.user_id]: _, ...rest } = prev;
+              const uid = r.user_id;
+              if (!uid) return prev;
+              const { [uid]: _, ...rest } = prev;
               return rest;
             }
-            return { ...prev, [r.user_id]: payload.new as ReadState };
+            const next = payload.new as ReadState;
+            return { ...prev, [next.user_id]: next };
           });
         },
       )
