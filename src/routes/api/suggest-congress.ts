@@ -257,12 +257,16 @@ export const Route = createFileRoute("/api/suggest-congress")({
             .update({ hits: (c.hits ?? 0) + 1 } as never)
             .eq("query_normalized", query);
           const annotated = await annotateExisting(c.response_json.matches ?? []);
-          return jsonResponse({
-            matches: annotated,
-            no_match: !!c.response_json.no_match,
-            from_cache: true,
-            cached_at: c.created_at,
-          });
+          return jsonResponse(
+            {
+              matches: annotated,
+              no_match: !!c.response_json.no_match,
+              from_cache: true,
+              cached_at: c.created_at,
+            },
+            {},
+            request,
+          );
         }
 
         // rate limit
@@ -271,6 +275,7 @@ export const Route = createFileRoute("/api/suggest-congress")({
           return jsonResponse(
             { error: "per_user_rate_limit", resets_in_seconds: rl.resetsIn, matches: [] },
             { status: 429, headers: { "Retry-After": String(rl.resetsIn) } },
+            request,
           );
         }
 
@@ -287,12 +292,16 @@ export const Route = createFileRoute("/api/suggest-congress")({
           );
 
         const annotated = await annotateExisting(llm.matches ?? []);
-        return jsonResponse({
-          matches: annotated,
-          no_match: !!llm.no_match,
-          from_cache: false,
-          cached_at: new Date().toISOString(),
-        });
+        return jsonResponse(
+          {
+            matches: annotated,
+            no_match: !!llm.no_match,
+            from_cache: false,
+            cached_at: new Date().toISOString(),
+          },
+          {},
+          request,
+        );
       },
     },
   },
