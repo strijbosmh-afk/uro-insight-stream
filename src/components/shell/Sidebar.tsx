@@ -17,8 +17,6 @@ import {
   Users as UsersIcon,
   Users2,
   LifeBuoy,
-  ChevronDown,
-  ChevronRight,
   BookOpen,
   AtSign,
 } from "lucide-react";
@@ -87,14 +85,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     () => (isAdmin ? [...BASE_SECTIONS, ADMIN_SECTION] : BASE_SECTIONS),
     [isAdmin],
   );
-  const [helpOpen, setHelpOpen] = React.useState(
-    () => pathname.startsWith("/help"),
-  );
   const [contactOpen, setContactOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (pathname.startsWith("/help")) setHelpOpen(true);
-  }, [pathname]);
 
   return (
     <aside
@@ -186,57 +177,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <li>
               <button
                 type="button"
-                onClick={() => setHelpOpen((v) => !v)}
+                onClick={() => setContactOpen(true)}
                 className={cn(
-                  "relative w-full flex items-center gap-3 h-8 text-[13px] transition-colors text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+                  "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
                   collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
                 )}
-                aria-expanded={helpOpen}
               >
-                <LifeBuoy className="w-4 h-4 shrink-0" />
-                {!collapsed && (
-                  <>
-                    <span className="truncate flex-1 text-left">Help</span>
-                    {helpOpen ? (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    )}
-                  </>
-                )}
+                <AtSign className="w-4 h-4 shrink-0" />
+                {!collapsed && <span className="truncate">Contact</span>}
               </button>
             </li>
-            {helpOpen && !collapsed && (
-              <>
-                <li>
-                  <Link
-                    to="/help/instructions"
-                    className={cn(
-                      "relative flex items-center gap-3 h-8 text-[13px] transition-colors pl-10 pr-4",
-                      pathname === "/help/instructions"
-                        ? "text-text-primary bg-panel-elevated"
-                        : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
-                    )}
-                  >
-                    {pathname === "/help/instructions" && (
-                      <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
-                    )}
-                    <BookOpen className="w-4 h-4 shrink-0" />
-                    <span className="truncate">Instructions</span>
-                  </Link>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setContactOpen(true)}
-                    className="relative w-full flex items-center gap-3 h-8 text-[13px] pl-10 pr-4 text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left"
-                  >
-                    <AtSign className="w-4 h-4 shrink-0" />
-                    <span className="truncate">Contact</span>
-                  </button>
-                </li>
-              </>
-            )}
           </ul>
         </div>
       </nav>
