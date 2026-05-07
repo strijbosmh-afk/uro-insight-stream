@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search, Users } from "lucide-react";
+import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search, Users, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -53,6 +53,12 @@ type AdminUser = {
   avatar_url: string | null;
 };
 
+type ReadState = {
+  user_id: string;
+  user_display_name: string;
+  last_read_at: string;
+};
+
 export const Route = createFileRoute("/configuration/brainstorm")({
   head: () => ({ meta: [{ title: "Brainstorm — UroFeed" }] }),
   component: BrainstormPage,
@@ -99,23 +105,52 @@ function ChatRoom({
   const [typingUsers, setTypingUsers] = React.useState<string[]>([]);
   const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
   const [admins, setAdmins] = React.useState<AdminUser[]>([]);
+  const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
   const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const isTabVisibleRef = React.useRef(
+    typeof document === "undefined" ? true : document.visibilityState === "visible",
+  );
 
-  // Mark read on mount/unmount
+  // Mark read in DB whenever new messages arrive (and tab is visible)
+  const markRead = React.useCallback(async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const now = new Date().toISOString();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("brainstorm:lastReadAt", now);
+    }
+    const { error } = await supabase.from("brainstorm_read_state").upsert(
+      {
+        user_id: currentUserId,
+        user_display_name: currentDisplayName,
+        last_read_at: now,
+        updated_at: now,
+      },
+      { onConflict: "user_id" },
+    );
+    if (error) {
+      // Non-fatal; receipts will just be slightly stale
+      console.warn("Failed to update read state", error.message);
+    }
+  }, [currentUserId, currentDisplayName]);
+
   React.useEffect(() => {
-    const stamp = () => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("brainstorm:lastReadAt", new Date().toISOString());
-      }
+    void markRead();
+  }, [markRead, messages.length]);
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVis = () => {
+      isTabVisibleRef.current = document.visibilityState === "visible";
+      if (isTabVisibleRef.current) void markRead();
     };
-    stamp();
-    return stamp;
-  }, [messages.length]);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [markRead]);
 
   // Initial load
   React.useEffect(() => {
@@ -169,6 +204,40 @@ function ChatRoom({
     })();
     return () => {
       cancel = true;
+    };
+  }, []);
+
+  // Load read states + subscribe
+  React.useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const { data } = await supabase.from("brainstorm_read_state").select("*");
+      if (cancel || !data) return;
+      const map: Record<string, ReadState> = {};
+      for (const r of data as ReadState[]) map[r.user_id] = r;
+      setReadStates(map);
+    })();
+    const ch = supabase
+      .channel("brainstorm-read-state")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "brainstorm_read_state" },
+        (payload) => {
+          const r = (payload.new ?? payload.old) as ReadState | null;
+          if (!r) return;
+          setReadStates((prev) => {
+            if (payload.eventType === "DELETE") {
+              const { [r.user_id]: _, ...rest } = prev;
+              return rest;
+            }
+            return { ...prev, [r.user_id]: payload.new as ReadState };
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      cancel = true;
+      void supabase.removeChannel(ch);
     };
   }, []);
 
