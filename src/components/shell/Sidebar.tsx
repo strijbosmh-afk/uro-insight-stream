@@ -16,7 +16,6 @@ import {
   Mail,
   Users as UsersIcon,
   Users2,
-  LifeBuoy,
   BookOpen,
   AtSign,
 } from "lucide-react";
