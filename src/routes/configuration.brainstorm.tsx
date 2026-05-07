@@ -69,7 +69,6 @@ function ChatRoom({
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [input, setInput] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
@@ -81,7 +80,7 @@ function ChatRoom({
   const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const composerRef = React.useRef<ComposerHandle>(null);
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
   const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
