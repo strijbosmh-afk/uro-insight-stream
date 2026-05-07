@@ -2008,6 +2008,102 @@ export type Database = {
           },
         ]
       }
+      user_x_credentials: {
+        Row: {
+          access_token: string | null
+          access_token_secret_encrypted: string | null
+          auth_mode: string
+          consumer_key: string | null
+          consumer_secret_encrypted: string | null
+          created_at: string
+          last_post_at: string | null
+          last_verified_at: string | null
+          post_count_today: number
+          post_count_window_start: string | null
+          revoked_at: string | null
+          scope_write: boolean
+          updated_at: string
+          user_id: string
+          x_user_id: string | null
+          x_username: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_secret_encrypted?: string | null
+          auth_mode?: string
+          consumer_key?: string | null
+          consumer_secret_encrypted?: string | null
+          created_at?: string
+          last_post_at?: string | null
+          last_verified_at?: string | null
+          post_count_today?: number
+          post_count_window_start?: string | null
+          revoked_at?: string | null
+          scope_write?: boolean
+          updated_at?: string
+          user_id: string
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          access_token_secret_encrypted?: string | null
+          auth_mode?: string
+          consumer_key?: string | null
+          consumer_secret_encrypted?: string | null
+          created_at?: string
+          last_post_at?: string | null
+          last_verified_at?: string | null
+          post_count_today?: number
+          post_count_window_start?: string | null
+          revoked_at?: string | null
+          scope_write?: boolean
+          updated_at?: string
+          user_id?: string
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Relationships: []
+      }
+      user_x_post_log: {
+        Row: {
+          error_code: string | null
+          error_message: string | null
+          id: string
+          in_reply_to_tweet_id: string | null
+          posted_at: string
+          posted_tweet_id: string | null
+          quoted_tweet_id: string | null
+          status: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          posted_at?: string
+          posted_tweet_id?: string | null
+          quoted_tweet_id?: string | null
+          status: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          posted_at?: string
+          posted_tweet_id?: string | null
+          quoted_tweet_id?: string | null
+          status?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       user_effective_sources: {
@@ -2016,6 +2112,51 @@ export type Database = {
           source_id: string | null
           user_id: string | null
           via: string | null
+        }
+        Relationships: []
+      }
+      user_x_connection_status: {
+        Row: {
+          auth_mode: string | null
+          created_at: string | null
+          last_post_at: string | null
+          last_verified_at: string | null
+          post_count_today: number | null
+          post_count_window_start: string | null
+          revoked_at: string | null
+          scope_write: boolean | null
+          updated_at: string | null
+          user_id: string | null
+          x_user_id: string | null
+          x_username: string | null
+        }
+        Insert: {
+          auth_mode?: string | null
+          created_at?: string | null
+          last_post_at?: string | null
+          last_verified_at?: string | null
+          post_count_today?: number | null
+          post_count_window_start?: string | null
+          revoked_at?: string | null
+          scope_write?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Update: {
+          auth_mode?: string | null
+          created_at?: string | null
+          last_post_at?: string | null
+          last_verified_at?: string | null
+          post_count_today?: number | null
+          post_count_window_start?: string | null
+          revoked_at?: string | null
+          scope_write?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
         }
         Relationships: []
       }
