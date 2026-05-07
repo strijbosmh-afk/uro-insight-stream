@@ -60,6 +60,7 @@ import {
   type PendingInvitation,
   type AdminAuditEntry,
 } from "@/serverFns/admin-users";
+import { EmailDiagnosticsView } from "@/components/admin/EmailDiagnosticsView";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Users — UroFeed admin" }] }),
@@ -98,6 +99,7 @@ function UsersAdminPage() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="invitations">Pending invitations</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
+          <TabsTrigger value="email">Email diagnostics</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-4">
           <UsersTab />
@@ -107,6 +109,9 @@ function UsersAdminPage() {
         </TabsContent>
         <TabsContent value="audit" className="mt-4">
           <AuditTab />
+        </TabsContent>
+        <TabsContent value="email" className="mt-4">
+          <EmailDiagnosticsView />
         </TabsContent>
       </Tabs>
     </div>
