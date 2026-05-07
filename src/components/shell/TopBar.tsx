@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, ChevronRight, Menu, PenSquare } from "lucide-react";
 import { feedService } from "@/services/feedService";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
+import { getXConnectionStatus } from "@/serverFns/x-credentials";
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
@@ -156,6 +157,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       </div>
 
       {/* Avatar */}
+      <XHandleBadge />
       <ComposeButton />
       <button
         type="button"
@@ -184,6 +186,24 @@ function ComposeButton() {
       </button>
       <ComposeTweetDialog open={open} onOpenChange={setOpen} />
     </>
+  );
+}
+
+function XHandleBadge() {
+  const { data: status } = useQuery({
+    queryKey: ["x-connection-status"],
+    queryFn: () => getXConnectionStatus(),
+  });
+  if (!status || status.revoked_at || !status.x_username) return null;
+  return (
+    <a
+      href="/settings"
+      title="Connected X account"
+      className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-success" />
+      <span>@{status.x_username}</span>
+    </a>
   );
 }
 
