@@ -149,8 +149,10 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
     return { ok: false, code: "invalid_credentials", message: "X did not return a user." };
   }
 
-  const consumerSecretEnc = encryptSecret(input.consumerSecret);
-  const accessSecretEnc = encryptSecret(input.accessTokenSecret);
+  // PostgREST serializes bytea as hex literals: '\xDEADBEEF'
+  const toHex = (buf: Buffer) => "\\x" + buf.toString("hex");
+  const consumerSecretEnc = toHex(encryptSecret(input.consumerSecret));
+  const accessSecretEnc = toHex(encryptSecret(input.accessTokenSecret));
 
   const { error } = await supabaseAdmin
     .from("user_x_credentials")
@@ -159,9 +161,9 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
         user_id: input.userId,
         auth_mode: "oauth1_byok",
         consumer_key: input.consumerKey,
-        consumer_secret_encrypted: consumerSecretEnc as unknown as string,
+        consumer_secret_encrypted: consumerSecretEnc,
         access_token: input.accessToken,
-        access_token_secret_encrypted: accessSecretEnc as unknown as string,
+        access_token_secret_encrypted: accessSecretEnc,
         x_user_id: json.data.id,
         x_username: json.data.username,
         scope_write: true, // provisional; first failed POST will surface read-only tokens
