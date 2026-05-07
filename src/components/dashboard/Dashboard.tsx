@@ -540,7 +540,12 @@ function ActivityRow({
   nowMs: number;
 }) {
   return (
-    <div className="flex gap-2 p-2 border border-border rounded-[2px] bg-panel">
+    <Link
+      to="/feed"
+      search={{ thread: tweet.id }}
+      className="flex gap-2 p-2 border border-border rounded-[2px] bg-panel hover:border-accent/60 hover:bg-panel-elevated transition-colors cursor-pointer"
+      title="Open in Live Feed"
+    >
       <img
         src={source?.avatarUrl}
         alt=""
@@ -575,7 +580,7 @@ function ActivityRow({
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
