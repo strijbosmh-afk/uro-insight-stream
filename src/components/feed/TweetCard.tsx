@@ -7,6 +7,7 @@ import { feedNowMs } from "./feedClock";
 import { HandleChip } from "@/components/handles/HandleChip";
 import { TweetMedia } from "./TweetMedia";
 import { ParentPreview } from "./ParentPreview";
+import { ReplyButton } from "@/components/x/ReplyButton";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -214,6 +215,9 @@ export const TweetCard = React.memo(function TweetCard({
               View thread
               <ExternalLink className="w-3 h-3" />
             </a>
+            <ReplyButton
+              reply={{ tweetId: tweet.id, authorHandle: handle, text: tweet.text }}
+            />
           </div>
         </div>
       </div>
