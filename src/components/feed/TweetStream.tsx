@@ -214,6 +214,7 @@ export function TweetStream({ data }: { data: FeedDataset }) {
                       tweet={t}
                       source={sourcesById[t.sourceId]}
                       isNew={newIdsRef.current.has(t.id)}
+                      isOpened={threadId === t.id}
                       onOpenThread={setThreadId}
                     />
                   </div>
