@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, ExternalLink, AlertCircle } from "lucide-react";
+import { Loader2, Send, ExternalLink, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getXConnectionStatus,
   postTweet,
@@ -44,9 +45,16 @@ interface Props {
 export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply }: Props) {
   const qc = useQueryClient();
   const [text, setText] = React.useState(initialText);
+  const [suggestions, setSuggestions] = React.useState<
+    { text: string; angle: string }[]
+  >([]);
+  const [suggestLoading, setSuggestLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setText(initialText || (reply ? `@${reply.authorHandle} ` : ""));
+    if (open) {
+      setText(initialText || (reply ? `@${reply.authorHandle} ` : ""));
+      setSuggestions([]);
+    }
   }, [open, initialText, reply]);
 
   const { data: status, isLoading: statusLoading } = useQuery({
@@ -84,6 +92,27 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
   });
 
   const notConnected = !statusLoading && !status;
+
+  async function handleSuggest() {
+    setSuggestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-summarize", {
+        body: {
+          mode: "suggest_replies",
+          parentAuthor: reply?.authorHandle,
+          parentText: reply?.text ?? "",
+          draft: text,
+        },
+      });
+      if (error) throw new Error(error.message || "AI request failed");
+      if (!data?.ok) throw new Error(data?.error || "AI request failed");
+      setSuggestions(data.replies ?? []);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSuggestLoading(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
