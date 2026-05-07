@@ -1,10 +1,23 @@
 import * as React from "react";
-import { useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Search, ChevronRight, Menu, PenSquare } from "lucide-react";
+import { useRouterState, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Search, ChevronRight, Menu, PenSquare, ChevronDown, Check, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { feedService } from "@/services/feedService";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
-import { getXConnectionStatus } from "@/serverFns/x-credentials";
+import {
+  getXConnectionStatus,
+  listXAccounts,
+  switchActiveXAccount,
+} from "@/serverFns/x-credentials";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
@@ -190,20 +203,65 @@ function ComposeButton() {
 }
 
 function XHandleBadge() {
+  const qc = useQueryClient();
   const { data: status } = useQuery({
     queryKey: ["x-connection-status"],
     queryFn: () => getXConnectionStatus(),
   });
+  const { data: accounts } = useQuery({
+    queryKey: ["x-accounts"],
+    queryFn: () => listXAccounts(),
+  });
+  const switchMut = useMutation({
+    mutationFn: (accountId: string) =>
+      switchActiveXAccount({ data: { accountId } }),
+    onSuccess: (_r, accountId) => {
+      const acc = accounts?.find((a) => a.id === accountId);
+      toast.success(`Switched to @${acc?.x_username ?? "account"}`);
+      qc.invalidateQueries({ queryKey: ["x-connection-status"] });
+      qc.invalidateQueries({ queryKey: ["x-accounts"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   if (!status || status.revoked_at || !status.x_username) return null;
+  const list = accounts ?? [];
+
   return (
-    <a
-      href="/settings"
-      title="Connected X account"
-      className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-success" />
-      <span>@{status.x_username}</span>
-    </a>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
+        title="Switch X account"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+        <span>@{status.x_username}</span>
+        <ChevronDown className="w-3 h-3 opacity-60" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          X accounts
+        </DropdownMenuLabel>
+        {list.map((a) => (
+          <DropdownMenuItem
+            key={a.id}
+            onClick={() => {
+              if (!a.is_active) switchMut.mutate(a.id);
+            }}
+            className="text-[12px] font-mono cursor-pointer"
+          >
+            <span className="flex-1">@{a.x_username}</span>
+            {a.is_active && <Check className="w-3.5 h-3.5 text-success" />}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="text-[12px] cursor-pointer">
+          <Link to="/settings">
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Add another account
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

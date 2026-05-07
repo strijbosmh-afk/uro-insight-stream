@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,12 +28,15 @@ import {
   disconnectX,
   getXConnectionStatus,
   listMyPosts,
+  listXAccounts,
+  switchActiveXAccount,
 } from "@/serverFns/x-credentials";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
 
 const DAILY_CAP = 50;
 
 type XConnectionStatus = NonNullable<Awaited<ReturnType<typeof getXConnectionStatus>>>;
+type XAccount = Awaited<ReturnType<typeof listXAccounts>>[number];
 
 export function XSettings() {
   const qc = useQueryClient();
@@ -41,52 +44,267 @@ export function XSettings() {
     queryKey: ["x-connection-status"],
     queryFn: () => getXConnectionStatus(),
   });
+  const { data: accounts } = useQuery({
+    queryKey: ["x-accounts"],
+    queryFn: () => listXAccounts(),
+  });
 
-  const [editing, setEditing] = React.useState(false);
-  const [justConnectedStatus, setJustConnectedStatus] = React.useState<XConnectionStatus | null>(null);
-
-  React.useEffect(() => {
-    if (status) setJustConnectedStatus(null);
-  }, [status]);
+  const [adding, setAdding] = React.useState(false);
 
   if (isLoading) {
     return <div className="text-text-muted text-sm">Loading…</div>;
   }
 
-  const visibleStatus = status ?? justConnectedStatus;
-  const connectedStatus = visibleStatus && !visibleStatus.revoked_at ? visibleStatus : null;
-  const connected = !!connectedStatus;
+  const accountList = accounts ?? [];
+  const hasAny = accountList.length > 0;
+  const activeAccount = accountList.find((a) => a.is_active) ?? null;
+
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["x-connection-status"] });
+    qc.invalidateQueries({ queryKey: ["x-accounts"] });
+    qc.invalidateQueries({ queryKey: ["x-my-posts"] });
+  };
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">X (Twitter) account</h2>
+        <h2 className="text-lg font-semibold">X (Twitter) accounts</h2>
         <p className="text-sm text-text-muted mt-1">
-          Connect your X account to post and reply directly from UroFeed. Your
-          credentials are encrypted and only ever used by you.
+          Connect one or more X accounts and switch between them. The active
+          account is used when you post or reply from UroFeed. Credentials are
+          encrypted and only ever used by you.
         </p>
       </div>
 
-      {connected && !editing ? (
-        <ConnectedView
-          status={connectedStatus}
-          onReplace={() => setEditing(true)}
-          onDisconnect={async () => {
-            await disconnectX();
-            toast.success("Disconnected from X");
-            setJustConnectedStatus(null);
-            qc.invalidateQueries({ queryKey: ["x-connection-status"] });
-          }}
+      {hasAny && !adding && (
+        <AccountList
+          accounts={accountList}
+          activeStatus={status ?? null}
+          onAdd={() => setAdding(true)}
+          onChanged={invalidateAll}
         />
-      ) : (
+      )}
+
+      {(adding || !hasAny) && (
         <ConnectForm
-          onConnected={(nextStatus) => {
-            setJustConnectedStatus(nextStatus);
-            setEditing(false);
-            qc.invalidateQueries({ queryKey: ["x-connection-status"] });
+          onConnected={() => {
+            setAdding(false);
+            invalidateAll();
           }}
-          onCancel={connected ? () => setEditing(false) : undefined}
+          onCancel={hasAny ? () => setAdding(false) : undefined}
         />
+      )}
+
+      {activeAccount && !adding && (
+        <RecentPosts username={activeAccount.x_username} />
+      )}
+    </div>
+  );
+}
+
+function AccountList({
+  accounts,
+  activeStatus,
+  onAdd,
+  onChanged,
+}: {
+  accounts: XAccount[];
+  activeStatus: XConnectionStatus | null;
+  onAdd: () => void;
+  onChanged: () => void;
+}) {
+  const switchMut = useMutation({
+    mutationFn: (accountId: string) =>
+      switchActiveXAccount({ data: { accountId } }),
+    onSuccess: (_res, accountId) => {
+      const acc = accounts.find((a) => a.id === accountId);
+      toast.success(`Switched to @${acc?.x_username ?? "account"}`);
+      onChanged();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const disconnectMut = useMutation({
+    mutationFn: (accountId: string) =>
+      disconnectX({ data: { accountId } }),
+    onSuccess: () => {
+      toast.success("Account removed");
+      onChanged();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {accounts.map((a) => {
+          const isActive = a.is_active;
+          const used =
+            isActive && activeStatus
+              ? (() => {
+                  const ws = activeStatus.post_count_window_start
+                    ? new Date(activeStatus.post_count_window_start).getTime()
+                    : 0;
+                  const expired = !ws || Date.now() - ws > 24 * 60 * 60 * 1000;
+                  return expired ? 0 : activeStatus.post_count_today ?? 0;
+                })()
+              : null;
+          return (
+            <div
+              key={a.id}
+              className={
+                "border rounded-[3px] p-3 bg-panel flex items-start justify-between gap-3 flex-wrap " +
+                (isActive ? "border-success/60" : "border-border")
+              }
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {isActive ? (
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  ) : (
+                    <span className="w-4 h-4 inline-block" />
+                  )}
+                  <span className="font-mono text-sm">@{a.x_username ?? "unknown"}</span>
+                  {isActive && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Active
+                    </Badge>
+                  )}
+                  {a.scope_write ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Read + Write
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-[10px]">
+                      Read-only
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-text-muted mt-1">
+                  Verified{" "}
+                  {a.last_verified_at
+                    ? new Date(a.last_verified_at).toLocaleString()
+                    : "—"}
+                </div>
+                {used !== null && (
+                  <div className="text-xs text-text-muted">
+                    Today: {used} / {DAILY_CAP} posts
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {!isActive && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => switchMut.mutate(a.id)}
+                    disabled={switchMut.isPending}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Use this account
+                  </Button>
+                )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      Remove
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Disconnect @{a.x_username}?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Encrypted credentials will be wiped. Past posts remain
+                        on X. You can reconnect any time.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => disconnectMut.mutate(a.id)}
+                      >
+                        Disconnect
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          Add another account
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function RecentPosts({ username }: { username: string | null }) {
+  const [composeOpen, setComposeOpen] = React.useState(false);
+  const { data: posts } = useQuery({
+    queryKey: ["x-my-posts"],
+    queryFn: () => listMyPosts({ data: { limit: 20 } }),
+  });
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Recent posts from UroFeed</h3>
+        <Button size="sm" onClick={() => setComposeOpen(true)}>
+          <Send className="w-3.5 h-3.5 mr-1.5" />
+          Send a test tweet
+        </Button>
+      </div>
+      <ComposeTweetDialog
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        initialText="Hello from UroFeed 👋"
+      />
+      {!posts || posts.length === 0 ? (
+        <div className="text-xs text-text-muted">
+          No posts yet. Send a test tweet to try it out.
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {posts.map((p) => (
+            <li
+              key={p.id}
+              className="border border-border rounded-[3px] p-2 bg-panel text-sm"
+            >
+              <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                <StatusBadge status={p.status} />
+                <span>{new Date(p.posted_at).toLocaleString()}</span>
+                {p.in_reply_to_tweet_id && <span>reply</span>}
+              </div>
+              <div className="mt-1 whitespace-pre-wrap text-text-primary line-clamp-3">
+                {p.text}
+              </div>
+              {p.error_message && (
+                <div className="mt-1 text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {p.error_message}
+                </div>
+              )}
+              {p.posted_tweet_id && username && (
+                <a
+                  className="text-xs text-accent inline-flex items-center gap-1 mt-1"
+                  href={`https://x.com/${username}/status/${p.posted_tweet_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View on X <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -96,7 +314,7 @@ function ConnectForm({
   onConnected,
   onCancel,
 }: {
-  onConnected: (status: XConnectionStatus) => void;
+  onConnected: () => void;
   onCancel?: () => void;
 }) {
   const [consumerKey, setConsumerKey] = React.useState("");
@@ -116,17 +334,7 @@ function ConnectForm({
         setConsumerSecret("");
         setAccessToken("");
         setAccessTokenSecret("");
-        onConnected({
-          user_id: "",
-          x_user_id: res.xUserId,
-          x_username: res.xUsername,
-          last_verified_at: new Date().toISOString(),
-          last_post_at: null,
-          scope_write: true,
-          post_count_today: 0,
-          post_count_window_start: null,
-          revoked_at: null,
-        });
+        onConnected();
       } else {
         toast.error(res.message);
       }
@@ -231,153 +439,6 @@ function Field({
         autoComplete="off"
         className="font-mono text-sm"
       />
-    </div>
-  );
-}
-
-function ConnectedView({
-  status,
-  onReplace,
-  onDisconnect,
-}: {
-  status: {
-    x_username: string | null;
-    last_verified_at: string | null;
-    last_post_at: string | null;
-    scope_write: boolean | null;
-    post_count_today: number | null;
-    post_count_window_start: string | null;
-  };
-  onReplace: () => void;
-  onDisconnect: () => void | Promise<void>;
-}) {
-  const [composeOpen, setComposeOpen] = React.useState(false);
-  const { data: posts } = useQuery({
-    queryKey: ["x-my-posts"],
-    queryFn: () => listMyPosts({ data: { limit: 20 } }),
-  });
-
-  const windowStart = status.post_count_window_start
-    ? new Date(status.post_count_window_start).getTime()
-    : 0;
-  const windowExpired = !windowStart || Date.now() - windowStart > 24 * 60 * 60 * 1000;
-  const used = windowExpired ? 0 : status.post_count_today ?? 0;
-
-  return (
-    <div className="space-y-6">
-      <div className="border border-border rounded-[3px] p-4 bg-panel">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              <span className="font-mono text-sm">
-                @{status.x_username ?? "unknown"}
-              </span>
-              {status.scope_write ? (
-                <Badge variant="secondary" className="text-[10px]">
-                  Read + Write
-                </Badge>
-              ) : (
-                <Badge variant="destructive" className="text-[10px]">
-                  Read-only token
-                </Badge>
-              )}
-            </div>
-            <div className="text-xs text-text-muted mt-1">
-              Verified{" "}
-              {status.last_verified_at
-                ? new Date(status.last_verified_at).toLocaleString()
-                : "—"}
-            </div>
-            <div className="text-xs text-text-muted">
-              Today: {used} / {DAILY_CAP} posts
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setComposeOpen(true)}>
-              <Send className="w-3.5 h-3.5 mr-1.5" />
-              Send a test tweet
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onReplace}>
-              Replace credentials
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Disconnect
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Disconnect X account?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Your encrypted credentials will be wiped from UroFeed. Past
-                    posts remain on X. You can reconnect any time.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void onDisconnect()}>
-                    Disconnect
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-      </div>
-
-      <ComposeTweetDialog
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        initialText="Hello from UroFeed 👋"
-      />
-
-      <div>
-        <h3 className="text-sm font-semibold mb-2">
-          Recent posts from UroFeed
-        </h3>
-        {!posts || posts.length === 0 ? (
-          <div className="text-xs text-text-muted">
-            No posts yet. Send a test tweet to try it out.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {posts.map((p) => (
-              <li
-                key={p.id}
-                className="border border-border rounded-[3px] p-2 bg-panel text-sm"
-              >
-                <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                  <StatusBadge status={p.status} />
-                  <span>{new Date(p.posted_at).toLocaleString()}</span>
-                  {p.in_reply_to_tweet_id && <span>reply</span>}
-                </div>
-                <div className="mt-1 whitespace-pre-wrap text-text-primary line-clamp-3">
-                  {p.text}
-                </div>
-                {p.error_message && (
-                  <div className="mt-1 text-xs text-destructive flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    {p.error_message}
-                  </div>
-                )}
-                {p.posted_tweet_id && status.x_username && (
-                  <a
-                    className="text-xs text-accent inline-flex items-center gap-1 mt-1"
-                    href={`https://x.com/${status.x_username}/status/${p.posted_tweet_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View on X <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 }

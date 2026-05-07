@@ -2016,6 +2016,8 @@ export type Database = {
           consumer_key: string | null
           consumer_secret_encrypted: string | null
           created_at: string
+          id: string
+          is_active: boolean
           last_post_at: string | null
           last_verified_at: string | null
           post_count_today: number
@@ -2034,6 +2036,8 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret_encrypted?: string | null
           created_at?: string
+          id?: string
+          is_active?: boolean
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
@@ -2052,6 +2056,8 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret_encrypted?: string | null
           created_at?: string
+          id?: string
+          is_active?: boolean
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
