@@ -155,6 +155,50 @@ export type Database = {
         }
         Relationships: []
       }
+      brainstorm_messages: {
+        Row: {
+          content: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          reactions: Json
+          reply_to_id: string | null
+          user_display_name: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          reactions?: Json
+          reply_to_id?: string | null
+          user_display_name: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          reactions?: Json
+          reply_to_id?: string | null
+          user_display_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brainstorm_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "brainstorm_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cancer_area_signals: {
         Row: {
           cancer_area_id: string
