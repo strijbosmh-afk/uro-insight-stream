@@ -1068,7 +1068,7 @@ function MessageBubble({
                       <div className="space-y-0.5">
                         {readers.map((r) => (
                           <div key={r.user_id}>
-                            {displayNameFor(r.user_id, r.user_display_name)}
+                            {displayNameFor(r.user_id, "Unknown user")}
                           </div>
                         ))}
                       </div>
