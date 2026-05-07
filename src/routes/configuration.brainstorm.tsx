@@ -18,6 +18,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
 } from "@/components/ui/tooltip";
 import { MessageList, type MessageListHandle } from "@/components/brainstorm/MessageList";
 import { PresenceList, PresenceListBody } from "@/components/brainstorm/PresenceList";
@@ -188,21 +191,28 @@ function ChatRoom({
               <Search className="w-4 h-4" />
             </Button>
             <Sheet open={membersOpen} onOpenChange={setMembersOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Show members"
-                  className="md:hidden h-8 px-2 gap-1.5"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="text-xs tabular-nums">{onlineIds.size}</span>
-                  <span className="relative inline-flex w-2 h-2" aria-hidden="true">
-                    <span className="absolute inset-0 rounded-full bg-success/60 animate-ping" />
-                    <span className="relative inline-flex w-2 h-2 rounded-full bg-success" />
-                  </span>
-                </Button>
-              </SheetTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Show members (${onlineIds.size} online, updates live)`}
+                      className="md:hidden h-8 px-2 gap-1.5"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-xs tabular-nums">{onlineIds.size}</span>
+                      <span className="relative inline-flex w-2 h-2" aria-hidden="true">
+                        <span className="absolute inset-0 rounded-full bg-success/60 animate-ping" />
+                        <span className="relative inline-flex w-2 h-2 rounded-full bg-success" />
+                      </span>
+                    </Button>
+                  </SheetTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {onlineIds.size} {onlineIds.size === 1 ? "member" : "members"} online · updates live
+                </TooltipContent>
+              </Tooltip>
               <SheetContent side="right" className="p-0 w-72 bg-panel flex flex-col">
                 <SheetHeader className="px-4 h-14 border-b border-border flex-row items-center justify-start space-y-0 shrink-0">
                   <SheetTitle className="text-sm font-semibold text-text-primary flex items-center gap-2">
