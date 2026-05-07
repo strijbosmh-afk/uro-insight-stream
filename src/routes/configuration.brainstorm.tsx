@@ -201,7 +201,7 @@ function ChatRoom({
       setReactions(data as Reaction[]);
     })();
     const ch = supabase
-      .channel(`brainstorm-reactions-${Math.random().toString(36).slice(2)}`)
+      .channel(`brainstorm-reactions-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "brainstorm_message_reactions" },
@@ -256,7 +256,7 @@ function ChatRoom({
   React.useEffect(() => {
     void loadAdmins();
     const ch = supabase
-      .channel(`brainstorm-profiles-${Math.random().toString(36).slice(2)}`)
+      .channel(`brainstorm-profiles-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
