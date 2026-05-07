@@ -196,7 +196,11 @@ function ChatRoom({
                   className="md:hidden h-8 px-2 gap-1.5"
                 >
                   <Users className="w-4 h-4" />
-                  <span className="text-xs">{onlineIds.size}</span>
+                  <span className="text-xs tabular-nums">{onlineIds.size}</span>
+                  <span className="relative inline-flex w-2 h-2" aria-hidden="true">
+                    <span className="absolute inset-0 rounded-full bg-success/60 animate-ping" />
+                    <span className="relative inline-flex w-2 h-2 rounded-full bg-success" />
+                  </span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="p-0 w-72 bg-panel flex flex-col">
