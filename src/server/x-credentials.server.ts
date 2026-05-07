@@ -65,6 +65,8 @@ export async function loadCredentials(userId: string): Promise<XCredentials | nu
       "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at"
     )
     .eq("user_id", userId)
+    .eq("is_active", true)
+    .is("revoked_at", null)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data || data.revoked_at) return null;
@@ -152,6 +154,16 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
   const consumerSecretEnc = toHex(encryptSecret(input.consumerSecret));
   const accessSecretEnc = toHex(encryptSecret(input.accessTokenSecret));
 
+  // Make this account active; deactivate any others for this user first to
+  // avoid the unique partial index conflict.
+  const { error: deactErr } = await supabaseAdmin
+    .from("user_x_credentials")
+    .update({ is_active: false })
+    .eq("user_id", input.userId);
+  if (deactErr) {
+    return { ok: false, code: "network_error", message: deactErr.message };
+  }
+
   const { error } = await supabaseAdmin
     .from("user_x_credentials")
     .upsert(
@@ -164,11 +176,12 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
         access_token_secret_encrypted: accessSecretEnc,
         x_user_id: json.data.id,
         x_username: json.data.username,
-        scope_write: true, // provisional; first failed POST will surface read-only tokens
+        scope_write: true,
         last_verified_at: new Date().toISOString(),
         revoked_at: null,
+        is_active: true,
       }],
-      { onConflict: "user_id" }
+      { onConflict: "user_id,x_user_id" }
     );
   if (error) {
     return { ok: false, code: "network_error", message: error.message };
@@ -177,10 +190,12 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
   return { ok: true, xUserId: json.data.id, xUsername: json.data.username };
 }
 
-export async function revoke(userId: string): Promise<void> {
+export async function revoke(userId: string, accountId?: string): Promise<void> {
   // Best-effort remote revoke (we ignore failures).
   try {
-    const creds = await loadCredentials(userId);
+    const creds = accountId
+      ? await loadCredentialsByAccountId(userId, accountId)
+      : await loadCredentials(userId);
     if (creds) {
       const oauth = makeOAuth(creds.consumerKey, creds.consumerSecret);
       const url = "https://api.twitter.com/1.1/oauth/invalidate_token.json";
@@ -199,7 +214,7 @@ export async function revoke(userId: string): Promise<void> {
     // ignore
   }
 
-  await supabaseAdmin
+  const q = supabaseAdmin
     .from("user_x_credentials")
     .update({
       consumer_key: null,
@@ -207,8 +222,55 @@ export async function revoke(userId: string): Promise<void> {
       access_token: null,
       access_token_secret_encrypted: null,
       revoked_at: new Date().toISOString(),
+      is_active: false,
     })
     .eq("user_id", userId);
+  if (accountId) {
+    await q.eq("id", accountId);
+  } else {
+    await q.eq("is_active", true);
+  }
+}
+
+export async function loadCredentialsByAccountId(
+  userId: string,
+  accountId: string
+): Promise<XCredentials | null> {
+  const { data, error } = await supabaseAdmin
+    .from("user_x_credentials")
+    .select(
+      "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at"
+    )
+    .eq("user_id", userId)
+    .eq("id", accountId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data || data.revoked_at) return null;
+  if (
+    !data.consumer_key ||
+    !data.access_token ||
+    !data.consumer_secret_encrypted ||
+    !data.access_token_secret_encrypted
+  ) {
+    return null;
+  }
+  const toBuf = (v: unknown): Buffer => {
+    if (Buffer.isBuffer(v)) return v;
+    if (v instanceof Uint8Array) return Buffer.from(v);
+    if (typeof v === "string") {
+      if (v.startsWith("\\x")) return Buffer.from(v.slice(2), "hex");
+      return Buffer.from(v, "base64");
+    }
+    throw new Error("Unexpected encrypted blob type");
+  };
+  return {
+    consumerKey: data.consumer_key,
+    consumerSecret: decryptSecret(toBuf(data.consumer_secret_encrypted)),
+    accessToken: data.access_token,
+    accessTokenSecret: decryptSecret(toBuf(data.access_token_secret_encrypted)),
+    xUsername: data.x_username,
+    xUserId: data.x_user_id,
+  };
 }
 
 export { makeOAuth };
