@@ -587,18 +587,49 @@ function AccessRequestForm({
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [sent, setSent] = React.useState(false);
+  const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
+  const [now, setNow] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const cooldownRemaining =
+    cooldownUntil && cooldownUntil > now
+      ? Math.ceil((cooldownUntil - now) / 1000)
+      : 0;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldownRemaining > 0) return;
     setBusy(true);
     onBusy(true);
     try {
-      const { error } = await supabase.from("access_requests").insert({
-        email: email.trim().toLowerCase(),
-        name: name.trim() || null,
-        reason: reason.trim() || null,
+      const res = await fetch("/api/public/access-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          name: name.trim() || null,
+          reason: reason.trim() || null,
+        }),
       });
-      if (error) throw error;
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        const retry = Number(data?.retry_after_seconds) || 3600;
+        setCooldownUntil(Date.now() + retry * 1000);
+        const mins = Math.max(1, Math.ceil(retry / 60));
+        toast.error("Too many requests", {
+          description: `Please try again in about ${mins} minute${mins === 1 ? "" : "s"}.`,
+        });
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Couldn't send request");
+      }
       setSent(true);
       toast.success("Request sent", {
         description: "An admin will review it shortly.",
@@ -696,13 +727,19 @@ function AccessRequestForm({
         />
       </div>
 
-      <Button type="submit" className="w-full h-9" disabled={busy || !email}>
+      <Button
+        type="submit"
+        className="w-full h-9"
+        disabled={busy || !email || cooldownRemaining > 0}
+      >
         {busy ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
         ) : (
           <Send className="w-3.5 h-3.5 mr-1.5" />
         )}
-        Send request
+        {cooldownRemaining > 0
+          ? `Try again in ${Math.ceil(cooldownRemaining / 60)}m`
+          : "Send request"}
       </Button>
     </form>
   );

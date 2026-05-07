@@ -929,6 +929,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_access_requests: {
+        Row: {
+          bucket_start: string
+          count: number
+          ip_hash: string
+          last_attempt_at: string
+        }
+        Insert: {
+          bucket_start: string
+          count?: number
+          ip_hash: string
+          last_attempt_at?: string
+        }
+        Update: {
+          bucket_start?: string
+          count?: number
+          ip_hash?: string
+          last_attempt_at?: string
+        }
+        Relationships: []
+      }
       rate_limit_congress_suggest: {
         Row: {
           count: number
