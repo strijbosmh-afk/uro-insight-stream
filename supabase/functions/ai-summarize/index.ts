@@ -13,12 +13,17 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 
 interface SummarizeBody {
-  mode?: "summarize" | "ping";
+  mode?: "summarize" | "ping" | "suggest_replies";
   model?: string;
   systemPrompt?: string;
   userPrompt?: string;
   // For ping
   message?: string;
+  // For suggest_replies
+  parentAuthor?: string;
+  parentText?: string;
+  draft?: string;
+  tone?: string;
 }
 
 const SUMMARY_TOOL = {
