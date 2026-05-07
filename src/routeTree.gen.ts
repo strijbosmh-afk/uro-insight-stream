@@ -23,6 +23,7 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DiscoverIndexRouteImport } from './routes/discover.index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
+import { Route as HelpInstructionsRouteImport } from './routes/help.instructions'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DiscoverGroupsRouteImport } from './routes/discover.groups'
@@ -117,6 +118,11 @@ const DiscoverIndexRoute = DiscoverIndexRouteImport.update({
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
   path: '/sessions/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpInstructionsRoute = HelpInstructionsRouteImport.update({
+  id: '/help/instructions',
+  path: '/help/instructions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroupsSlugRoute = GroupsSlugRouteImport.update({
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
+  '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover/': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -320,6 +327,7 @@ export interface FileRoutesByTo {
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
+  '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -362,6 +370,7 @@ export interface FileRoutesById {
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
+  '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover/': typeof DiscoverIndexRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -405,6 +414,7 @@ export interface FileRouteTypes {
     | '/discover/groups'
     | '/email/unsubscribe'
     | '/groups/$slug'
+    | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover/'
     | '/lovable/email/suppression'
@@ -445,6 +455,7 @@ export interface FileRouteTypes {
     | '/discover/groups'
     | '/email/unsubscribe'
     | '/groups/$slug'
+    | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover'
     | '/lovable/email/suppression'
@@ -486,6 +497,7 @@ export interface FileRouteTypes {
     | '/discover/groups'
     | '/email/unsubscribe'
     | '/groups/$slug'
+    | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover/'
     | '/lovable/email/suppression'
@@ -526,6 +538,7 @@ export interface RootRouteChildren {
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   GroupsSlugRoute: typeof GroupsSlugRoute
+  HelpInstructionsRoute: typeof HelpInstructionsRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -642,6 +655,13 @@ declare module '@tanstack/react-router' {
       path: '/sessions/$sessionId'
       fullPath: '/sessions/$sessionId'
       preLoaderRoute: typeof SessionsSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/instructions': {
+      id: '/help/instructions'
+      path: '/help/instructions'
+      fullPath: '/help/instructions'
+      preLoaderRoute: typeof HelpInstructionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/groups/$slug': {
@@ -869,6 +889,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   GroupsSlugRoute: GroupsSlugRoute,
+  HelpInstructionsRoute: HelpInstructionsRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
