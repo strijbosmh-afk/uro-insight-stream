@@ -289,7 +289,10 @@ Deno.serve(async (req) => {
   }
 });
 
-async function passThroughError(resp: Response) {
+async function passThroughError(
+  resp: Response,
+  jsonResponse: (body: unknown, status?: number) => Response,
+) {
   const text = await resp.text();
   if (resp.status === 429) {
     return jsonResponse(
