@@ -668,88 +668,17 @@ function ChatRoom({
           </div>
         )}
 
-        {/* Reply / Edit context bar */}
-        {(replyTo || editing) && (
-          <div className="px-4 py-2 border-t border-border bg-panel-elevated/60 flex items-center justify-between gap-2 shrink-0">
-            <div className="text-xs min-w-0">
-              <div className="text-text-muted">
-                {editing
-                  ? "Editing message"
-                  : `Replying to ${
-                      replyTo
-                        ? displayNameFor(replyTo.user_id, replyTo.user_display_name)
-                        : ""
-                    }`}
-              </div>
-              <div className="text-text-primary truncate">
-                {(editing ?? replyTo)?.content}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Cancel"
-              onClick={() => {
-                if (editing) {
-                  setEditing(null);
-                  setInput("");
-                }
-                setReplyTo(null);
-              }}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="border-t border-border bg-panel p-3 flex items-end gap-2 shrink-0">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Insert emoji">
-                <Smile className="w-4 h-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" side="top" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {REACTION_EMOJIS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => insertEmoji(e)}
-                    className="text-xl w-9 h-9 rounded hover:bg-panel-elevated"
-                    aria-label={`Insert ${e}`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-            placeholder={editing ? "Edit message…" : "Type a message…"}
-            rows={1}
-            className="flex-1 resize-none min-h-[36px] max-h-[140px]"
-          />
-          <Button
-            type="button"
-            onClick={() => void send()}
-            disabled={!input.trim()}
-            size="icon"
-            aria-label="Send message"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+        <Composer
+          ref={composerRef}
+          replyTo={replyTo}
+          editing={editing}
+          displayNameFor={displayNameFor}
+          onSend={handleSend}
+          onSaveEdit={handleSaveEdit}
+          onCancelReply={() => setReplyTo(null)}
+          onCancelEdit={() => setEditing(null)}
+          onType={onType}
+        />
 
         <AlertDialog
           open={!!confirmDelete}
