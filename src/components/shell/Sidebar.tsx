@@ -175,6 +175,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
           <ul>
             <li>
+              <Link
+                to="/help/instructions"
+                className={cn(
+                  "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                  collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+                  pathname === "/help/instructions"
+                    ? "text-text-primary bg-panel-elevated"
+                    : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+                )}
+              >
+                {pathname === "/help/instructions" && (
+                  <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
+                )}
+                <BookOpen className="w-4 h-4 shrink-0" />
+                {!collapsed && <span className="truncate">Instructions</span>}
+              </Link>
+            </li>
+            <li>
               <button
                 type="button"
                 onClick={() => setContactOpen(true)}
