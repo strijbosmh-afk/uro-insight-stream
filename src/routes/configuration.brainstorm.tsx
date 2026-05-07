@@ -932,6 +932,7 @@ function MessageBubble({
   showHeader,
   isOwn,
   currentUserId,
+  reactions,
   readers,
   totalOtherAdmins,
   displayNameFor,
@@ -947,6 +948,7 @@ function MessageBubble({
   showHeader: boolean;
   isOwn: boolean;
   currentUserId: string;
+  reactions: Reaction[];
   readers: ReadState[];
   totalOtherAdmins: number;
   displayNameFor: (userId: string, fallback: string) => string;
@@ -957,9 +959,15 @@ function MessageBubble({
   onJumpTo: (id: string) => void;
   registerRef: (el: HTMLDivElement | null) => void;
 }) {
-  const reactionEntries = Object.entries(msg.reactions ?? {}).filter(
-    ([, ids]) => ids.length > 0,
-  );
+  const reactionEntries = React.useMemo(() => {
+    const grouped = new Map<Emoji, string[]>();
+    for (const r of reactions) {
+      const arr = grouped.get(r.emoji) ?? [];
+      arr.push(r.user_id);
+      grouped.set(r.emoji, arr);
+    }
+    return Array.from(grouped.entries());
+  }, [reactions]);
   const allRead = totalOtherAdmins > 0 && readers.length >= totalOtherAdmins;
   const someRead = readers.length > 0;
   return (
