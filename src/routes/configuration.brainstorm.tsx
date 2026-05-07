@@ -471,58 +471,6 @@ function ChatRoom({
     }
   };
 
-  const scrollToMessage = (id: string) => {
-    const el = messageRefs.current[id];
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("ring-2", "ring-accent");
-    setTimeout(() => el.classList.remove("ring-2", "ring-accent"), 1500);
-  };
-
-  const filtered = React.useMemo(() => {
-    if (!search.trim()) return messages;
-    const q = search.toLowerCase();
-    return messages.filter(
-      (m) =>
-        m.content.toLowerCase().includes(q) ||
-        m.user_display_name.toLowerCase().includes(q),
-    );
-  }, [messages, search]);
-
-  // Group with prev message context
-  const items = React.useMemo(() => {
-    const out: Array<
-      | { type: "date"; key: string; label: string }
-      | {
-          type: "msg";
-          key: string;
-          msg: Message;
-          showHeader: boolean;
-          parent: Message | null;
-        }
-    > = [];
-    let lastDay = "";
-    let prev: Message | null = null;
-    for (const m of filtered) {
-      const day = new Date(m.created_at).toDateString();
-      if (day !== lastDay) {
-        out.push({ type: "date", key: `d-${day}`, label: dayLabel(m.created_at) });
-        lastDay = day;
-        prev = null;
-      }
-      const showHeader =
-        !prev ||
-        prev.user_id !== m.user_id ||
-        new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 5 * 60_000;
-      const parent = m.reply_to_id
-        ? messages.find((x) => x.id === m.reply_to_id) ?? null
-        : null;
-      out.push({ type: "msg", key: m.id, msg: m, showHeader, parent });
-      prev = m;
-    }
-    return out;
-  }, [filtered, messages]);
-
   const getReadersFor = React.useCallback(
     (m: Message): ReadState[] => {
       const created = new Date(m.created_at).getTime();
