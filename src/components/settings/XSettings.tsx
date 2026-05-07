@@ -54,7 +54,8 @@ export function XSettings() {
   }
 
   const visibleStatus = status ?? justConnectedStatus;
-  const connected = !!visibleStatus && !visibleStatus.revoked_at;
+  const connectedStatus = visibleStatus && !visibleStatus.revoked_at ? visibleStatus : null;
+  const connected = !!connectedStatus;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -68,7 +69,7 @@ export function XSettings() {
 
       {connected && !editing ? (
         <ConnectedView
-          status={visibleStatus}
+          status={connectedStatus}
           onReplace={() => setEditing(true)}
           onDisconnect={async () => {
             await disconnectX();
