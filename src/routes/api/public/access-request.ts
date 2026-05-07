@@ -11,7 +11,7 @@ function originAllowed(origin: string | null): string | null {
   for (const entry of entries) {
     if (entry === origin) return origin;
     if (entry.includes("*")) {
-      const pattern =
+      const pattern: string =
         "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$";
       if (new RegExp(pattern).test(origin)) return origin;
     }
