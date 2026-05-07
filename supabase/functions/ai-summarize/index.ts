@@ -2,12 +2,36 @@
 // Forwards a structured request to the Lovable AI Gateway (OpenAI-compatible).
 // The gateway's API key (LOVABLE_API_KEY) is auto-provisioned; no client-side key.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// CORS allowlist. ALLOWED_ORIGINS is a comma-separated list of exact origins
+// or wildcard patterns (e.g. "https://*.lovable.app"). When the request
+// Origin matches an entry, we echo it back; otherwise the
+// Access-Control-Allow-Origin header is omitted entirely.
+function originAllowed(origin: string | null): string | null {
+  if (!origin) return null;
+  const raw = Deno.env.get("ALLOWED_ORIGINS") ?? "";
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (entry === origin) return origin;
+    if (entry.includes("*")) {
+      const re = new RegExp(
+        "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+      );
+      if (re.test(origin)) return origin;
+    }
+  }
+  return null;
+}
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = originAllowed(req.headers.get("origin"));
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+  if (allowed) headers["Access-Control-Allow-Origin"] = allowed;
+  return headers;
+}
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
@@ -71,19 +95,22 @@ const SUMMARY_TOOL = {
   },
 };
 
-function jsonResponse(body: unknown, status = 200) {
+function jsonResponse(body: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: {
+      ...(req ? buildCorsHeaders(req) : {}),
+      "Content-Type": "application/json",
+    },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse({ error: "Method not allowed" }, 405, req);
   }
 
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
