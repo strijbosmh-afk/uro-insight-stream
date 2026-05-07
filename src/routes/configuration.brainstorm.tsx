@@ -1,18 +1,12 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Search } from "lucide-react";
+import { Lightbulb, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +22,8 @@ import {
 } from "@/components/ui/tooltip";
 import { MessageItem } from "@/components/brainstorm/MessageItem";
 import { PresenceList } from "@/components/brainstorm/PresenceList";
+import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
 import {
-  REACTION_EMOJIS,
   type Emoji,
   type Message,
   type Reaction,
