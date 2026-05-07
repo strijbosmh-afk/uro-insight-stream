@@ -120,6 +120,13 @@ function ChatRoom({
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
   const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  // Stable, unique suffix per component mount for realtime channel names.
+  // Avoids collisions when the same user has multiple tabs open.
+  const channelSuffixRef = React.useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
   const isTabVisibleRef = React.useRef(
     typeof document === "undefined" ? true : document.visibilityState === "visible",
   );
@@ -277,7 +284,7 @@ function ChatRoom({
       setReadStates(map);
     })();
     const ch = supabase
-      .channel("brainstorm-read-state")
+      .channel(`brainstorm-read-state-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "brainstorm_read_state" },
@@ -303,7 +310,7 @@ function ChatRoom({
   // Realtime subscribe
   React.useEffect(() => {
     const ch = supabase
-      .channel("brainstorm-messages")
+      .channel(`brainstorm-messages-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "brainstorm_messages" },
@@ -334,7 +341,7 @@ function ChatRoom({
 
   // Presence (active admins + typing)
   React.useEffect(() => {
-    const ch = supabase.channel("brainstorm-presence", {
+    const ch = supabase.channel(`brainstorm-presence-${channelSuffixRef.current}`, {
       config: { presence: { key: currentUserId } },
     });
     presenceRef.current = ch;
