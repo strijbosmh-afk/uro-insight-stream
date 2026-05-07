@@ -1,18 +1,12 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Search } from "lucide-react";
+import { Lightbulb, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +22,8 @@ import {
 } from "@/components/ui/tooltip";
 import { MessageItem } from "@/components/brainstorm/MessageItem";
 import { PresenceList } from "@/components/brainstorm/PresenceList";
+import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
 import {
-  REACTION_EMOJIS,
   type Emoji,
   type Message,
   type Reaction,
@@ -75,7 +69,6 @@ function ChatRoom({
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [input, setInput] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
@@ -87,7 +80,7 @@ function ChatRoom({
   const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const composerRef = React.useRef<ComposerHandle>(null);
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
   const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -367,44 +360,13 @@ function ChatRoom({
     void ch.track({ display_name: currentDisplayName, typing });
   };
 
-  const onInputChange = (v: string) => {
-    setInput(v);
+  const onType = () => {
     broadcastTyping(true);
     if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = window.setTimeout(() => broadcastTyping(false), 3000);
   };
 
-  const send = async () => {
-    const content = input.trim();
-    if (!content) return;
-    if (editing) {
-      const original = editing;
-      // Snapshot for rollback if the update fails.
-      const snapshotMessages = messages;
-      const editedAt = new Date().toISOString();
-      setEditing(null);
-      setInput("");
-      // Optimistically apply the edit so the sender sees it immediately.
-      setMessages((prev) =>
-        prev.map((x) =>
-          x.id === original.id ? { ...x, content, edited_at: editedAt } : x,
-        ),
-      );
-      const { error } = await supabase
-        .from("brainstorm_messages")
-        .update({ content, edited_at: editedAt })
-        .eq("id", original.id);
-      if (error) {
-        // Roll back the optimistic edit.
-        setMessages(snapshotMessages);
-        toast.error("Failed to save edit", { description: error.message });
-        setEditing(original);
-        setInput(content);
-      }
-      return;
-    }
-    const tempInput = input;
-    setInput("");
+  const handleSend = async (content: string): Promise<boolean> => {
     broadcastTyping(false);
     const { data, error } = await supabase
       .from("brainstorm_messages")
@@ -418,13 +380,42 @@ function ChatRoom({
       .single();
     if (error) {
       toast.error("Failed to send", { description: error.message });
-      setInput(tempInput);
-    } else if (data) {
+      return false;
+    }
+    if (data) {
       setMessages((prev) =>
         prev.some((x) => x.id === data.id) ? prev : [...prev, data as Message],
       );
       setReplyTo(null);
     }
+    return true;
+  };
+
+  const handleSaveEdit = async (
+    messageId: string,
+    content: string,
+  ): Promise<boolean> => {
+    const original = messages.find((x) => x.id === messageId);
+    const snapshotMessages = messages;
+    const editedAt = new Date().toISOString();
+    // Optimistically apply edit and clear edit state.
+    setEditing(null);
+    setMessages((prev) =>
+      prev.map((x) =>
+        x.id === messageId ? { ...x, content, edited_at: editedAt } : x,
+      ),
+    );
+    const { error } = await supabase
+      .from("brainstorm_messages")
+      .update({ content, edited_at: editedAt })
+      .eq("id", messageId);
+    if (error) {
+      setMessages(snapshotMessages);
+      toast.error("Failed to save edit", { description: error.message });
+      if (original) setEditing(original);
+      return false;
+    }
+    return true;
   };
 
   const toggleReaction = async (msg: Message, emoji: Emoji) => {
@@ -476,14 +467,11 @@ function ChatRoom({
   const startEdit = (m: Message) => {
     setEditing(m);
     setReplyTo(null);
-    setInput(m.content);
-    setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
   const startReply = (m: Message) => {
     setReplyTo(m);
     setEditing(null);
-    setTimeout(() => textareaRef.current?.focus(), 0);
   };
 
   const doDelete = async (m: Message) => {
@@ -498,22 +486,6 @@ function ChatRoom({
       setMessages(snapshot);
       toast.error("Delete failed", { description: error.message });
     }
-  };
-
-  const insertEmoji = (e: Emoji) => {
-    const el = textareaRef.current;
-    if (!el) {
-      setInput((v) => v + e);
-      return;
-    }
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const next = input.slice(0, start) + e + input.slice(end);
-    setInput(next);
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(start + e.length, start + e.length);
-    }, 0);
   };
 
   const scrollToMessage = (id: string) => {
@@ -696,88 +668,17 @@ function ChatRoom({
           </div>
         )}
 
-        {/* Reply / Edit context bar */}
-        {(replyTo || editing) && (
-          <div className="px-4 py-2 border-t border-border bg-panel-elevated/60 flex items-center justify-between gap-2 shrink-0">
-            <div className="text-xs min-w-0">
-              <div className="text-text-muted">
-                {editing
-                  ? "Editing message"
-                  : `Replying to ${
-                      replyTo
-                        ? displayNameFor(replyTo.user_id, replyTo.user_display_name)
-                        : ""
-                    }`}
-              </div>
-              <div className="text-text-primary truncate">
-                {(editing ?? replyTo)?.content}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Cancel"
-              onClick={() => {
-                if (editing) {
-                  setEditing(null);
-                  setInput("");
-                }
-                setReplyTo(null);
-              }}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="border-t border-border bg-panel p-3 flex items-end gap-2 shrink-0">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Insert emoji">
-                <Smile className="w-4 h-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" side="top" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {REACTION_EMOJIS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => insertEmoji(e)}
-                    className="text-xl w-9 h-9 rounded hover:bg-panel-elevated"
-                    aria-label={`Insert ${e}`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-            placeholder={editing ? "Edit message…" : "Type a message…"}
-            rows={1}
-            className="flex-1 resize-none min-h-[36px] max-h-[140px]"
-          />
-          <Button
-            type="button"
-            onClick={() => void send()}
-            disabled={!input.trim()}
-            size="icon"
-            aria-label="Send message"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+        <Composer
+          ref={composerRef}
+          replyTo={replyTo}
+          editing={editing}
+          displayNameFor={displayNameFor}
+          onSend={handleSend}
+          onSaveEdit={handleSaveEdit}
+          onCancelReply={() => setReplyTo(null)}
+          onCancelEdit={() => setEditing(null)}
+          onType={onType}
+        />
 
         <AlertDialog
           open={!!confirmDelete}
