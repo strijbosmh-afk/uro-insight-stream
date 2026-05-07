@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   getXConnectionStatus,
   postTweet,
 } from "@/serverFns/x-credentials";
@@ -35,6 +42,15 @@ export interface ReplyContext {
   text: string;
 }
 
+const TONE_OPTIONS = [
+  { value: "professional", label: "Professional", prompt: "professional, precise, clinically rigorous" },
+  { value: "collegial", label: "Collegial", prompt: "warm, collegial, supportive peer tone" },
+  { value: "inquisitive", label: "Inquisitive", prompt: "curious and inquisitive; lead with thoughtful questions" },
+  { value: "counterpoint", label: "Counterpoint", prompt: "respectful counterpoint; challenge claims with evidence" },
+  { value: "concise", label: "Concise", prompt: "ultra-concise, punchy, under 180 chars" },
+] as const;
+type ToneValue = (typeof TONE_OPTIONS)[number]["value"];
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +65,7 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
     { text: string; angle: string }[]
   >([]);
   const [suggestLoading, setSuggestLoading] = React.useState(false);
+  const [tone, setTone] = React.useState<ToneValue>("professional");
 
   React.useEffect(() => {
     if (open) {
@@ -96,12 +113,15 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
   async function handleSuggest() {
     setSuggestLoading(true);
     try {
+      const tonePrompt =
+        TONE_OPTIONS.find((t) => t.value === tone)?.prompt ?? tone;
       const { data, error } = await supabase.functions.invoke("ai-summarize", {
         body: {
           mode: "suggest_replies",
           parentAuthor: reply?.authorHandle,
           parentText: reply?.text ?? "",
           draft: text,
+          tone: tonePrompt,
         },
       });
       if (error) throw new Error(error.message || "AI request failed");
