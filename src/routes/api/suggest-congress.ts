@@ -6,10 +6,43 @@ const PER_USER_LIMIT = 30;
 const PER_USER_WINDOW_MS = 60 * 1000;
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function jsonResponse(body: unknown, init: ResponseInit = {}) {
+function originAllowed(origin: string | null): string | null {
+  if (!origin) return null;
+  const raw = process.env.ALLOWED_ORIGINS ?? "";
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (entry === origin) return origin;
+    if (entry.includes("*")) {
+      const re = new RegExp(
+        "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+      );
+      if (re.test(origin)) return origin;
+    }
+  }
+  return null;
+}
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = originAllowed(req.headers.get("origin"));
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    Vary: "Origin",
+  };
+  if (allowed) headers["Access-Control-Allow-Origin"] = allowed;
+  return headers;
+}
+function jsonResponse(
+  body: unknown,
+  init: ResponseInit = {},
+  req?: Request,
+) {
   return new Response(JSON.stringify(body), {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(req ? buildCorsHeaders(req) : {}),
+      ...(init.headers ?? {}),
+    },
   });
 }
 
@@ -189,14 +222,10 @@ async function annotateExisting(matches: Match[]): Promise<Match[]> {
 export const Route = createFileRoute("/api/suggest-congress")({
   server: {
     handlers: {
-      OPTIONS: async () =>
+      OPTIONS: async ({ request }) =>
         new Response(null, {
           status: 204,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          },
+          headers: buildCorsHeaders(request),
         }),
       POST: async ({ request }) => {
         const auth = await authenticate(request);
