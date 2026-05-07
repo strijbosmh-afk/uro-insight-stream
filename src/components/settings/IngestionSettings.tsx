@@ -287,7 +287,7 @@ export function IngestionSettings() {
             {data.runs.map((r) => (
               <div
                 key={r.id}
-                className="grid grid-cols-[1fr_60px_1fr_80px_80px_120px] gap-3 items-center py-1 border-b border-border/40"
+                className="grid grid-cols-[1fr_90px_1fr_80px_80px_120px] gap-3 items-center py-1 border-b border-border/40"
               >
                 <span className="truncate">
                   {r.target_type === "hashtag" ? "#" : "@"}
