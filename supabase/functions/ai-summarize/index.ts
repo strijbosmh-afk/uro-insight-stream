@@ -2,12 +2,36 @@
 // Forwards a structured request to the Lovable AI Gateway (OpenAI-compatible).
 // The gateway's API key (LOVABLE_API_KEY) is auto-provisioned; no client-side key.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// CORS allowlist. ALLOWED_ORIGINS is a comma-separated list of exact origins
+// or wildcard patterns (e.g. "https://*.lovable.app"). When the request
+// Origin matches an entry, we echo it back; otherwise the
+// Access-Control-Allow-Origin header is omitted entirely.
+function originAllowed(origin: string | null): string | null {
+  if (!origin) return null;
+  const raw = Deno.env.get("ALLOWED_ORIGINS") ?? "";
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (entry === origin) return origin;
+    if (entry.includes("*")) {
+      const re = new RegExp(
+        "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$",
+      );
+      if (re.test(origin)) return origin;
+    }
+  }
+  return null;
+}
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = originAllowed(req.headers.get("origin"));
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+  if (allowed) headers["Access-Control-Allow-Origin"] = allowed;
+  return headers;
+}
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
@@ -71,19 +95,18 @@ const SUMMARY_TOOL = {
   },
 };
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
+  const cors = buildCorsHeaders(req);
+  const jsonResponse = (body: unknown, status = 200, _req?: Request) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse({ error: "Method not allowed" }, 405, req);
   }
 
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -98,7 +121,7 @@ Deno.serve(async (req) => {
   try {
     body = (await req.json()) as SummarizeBody;
   } catch {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
+    return jsonResponse({ error: "Invalid JSON body" }, 400, req);
   }
 
   const model = body.model || DEFAULT_MODEL;
@@ -123,11 +146,11 @@ Deno.serve(async (req) => {
           ],
         }),
       });
-      if (!resp.ok) return passThroughError(resp);
+    if (!resp.ok) return passThroughError(resp, jsonResponse);
       const data = await resp.json();
       const text =
         data?.choices?.[0]?.message?.content ?? "(no content)";
-      return jsonResponse({ ok: true, model, text });
+      return jsonResponse({ ok: true, model, text }, 200, req);
     }
 
     if (mode === "suggest_replies") {
@@ -190,18 +213,18 @@ Deno.serve(async (req) => {
           tool_choice: { type: "function", function: { name: "emit_replies" } },
         }),
       });
-      if (!resp.ok) return passThroughError(resp);
+      if (!resp.ok) return passThroughError(resp, jsonResponse);
       const data = await resp.json();
       const call =
         data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
       if (!call) {
-        return jsonResponse({ error: "No tool call in response" }, 502);
+        return jsonResponse({ error: "No tool call in response" }, 502, req);
       }
       let parsed: { replies?: { text: string; angle: string }[] };
       try {
         parsed = JSON.parse(call);
       } catch {
-        return jsonResponse({ error: "Failed to parse tool call JSON" }, 502);
+        return jsonResponse({ error: "Failed to parse tool call JSON" }, 502, req);
       }
       return jsonResponse({
         ok: true,
@@ -236,7 +259,7 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!resp.ok) return passThroughError(resp);
+    if (!resp.ok) return passThroughError(resp, jsonResponse);
 
     const data = await resp.json();
     const call =
@@ -266,7 +289,10 @@ Deno.serve(async (req) => {
   }
 });
 
-async function passThroughError(resp: Response) {
+async function passThroughError(
+  resp: Response,
+  jsonResponse: (body: unknown, status?: number) => Response,
+) {
   const text = await resp.text();
   if (resp.status === 429) {
     return jsonResponse(

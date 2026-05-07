@@ -6,10 +6,43 @@ const PER_USER_LIMIT = 30;
 const PER_USER_WINDOW_MS = 60 * 1000;
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function jsonResponse(body: unknown, init: ResponseInit = {}) {
+function originAllowed(origin: string | null): string | null {
+  if (!origin) return null;
+  const raw = process.env.ALLOWED_ORIGINS ?? "";
+  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (entry === origin) return origin;
+    if (entry.includes("*")) {
+      const pattern: string =
+        "^" + entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$";
+      const re: RegExp = new RegExp(pattern);
+      if (re.test(origin)) return origin;
+    }
+  }
+  return null;
+}
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = originAllowed(req.headers.get("origin"));
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    Vary: "Origin",
+  };
+  if (allowed) headers["Access-Control-Allow-Origin"] = allowed;
+  return headers;
+}
+function jsonResponse(
+  body: unknown,
+  init: ResponseInit = {},
+  req?: Request,
+) {
   return new Response(JSON.stringify(body), {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(req ? buildCorsHeaders(req) : {}),
+      ...(init.headers ?? {}),
+    },
   });
 }
 
@@ -19,13 +52,13 @@ function bucketStart(now: Date, windowMs: number): Date {
 
 async function authenticate(request: Request): Promise<{ userId: string } | Response> {
   const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  if (!auth?.startsWith("Bearer ")) return jsonResponse({ error: "unauthorized" }, { status: 401 }, request);
   const token = auth.slice(7);
   const client = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await client.auth.getClaims(token);
-  if (error || !data?.claims?.sub) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  if (error || !data?.claims?.sub) return jsonResponse({ error: "unauthorized" }, { status: 401 }, request);
   return { userId: data.claims.sub as string };
 }
 
@@ -189,14 +222,10 @@ async function annotateExisting(matches: Match[]): Promise<Match[]> {
 export const Route = createFileRoute("/api/suggest-congress")({
   server: {
     handlers: {
-      OPTIONS: async () =>
+      OPTIONS: async ({ request }) =>
         new Response(null, {
           status: 204,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          },
+          headers: buildCorsHeaders(request),
         }),
       POST: async ({ request }) => {
         const auth = await authenticate(request);
@@ -207,12 +236,12 @@ export const Route = createFileRoute("/api/suggest-congress")({
         try {
           body = (await request.json()) as { query?: unknown };
         } catch {
-          return jsonResponse({ error: "invalid_json" }, { status: 400 });
+          return jsonResponse({ error: "invalid_json" }, { status: 400 }, request);
         }
         const raw = typeof body.query === "string" ? body.query : "";
         const query = normalizeQuery(raw);
         if (query.length < 3) {
-          return jsonResponse({ matches: [], too_short: true });
+          return jsonResponse({ matches: [], too_short: true }, {}, request);
         }
 
         // cache
@@ -228,12 +257,16 @@ export const Route = createFileRoute("/api/suggest-congress")({
             .update({ hits: (c.hits ?? 0) + 1 } as never)
             .eq("query_normalized", query);
           const annotated = await annotateExisting(c.response_json.matches ?? []);
-          return jsonResponse({
-            matches: annotated,
-            no_match: !!c.response_json.no_match,
-            from_cache: true,
-            cached_at: c.created_at,
-          });
+          return jsonResponse(
+            {
+              matches: annotated,
+              no_match: !!c.response_json.no_match,
+              from_cache: true,
+              cached_at: c.created_at,
+            },
+            {},
+            request,
+          );
         }
 
         // rate limit
@@ -242,12 +275,13 @@ export const Route = createFileRoute("/api/suggest-congress")({
           return jsonResponse(
             { error: "per_user_rate_limit", resets_in_seconds: rl.resetsIn, matches: [] },
             { status: 429, headers: { "Retry-After": String(rl.resetsIn) } },
+            request,
           );
         }
 
         const llm = await callLLM(query);
         if (!llm) {
-          return jsonResponse({ matches: [], error: "lookup_failed" });
+          return jsonResponse({ matches: [], error: "lookup_failed" }, {}, request);
         }
 
         await supabaseAdmin
@@ -258,12 +292,16 @@ export const Route = createFileRoute("/api/suggest-congress")({
           );
 
         const annotated = await annotateExisting(llm.matches ?? []);
-        return jsonResponse({
-          matches: annotated,
-          no_match: !!llm.no_match,
-          from_cache: false,
-          cached_at: new Date().toISOString(),
-        });
+        return jsonResponse(
+          {
+            matches: annotated,
+            no_match: !!llm.no_match,
+            from_cache: false,
+            cached_at: new Date().toISOString(),
+          },
+          {},
+          request,
+        );
       },
     },
   },
