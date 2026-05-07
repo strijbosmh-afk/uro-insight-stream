@@ -289,50 +289,8 @@ function ChatRoom({
     return true;
   };
 
-  const toggleReaction = async (msg: Message, emoji: Emoji) => {
-    const existing = reactions.find(
-      (r) => r.message_id === msg.id && r.user_id === currentUserId && r.emoji === emoji,
-    );
-    if (existing) {
-      // Optimistic remove
-      const snapshot = reactions;
-      setReactions((prev) => prev.filter((x) => x.id !== existing.id));
-      const { error } = await supabase
-        .from("brainstorm_message_reactions")
-        .delete()
-        .eq("id", existing.id);
-      if (error) {
-        setReactions(snapshot);
-        toast.error("Reaction failed", { description: error.message });
-      }
-    } else {
-      // Optimistic add with a temp id; realtime will replace it.
-      const tempId = `temp-${Math.random().toString(36).slice(2)}`;
-      const optimistic: Reaction = {
-        id: tempId,
-        message_id: msg.id,
-        user_id: currentUserId,
-        emoji,
-        created_at: new Date().toISOString(),
-      };
-      const snapshot = reactions;
-      setReactions((prev) => [...prev, optimistic]);
-      const { data, error } = await supabase
-        .from("brainstorm_message_reactions")
-        .insert({ message_id: msg.id, user_id: currentUserId, emoji })
-        .select()
-        .single();
-      if (error) {
-        setReactions(snapshot);
-        toast.error("Reaction failed", { description: error.message });
-      } else if (data) {
-        setReactions((prev) =>
-          prev.some((x) => x.id === (data as Reaction).id)
-            ? prev.filter((x) => x.id !== tempId)
-            : prev.map((x) => (x.id === tempId ? (data as Reaction) : x)),
-        );
-      }
-    }
+  const handleReact = (m: Message, emoji: Emoji) => {
+    void toggleReaction(m.id, emoji);
   };
 
   const startEdit = (m: Message) => {
