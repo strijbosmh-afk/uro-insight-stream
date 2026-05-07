@@ -23,6 +23,7 @@ import {
 import { MessageList, type MessageListHandle } from "@/components/brainstorm/MessageList";
 import { PresenceList } from "@/components/brainstorm/PresenceList";
 import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
+import { useBrainstormMessages } from "@/hooks/useBrainstormMessages";
 import {
   type Emoji,
   type Message,
@@ -66,9 +67,14 @@ function ChatRoom({
   currentUserId: string;
   currentDisplayName: string;
 }) {
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  const {
+    messages,
+    isLoading: loading,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+  } = useBrainstormMessages(currentUserId);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
-  const [loading, setLoading] = React.useState(true);
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
@@ -128,29 +134,6 @@ function ChatRoom({
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [markRead]);
-
-  // Initial load
-  React.useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("brainstorm_messages")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true })
-        .limit(500);
-      if (cancel) return;
-      if (error) {
-        toast.error("Failed to load messages", { description: error.message });
-      } else {
-        setMessages((data ?? []) as Message[]);
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
 
   // Initial reactions load + realtime subscription
   React.useEffect(() => {
@@ -274,38 +257,6 @@ function ChatRoom({
     };
   }, []);
 
-  // Realtime subscribe
-  React.useEffect(() => {
-    const ch = supabase
-      .channel(`brainstorm-messages-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "brainstorm_messages" },
-        (payload) => {
-          const m = payload.new as Message;
-          if (m.deleted_at) return;
-          setMessages((prev) =>
-            prev.some((x) => x.id === m.id) ? prev : [...prev, m],
-          );
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "brainstorm_messages" },
-        (payload) => {
-          const m = payload.new as Message;
-          setMessages((prev) => {
-            if (m.deleted_at) return prev.filter((x) => x.id !== m.id);
-            return prev.map((x) => (x.id === m.id ? m : x));
-          });
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, []);
-
   // Presence (active admins + typing)
   React.useEffect(() => {
     const ch = supabase.channel(`brainstorm-presence-${channelSuffixRef.current}`, {
@@ -351,27 +302,13 @@ function ChatRoom({
 
   const handleSend = async (content: string): Promise<boolean> => {
     broadcastTyping(false);
-    const { data, error } = await supabase
-      .from("brainstorm_messages")
-      .insert({
-        user_id: currentUserId,
-        user_display_name: currentDisplayName,
-        content,
-        reply_to_id: replyTo?.id ?? null,
-      })
-      .select()
-      .single();
-    if (error) {
-      toast.error("Failed to send", { description: error.message });
-      return false;
-    }
-    if (data) {
-      setMessages((prev) =>
-        prev.some((x) => x.id === data.id) ? prev : [...prev, data as Message],
-      );
-      setReplyTo(null);
-    }
-    return true;
+    const result = await sendMessage(content, {
+      userId: currentUserId,
+      displayName: currentDisplayName,
+      replyToId: replyTo?.id ?? null,
+    });
+    if (result.success) setReplyTo(null);
+    return result.success;
   };
 
   const handleSaveEdit = async (
@@ -379,22 +316,10 @@ function ChatRoom({
     content: string,
   ): Promise<boolean> => {
     const original = messages.find((x) => x.id === messageId);
-    const snapshotMessages = messages;
-    const editedAt = new Date().toISOString();
-    // Optimistically apply edit and clear edit state.
+    // Clear edit state optimistically; hook handles message-state rollback.
     setEditing(null);
-    setMessages((prev) =>
-      prev.map((x) =>
-        x.id === messageId ? { ...x, content, edited_at: editedAt } : x,
-      ),
-    );
-    const { error } = await supabase
-      .from("brainstorm_messages")
-      .update({ content, edited_at: editedAt })
-      .eq("id", messageId);
-    if (error) {
-      setMessages(snapshotMessages);
-      toast.error("Failed to save edit", { description: error.message });
+    const result = await editMessage(messageId, content);
+    if (!result.success) {
       if (original) setEditing(original);
       return false;
     }
@@ -459,16 +384,7 @@ function ChatRoom({
 
   const doDelete = async (m: Message) => {
     setConfirmDelete(null);
-    const snapshot = messages;
-    setMessages((prev) => prev.filter((x) => x.id !== m.id));
-    const { error } = await supabase
-      .from("brainstorm_messages")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", m.id);
-    if (error) {
-      setMessages(snapshot);
-      toast.error("Delete failed", { description: error.message });
-    }
+    await deleteMessage(m.id);
   };
 
   const getReadersFor = React.useCallback(
