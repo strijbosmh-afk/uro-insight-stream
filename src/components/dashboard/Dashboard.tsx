@@ -288,6 +288,7 @@ export function Dashboard() {
                 Ingestion
               </span>
             }
+            className="hidden md:flex"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {cronHealth.map((job) => (
