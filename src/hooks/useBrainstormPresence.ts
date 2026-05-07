@@ -1,5 +1,6 @@
 import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface UseBrainstormPresenceResult {
   onlineIds: Set<string>;
@@ -36,13 +37,8 @@ export function useBrainstormPresence(
   const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = React.useState<string[]>([]);
 
-  const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const presenceRef = React.useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
   // Keep latest display name accessible inside broadcastTyping without
   // re-creating the callback (and without restarting the channel).
   const displayNameRef = React.useRef(displayName);
@@ -50,39 +46,48 @@ export function useBrainstormPresence(
     displayNameRef.current = displayName;
   }, [displayName]);
 
+  // Cleanup typing timeout on unmount (channel cleanup is handled by the
+  // generic hook).
   React.useEffect(() => {
-    const ch = supabase.channel(`brainstorm-presence-${channelSuffixRef.current}`, {
-      config: { presence: { key: currentUserId } },
-    });
-    presenceRef.current = ch;
-    ch.on("presence", { event: "sync" }, () => {
-      const state = ch.presenceState() as Record<
-        string,
-        Array<{ display_name: string; typing?: boolean }>
-      >;
-      setOnlineIds(new Set(Object.keys(state)));
-      const typing: string[] = [];
-      for (const [uid, metas] of Object.entries(state)) {
-        if (uid === currentUserId) continue;
-        const m = metas[0];
-        if (m?.typing) typing.push(m.display_name);
-      }
-      setTypingUsers(typing);
-    });
-    void ch.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await ch.track({ display_name: displayNameRef.current, typing: false });
-      }
-    });
     return () => {
       if (typingTimeoutRef.current) {
         window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      void supabase.removeChannel(ch);
-      presenceRef.current = null;
     };
-  }, [currentUserId, displayName]);
+  }, []);
+
+  useRealtimeChannel(
+    "brainstorm-presence",
+    {
+      onPresenceSync: () => {
+        const ch = presenceRef.current;
+        if (!ch) return;
+        const state = ch.presenceState() as Record<
+          string,
+          Array<{ display_name: string; typing?: boolean }>
+        >;
+        setOnlineIds(new Set(Object.keys(state)));
+        const typing: string[] = [];
+        for (const [uid, metas] of Object.entries(state)) {
+          if (uid === currentUserId) continue;
+          const m = metas[0];
+          if (m?.typing) typing.push(m.display_name);
+        }
+        setTypingUsers(typing);
+      },
+      onSubscribe: (status, channel) => {
+        presenceRef.current = channel;
+        if (status === "SUBSCRIBED") {
+          void channel.track({ display_name: displayNameRef.current, typing: false });
+        }
+      },
+    },
+    {
+      deps: [currentUserId],
+      channelOptions: { config: { presence: { key: currentUserId } } },
+    },
+  );
 
   const broadcastTyping = React.useCallback((isTyping: boolean) => {
     const ch = presenceRef.current;
