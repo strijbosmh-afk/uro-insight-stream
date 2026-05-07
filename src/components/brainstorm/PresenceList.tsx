@@ -61,31 +61,28 @@ function MemberRow({
   );
 }
 
-export function PresenceList({
+export function PresenceListBody({
   admins,
   onlineIds,
   currentUserId,
-  className,
+  showHeader = true,
 }: {
   admins: AdminUser[];
   onlineIds: Set<string>;
   currentUserId: string;
-  className?: string;
+  showHeader?: boolean;
 }) {
   return (
-    <aside
-      className={cn(
-        "hidden md:flex flex-col w-60 shrink-0 border-l border-border bg-panel min-h-0",
-        className,
+    <>
+      {showHeader && (
+        <div className="flex items-center gap-2 px-4 h-14 border-b border-border shrink-0">
+          <Users className="w-4 h-4 text-text-muted" />
+          <h2 className="text-sm font-semibold text-text-primary">Members</h2>
+          <Badge variant="outline" className="ml-auto text-[10px]">
+            {admins.length}
+          </Badge>
+        </div>
       )}
-    >
-      <div className="flex items-center gap-2 px-4 h-14 border-b border-border shrink-0">
-        <Users className="w-4 h-4 text-text-muted" />
-        <h2 className="text-sm font-semibold text-text-primary">Members</h2>
-        <Badge variant="outline" className="ml-auto text-[10px]">
-          {admins.length}
-        </Badge>
-      </div>
       <div className="flex-1 overflow-y-auto py-2">
         {admins.length === 0 ? (
           <div className="px-4 py-3 text-xs text-text-muted">No members</div>
@@ -120,6 +117,33 @@ export function PresenceList({
           </>
         )}
       </div>
+    </>
+  );
+}
+
+export function PresenceList({
+  admins,
+  onlineIds,
+  currentUserId,
+  className,
+}: {
+  admins: AdminUser[];
+  onlineIds: Set<string>;
+  currentUserId: string;
+  className?: string;
+}) {
+  return (
+    <aside
+      className={cn(
+        "hidden md:flex flex-col w-60 shrink-0 border-l border-border bg-panel min-h-0",
+        className,
+      )}
+    >
+      <PresenceListBody
+        admins={admins}
+        onlineIds={onlineIds}
+        currentUserId={currentUserId}
+      />
     </aside>
   );
 }

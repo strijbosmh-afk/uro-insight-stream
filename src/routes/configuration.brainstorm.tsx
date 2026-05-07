@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Search } from "lucide-react";
+import { Lightbulb, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,15 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { MessageList, type MessageListHandle } from "@/components/brainstorm/MessageList";
-import { PresenceList } from "@/components/brainstorm/PresenceList";
+import { PresenceList, PresenceListBody } from "@/components/brainstorm/PresenceList";
 import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useBrainstormMessages } from "@/hooks/useBrainstormMessages";
 import { useBrainstormReactions } from "@/hooks/useBrainstormReactions";
 import { useBrainstormReadState } from "@/hooks/useBrainstormReadState";
@@ -87,6 +94,7 @@ function ChatRoom({
   const [search, setSearch] = React.useState("");
   const [showSearch, setShowSearch] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState<Message | null>(null);
+  const [membersOpen, setMembersOpen] = React.useState(false);
 
   const messageListRef = React.useRef<MessageListHandle>(null);
   const composerRef = React.useRef<ComposerHandle>(null);
@@ -165,7 +173,7 @@ function ChatRoom({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search messages…"
-                className="h-8 w-56"
+                className="h-8 w-40 sm:w-56"
               />
             )}
             <Button
@@ -179,6 +187,36 @@ function ChatRoom({
             >
               <Search className="w-4 h-4" />
             </Button>
+            <Sheet open={membersOpen} onOpenChange={setMembersOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Show members"
+                  className="md:hidden h-8 px-2 gap-1.5"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="text-xs">{onlineIds.size}</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="p-0 w-72 bg-panel flex flex-col">
+                <SheetHeader className="px-4 h-14 border-b border-border flex-row items-center justify-start space-y-0 shrink-0">
+                  <SheetTitle className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <Users className="w-4 h-4 text-text-muted" />
+                    Members
+                    <Badge variant="outline" className="ml-1 text-[10px]">
+                      {admins.length}
+                    </Badge>
+                  </SheetTitle>
+                </SheetHeader>
+                <PresenceListBody
+                  admins={admins}
+                  onlineIds={onlineIds}
+                  currentUserId={currentUserId}
+                  showHeader={false}
+                />
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
 
