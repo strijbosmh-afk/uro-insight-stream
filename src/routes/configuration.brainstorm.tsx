@@ -24,6 +24,7 @@ import { MessageList, type MessageListHandle } from "@/components/brainstorm/Mes
 import { PresenceList } from "@/components/brainstorm/PresenceList";
 import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
 import {
+  type Emoji,
   type Message,
   type Reaction,
   type AdminUser,
