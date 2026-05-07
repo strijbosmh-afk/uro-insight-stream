@@ -79,11 +79,10 @@ function ChatRoom({
   const [admins, setAdmins] = React.useState<AdminUser[]>([]);
   const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
-  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const messageListRef = React.useRef<MessageListHandle>(null);
   const composerRef = React.useRef<ComposerHandle>(null);
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
-  const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   // Stable, unique suffix per component mount for realtime channel names.
   // Avoids collisions when the same user has multiple tabs open.
   const channelSuffixRef = React.useRef<string>(
