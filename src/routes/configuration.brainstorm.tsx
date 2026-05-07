@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search } from "lucide-react";
+import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -44,6 +44,13 @@ type Message = {
   created_at: string;
   edited_at: string | null;
   deleted_at: string | null;
+};
+
+type AdminUser = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
 };
 
 export const Route = createFileRoute("/configuration/brainstorm")({
@@ -90,7 +97,8 @@ function ChatRoom({
   const [showSearch, setShowSearch] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState<Message | null>(null);
   const [typingUsers, setTypingUsers] = React.useState<string[]>([]);
-  const [activeAdmins, setActiveAdmins] = React.useState(0);
+  const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
+  const [admins, setAdmins] = React.useState<AdminUser[]>([]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -126,6 +134,38 @@ function ChatRoom({
         setMessages((data ?? []) as Message[]);
       }
       setLoading(false);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  // Load admin user list (people with access)
+  React.useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      if (cancel || rolesErr) return;
+      const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
+      if (ids.length === 0) {
+        setAdmins([]);
+        return;
+      }
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name, email, avatar_url")
+        .in("id", ids);
+      if (cancel) return;
+      setAdmins(
+        (profs ?? []).sort((a, b) =>
+          (a.display_name ?? a.email ?? "").localeCompare(
+            b.display_name ?? b.email ?? "",
+          ),
+        ) as AdminUser[],
+      );
     })();
     return () => {
       cancel = true;
@@ -175,7 +215,7 @@ function ChatRoom({
         string,
         Array<{ display_name: string; typing?: boolean }>
       >;
-      setActiveAdmins(Object.keys(state).length);
+      setOnlineIds(new Set(Object.keys(state)));
       const typing: string[] = [];
       for (const [uid, metas] of Object.entries(state)) {
         if (uid === currentUserId) continue;
@@ -376,9 +416,10 @@ function ChatRoom({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col h-[calc(100vh-3rem)]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-border bg-panel shrink-0">
+      <div className="flex h-full min-h-0 -m-3 sm:-m-3">
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 h-14 border-b border-border bg-panel shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-md bg-accent/10 border border-accent/40 flex items-center justify-center">
               <Lightbulb className="w-4 h-4 text-accent" />
@@ -387,7 +428,7 @@ function ChatRoom({
               <div className="flex items-center gap-2">
                 <h1 className="text-sm font-semibold text-text-primary">Brainstorm</h1>
                 <Badge variant="outline" className="border-success/40 text-success text-[10px]">
-                  {activeAdmins} active
+                  {onlineIds.size} online
                 </Badge>
               </div>
               <p className="text-xs text-text-muted">Discuss improvements with the team</p>
@@ -564,8 +605,112 @@ function ChatRoom({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
+
+        {/* Members sidebar */}
+        <aside className="hidden md:flex flex-col w-60 shrink-0 border-l border-border bg-panel min-h-0">
+          <div className="flex items-center gap-2 px-4 h-14 border-b border-border shrink-0">
+            <Users className="w-4 h-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text-primary">Members</h2>
+            <Badge variant="outline" className="ml-auto text-[10px]">
+              {admins.length}
+            </Badge>
+          </div>
+          <div className="flex-1 overflow-y-auto py-2">
+            {admins.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-text-muted">No members</div>
+            ) : (
+              <>
+                {admins.some((a) => onlineIds.has(a.id)) && (
+                  <SectionLabel>Online</SectionLabel>
+                )}
+                {admins
+                  .filter((a) => onlineIds.has(a.id))
+                  .map((a) => (
+                    <MemberRow
+                      key={a.id}
+                      user={a}
+                      online
+                      isMe={a.id === currentUserId}
+                    />
+                  ))}
+                {admins.some((a) => !onlineIds.has(a.id)) && (
+                  <SectionLabel>Offline</SectionLabel>
+                )}
+                {admins
+                  .filter((a) => !onlineIds.has(a.id))
+                  .map((a) => (
+                    <MemberRow
+                      key={a.id}
+                      user={a}
+                      online={false}
+                      isMe={a.id === currentUserId}
+                    />
+                  ))}
+              </>
+            )}
+          </div>
+        </aside>
       </div>
     </TooltipProvider>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider font-mono text-text-muted">
+      {children}
+    </div>
+  );
+}
+
+function MemberRow({
+  user,
+  online,
+  isMe,
+}: {
+  user: AdminUser;
+  online: boolean;
+  isMe: boolean;
+}) {
+  const name = user.display_name ?? user.email ?? "Unknown";
+  const initials = name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 px-4 py-1.5 text-sm",
+        online ? "text-text-primary" : "text-text-muted",
+      )}
+    >
+      <div className="relative">
+        <div
+          className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold border",
+            online
+              ? "bg-accent/15 border-accent/40 text-text-primary"
+              : "bg-panel-elevated border-border text-text-muted",
+          )}
+        >
+          {initials || "?"}
+        </div>
+        <span
+          className={cn(
+            "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-panel",
+            online ? "bg-success" : "bg-text-muted/40",
+          )}
+        />
+      </div>
+      <div className="min-w-0 flex-1 truncate">
+        {name}
+        {isMe && <span className="ml-1 text-[10px] text-text-muted">(you)</span>}
+      </div>
+    </div>
   );
 }
 
