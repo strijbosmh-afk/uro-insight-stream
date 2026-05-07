@@ -814,6 +814,8 @@ function MessageBubble({
   showHeader,
   isOwn,
   currentUserId,
+  readers,
+  totalOtherAdmins,
   onReply,
   onEdit,
   onDelete,
@@ -826,6 +828,8 @@ function MessageBubble({
   showHeader: boolean;
   isOwn: boolean;
   currentUserId: string;
+  readers: ReadState[];
+  totalOtherAdmins: number;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -836,6 +840,8 @@ function MessageBubble({
   const reactionEntries = Object.entries(msg.reactions ?? {}).filter(
     ([, ids]) => ids.length > 0,
   );
+  const allRead = totalOtherAdmins > 0 && readers.length >= totalOtherAdmins;
+  const someRead = readers.length > 0;
   return (
     <div
       ref={registerRef}
@@ -879,6 +885,50 @@ function MessageBubble({
         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-text-muted">
           <span>{relativeTime(msg.created_at)}</span>
           {msg.edited_at && <span className="italic">edited</span>}
+          {isOwn && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 ml-1",
+                    allRead ? "text-accent" : someRead ? "text-text-primary" : "text-text-muted/60",
+                  )}
+                  aria-label={
+                    someRead
+                      ? `Read by ${readers.length} of ${totalOtherAdmins}`
+                      : "Sent"
+                  }
+                >
+                  {someRead ? (
+                    <CheckCheck className="w-3 h-3" />
+                  ) : (
+                    <Check className="w-3 h-3" />
+                  )}
+                  {totalOtherAdmins > 0 && (
+                    <span>
+                      {readers.length}/{totalOtherAdmins}
+                    </span>
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <div className="text-xs max-w-[220px]">
+                  {someRead ? (
+                    <>
+                      <div className="font-semibold mb-0.5">Read by</div>
+                      <div className="space-y-0.5">
+                        {readers.map((r) => (
+                          <div key={r.user_id}>{r.user_display_name}</div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <span>Delivered. No one has read this yet.</span>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Action toolbar */}
