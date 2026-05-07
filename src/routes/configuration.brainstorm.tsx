@@ -397,7 +397,7 @@ function ChatRoom({
           onReply={startReply}
           onEdit={startEdit}
           onDelete={(m) => setConfirmDelete(m)}
-          onReact={toggleReaction}
+          onReact={handleReact}
         />
 
         {/* Typing indicator */}
