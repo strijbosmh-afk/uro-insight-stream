@@ -28,6 +28,7 @@ import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DiscoverGroupsRouteImport } from './routes/discover.groups'
 import { Route as CongressesCongressIdRouteImport } from './routes/congresses.$congressId'
+import { Route as ConfigurationBrainstormRouteImport } from './routes/configuration.brainstorm'
 import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-congress'
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -145,6 +146,11 @@ const CongressesCongressIdRoute = CongressesCongressIdRouteImport.update({
   id: '/$congressId',
   path: '/$congressId',
   getParentRoute: () => CongressesRoute,
+} as any)
+const ConfigurationBrainstormRoute = ConfigurationBrainstormRouteImport.update({
+  id: '/configuration/brainstorm',
+  path: '/configuration/brainstorm',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSuggestCongressRoute = ApiSuggestCongressRouteImport.update({
   id: '/api/suggest-congress',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
+  '/configuration/brainstorm': typeof ConfigurationBrainstormRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
+  '/configuration/brainstorm': typeof ConfigurationBrainstormRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -375,6 +383,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
   '/api/suggest-congress': typeof ApiSuggestCongressRoute
+  '/configuration/brainstorm': typeof ConfigurationBrainstormRoute
   '/congresses/$congressId': typeof CongressesCongressIdRoute
   '/discover/groups': typeof DiscoverGroupsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -420,6 +429,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
+    | '/configuration/brainstorm'
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
+    | '/configuration/brainstorm'
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/lookup-handle'
     | '/api/suggest-congress'
+    | '/configuration/brainstorm'
     | '/congresses/$congressId'
     | '/discover/groups'
     | '/email/unsubscribe'
@@ -549,6 +561,7 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
   ApiSuggestCongressRoute: typeof ApiSuggestCongressRoute
+  ConfigurationBrainstormRoute: typeof ConfigurationBrainstormRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   GroupsSlugRoute: typeof GroupsSlugRoute
   HelpInstructionsRoute: typeof HelpInstructionsRoute
@@ -704,6 +717,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/congresses/$congressId'
       preLoaderRoute: typeof CongressesCongressIdRouteImport
       parentRoute: typeof CongressesRoute
+    }
+    '/configuration/brainstorm': {
+      id: '/configuration/brainstorm'
+      path: '/configuration/brainstorm'
+      fullPath: '/configuration/brainstorm'
+      preLoaderRoute: typeof ConfigurationBrainstormRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/suggest-congress': {
       id: '/api/suggest-congress'
@@ -908,6 +928,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
   ApiSuggestCongressRoute: ApiSuggestCongressRoute,
+  ConfigurationBrainstormRoute: ConfigurationBrainstormRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   GroupsSlugRoute: GroupsSlugRoute,
   HelpInstructionsRoute: HelpInstructionsRoute,

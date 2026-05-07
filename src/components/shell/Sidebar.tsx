@@ -18,9 +18,11 @@ import {
   Users2,
   BookOpen,
   AtSign,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
+import { useBrainstormUnread } from "@/hooks/useBrainstormUnread";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +64,12 @@ const BASE_SECTIONS: NavSection[] = [
   },
 ];
 
+const BRAINSTORM_ITEM: NavItem = {
+  label: "Brainstorm",
+  to: "/configuration/brainstorm",
+  icon: Lightbulb,
+};
+
 const ADMIN_SECTION: NavSection = {
   label: "Admin",
   items: [
@@ -80,11 +88,26 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin } = useAuth();
+  const { unread, markRead } = useBrainstormUnread();
   const sections = React.useMemo(
-    () => (isAdmin ? [...BASE_SECTIONS, ADMIN_SECTION] : BASE_SECTIONS),
+    () => {
+      if (!isAdmin) return BASE_SECTIONS;
+      return [
+        BASE_SECTIONS[0],
+        {
+          ...BASE_SECTIONS[1],
+          items: [...BASE_SECTIONS[1].items, BRAINSTORM_ITEM],
+        },
+        ADMIN_SECTION,
+      ];
+    },
     [isAdmin],
   );
   const [contactOpen, setContactOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (pathname === BRAINSTORM_ITEM.to) markRead();
+  }, [pathname, markRead]);
 
   return (
     <aside
@@ -140,6 +163,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   (pathname === item.to ||
                     pathname.startsWith(item.to + "/"));
                 const Icon = item.icon;
+                const isBrainstorm = item.to === BRAINSTORM_ITEM.to;
                 return (
                   <li key={item.to}>
                     <Link
@@ -156,7 +180,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
                       )}
                       <Icon className="w-4 h-4 shrink-0" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+                      {isBrainstorm && unread > 0 && (
+                        <span
+                          className={cn(
+                            "min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-[10px] font-semibold text-accent-foreground flex items-center justify-center",
+                            collapsed && "absolute top-1 right-1 min-w-[14px] h-[14px] text-[9px]",
+                          )}
+                        >
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
