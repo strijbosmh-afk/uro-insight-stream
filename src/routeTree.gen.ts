@@ -37,6 +37,7 @@ import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as AdminEmailDiagnosticsRouteImport } from './routes/admin.email-diagnostics'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiPublicAccessRequestRouteImport } from './routes/api/public/access-request'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -192,6 +193,11 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAccessRequestRoute = ApiPublicAccessRequestRouteImport.update({
+  id: '/api/public/access-request',
+  path: '/api/public/access-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover/': typeof DiscoverIndexRoute
+  '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover': typeof DiscoverIndexRoute
+  '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -391,6 +399,7 @@ export interface FileRoutesById {
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/discover/': typeof DiscoverIndexRoute
+  '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover/'
+    | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover'
+    | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -524,6 +535,7 @@ export interface FileRouteTypes {
     | '/help/instructions'
     | '/sessions/$sessionId'
     | '/discover/'
+    | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
@@ -566,6 +578,7 @@ export interface RootRouteChildren {
   GroupsSlugRoute: typeof GroupsSlugRoute
   HelpInstructionsRoute: typeof HelpInstructionsRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  ApiPublicAccessRequestRoute: typeof ApiPublicAccessRequestRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
@@ -781,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/access-request': {
+      id: '/api/public/access-request'
+      path: '/api/public/access-request'
+      fullPath: '/api/public/access-request'
+      preLoaderRoute: typeof ApiPublicAccessRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -933,6 +953,7 @@ const rootRouteChildren: RootRouteChildren = {
   GroupsSlugRoute: GroupsSlugRoute,
   HelpInstructionsRoute: HelpInstructionsRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  ApiPublicAccessRequestRoute: ApiPublicAccessRequestRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
     ApiPublicHooksAggregateSourceCandidatesRoute,
@@ -956,3 +977,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
