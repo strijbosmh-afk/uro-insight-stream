@@ -40,10 +40,17 @@ type Message = {
   user_display_name: string;
   content: string;
   reply_to_id: string | null;
-  reactions: Record<string, string[]>;
   created_at: string;
   edited_at: string | null;
   deleted_at: string | null;
+};
+
+type Reaction = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: Emoji;
+  created_at: string;
 };
 
 type AdminUser = {
@@ -95,6 +102,7 @@ function ChatRoom({
   currentDisplayName: string;
 }) {
   const [messages, setMessages] = React.useState<Message[]>([]);
+  const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [input, setInput] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
@@ -172,6 +180,43 @@ function ChatRoom({
     })();
     return () => {
       cancel = true;
+    };
+  }, []);
+
+  // Initial reactions load + realtime subscription
+  React.useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("brainstorm_message_reactions")
+        .select("id, message_id, user_id, emoji, created_at");
+      if (cancel || !data) return;
+      setReactions(data as Reaction[]);
+    })();
+    const ch = supabase
+      .channel(`brainstorm-reactions-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "brainstorm_message_reactions" },
+        (payload) => {
+          const r = payload.new as Reaction;
+          setReactions((prev) =>
+            prev.some((x) => x.id === r.id) ? prev : [...prev, r],
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "brainstorm_message_reactions" },
+        (payload) => {
+          const r = payload.old as Reaction;
+          setReactions((prev) => prev.filter((x) => x.id !== r.id));
+        },
+      )
+      .subscribe();
+    return () => {
+      cancel = true;
+      void supabase.removeChannel(ch);
     };
   }, []);
 
@@ -390,20 +435,49 @@ function ChatRoom({
   };
 
   const toggleReaction = async (msg: Message, emoji: Emoji) => {
-    const next: Record<string, string[]> = { ...(msg.reactions ?? {}) };
-    const arr = next[emoji] ? [...next[emoji]] : [];
-    const idx = arr.indexOf(currentUserId);
-    if (idx >= 0) arr.splice(idx, 1);
-    else arr.push(currentUserId);
-    if (arr.length === 0) delete next[emoji];
-    else next[emoji] = arr;
-    // Optimistic
-    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, reactions: next } : m)));
-    const { error } = await supabase
-      .from("brainstorm_messages")
-      .update({ reactions: next })
-      .eq("id", msg.id);
-    if (error) toast.error("Reaction failed", { description: error.message });
+    const existing = reactions.find(
+      (r) => r.message_id === msg.id && r.user_id === currentUserId && r.emoji === emoji,
+    );
+    if (existing) {
+      // Optimistic remove
+      const snapshot = reactions;
+      setReactions((prev) => prev.filter((x) => x.id !== existing.id));
+      const { error } = await supabase
+        .from("brainstorm_message_reactions")
+        .delete()
+        .eq("id", existing.id);
+      if (error) {
+        setReactions(snapshot);
+        toast.error("Reaction failed", { description: error.message });
+      }
+    } else {
+      // Optimistic add with a temp id; realtime will replace it.
+      const tempId = `temp-${Math.random().toString(36).slice(2)}`;
+      const optimistic: Reaction = {
+        id: tempId,
+        message_id: msg.id,
+        user_id: currentUserId,
+        emoji,
+        created_at: new Date().toISOString(),
+      };
+      const snapshot = reactions;
+      setReactions((prev) => [...prev, optimistic]);
+      const { data, error } = await supabase
+        .from("brainstorm_message_reactions")
+        .insert({ message_id: msg.id, user_id: currentUserId, emoji })
+        .select()
+        .single();
+      if (error) {
+        setReactions(snapshot);
+        toast.error("Reaction failed", { description: error.message });
+      } else if (data) {
+        setReactions((prev) =>
+          prev.some((x) => x.id === (data as Reaction).id)
+            ? prev.filter((x) => x.id !== tempId)
+            : prev.map((x) => (x.id === tempId ? (data as Reaction) : x)),
+        );
+      }
+    }
   };
 
   const startEdit = (m: Message) => {
@@ -421,12 +495,16 @@ function ChatRoom({
 
   const doDelete = async (m: Message) => {
     setConfirmDelete(null);
+    const snapshot = messages;
     setMessages((prev) => prev.filter((x) => x.id !== m.id));
     const { error } = await supabase
       .from("brainstorm_messages")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", m.id);
-    if (error) toast.error("Delete failed", { description: error.message });
+    if (error) {
+      setMessages(snapshot);
+      toast.error("Delete failed", { description: error.message });
+    }
   };
 
   const insertEmoji = (e: Emoji) => {
@@ -598,6 +676,7 @@ function ChatRoom({
                   showHeader={it.showHeader}
                   isOwn={it.msg.user_id === currentUserId}
                   currentUserId={currentUserId}
+                  reactions={reactions.filter((r) => r.message_id === it.msg.id)}
                   readers={getReadersFor(it.msg)}
                   totalOtherAdmins={Math.max(admins.length - 1, 0)}
                   displayNameFor={displayNameFor}
@@ -853,6 +932,7 @@ function MessageBubble({
   showHeader,
   isOwn,
   currentUserId,
+  reactions,
   readers,
   totalOtherAdmins,
   displayNameFor,
@@ -868,6 +948,7 @@ function MessageBubble({
   showHeader: boolean;
   isOwn: boolean;
   currentUserId: string;
+  reactions: Reaction[];
   readers: ReadState[];
   totalOtherAdmins: number;
   displayNameFor: (userId: string, fallback: string) => string;
@@ -878,9 +959,15 @@ function MessageBubble({
   onJumpTo: (id: string) => void;
   registerRef: (el: HTMLDivElement | null) => void;
 }) {
-  const reactionEntries = Object.entries(msg.reactions ?? {}).filter(
-    ([, ids]) => ids.length > 0,
-  );
+  const reactionEntries = React.useMemo(() => {
+    const grouped = new Map<Emoji, string[]>();
+    for (const r of reactions) {
+      const arr = grouped.get(r.emoji) ?? [];
+      arr.push(r.user_id);
+      grouped.set(r.emoji, arr);
+    }
+    return Array.from(grouped.entries());
+  }, [reactions]);
   const allRead = totalOtherAdmins > 0 && readers.length >= totalOtherAdmins;
   const someRead = readers.length > 0;
   return (
