@@ -727,13 +727,19 @@ function AccessRequestForm({
         />
       </div>
 
-      <Button type="submit" className="w-full h-9" disabled={busy || !email}>
+      <Button
+        type="submit"
+        className="w-full h-9"
+        disabled={busy || !email || cooldownRemaining > 0}
+      >
         {busy ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
         ) : (
           <Send className="w-3.5 h-3.5 mr-1.5" />
         )}
-        Send request
+        {cooldownRemaining > 0
+          ? `Try again in ${Math.ceil(cooldownRemaining / 60)}m`
+          : "Send request"}
       </Button>
     </form>
   );
