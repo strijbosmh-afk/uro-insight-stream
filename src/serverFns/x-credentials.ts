@@ -26,13 +26,67 @@ export const getXConnectionStatus = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("user_x_credentials")
       .select(
-        "user_id, x_user_id, x_username, last_verified_at, last_post_at, scope_write, post_count_today, post_count_window_start, revoked_at"
+        "id, user_id, x_user_id, x_username, last_verified_at, last_post_at, scope_write, post_count_today, post_count_window_start, revoked_at, is_active"
       )
       .eq("user_id", userId)
+      .eq("is_active", true)
+      .is("revoked_at", null)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data || data.revoked_at) return null;
     return data;
+  });
+
+export const listXAccounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data, error } = await supabaseAdmin
+      .from("user_x_credentials")
+      .select(
+        "id, x_user_id, x_username, last_verified_at, last_post_at, scope_write, is_active, revoked_at, created_at"
+      )
+      .eq("user_id", userId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const SwitchSchema = z.object({ accountId: z.string().uuid() });
+
+export const switchActiveXAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SwitchSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    // Verify the account belongs to this user.
+    const { data: row, error: selErr } = await supabaseAdmin
+      .from("user_x_credentials")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("id", data.accountId)
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (selErr) throw new Error(selErr.message);
+    if (!row) throw new Error("Account not found");
+
+    // Deactivate all other accounts first to avoid the unique-active conflict.
+    const { error: deactErr } = await supabaseAdmin
+      .from("user_x_credentials")
+      .update({ is_active: false })
+      .eq("user_id", userId)
+      .neq("id", data.accountId);
+    if (deactErr) throw new Error(deactErr.message);
+
+    const { error: actErr } = await supabaseAdmin
+      .from("user_x_credentials")
+      .update({ is_active: true })
+      .eq("user_id", userId)
+      .eq("id", data.accountId);
+    if (actErr) throw new Error(actErr.message);
+
+    return { ok: true as const };
   });
 
 const ConnectSchema = z.object({
@@ -66,8 +120,11 @@ export const connectX = createServerFn({ method: "POST" })
 
 export const disconnectX = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await revoke(context.userId);
+  .inputValidator((data: unknown) =>
+    z.object({ accountId: z.string().uuid().optional() }).parse(data ?? {})
+  )
+  .handler(async ({ data, context }) => {
+    await revoke(context.userId, data.accountId);
     return { ok: true };
   });
 
