@@ -10,7 +10,6 @@ import { postTweet as serverPostTweet, PostTweetError } from "@/server/x-posting
 
 function graphemeLength(s: string): number {
   try {
-    // @ts-expect-error Intl.Segmenter is widely available
     const seg = new Intl.Segmenter("en", { granularity: "grapheme" });
     let n = 0;
     for (const _ of seg.segment(s)) n++;
