@@ -2,6 +2,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Message } from "@/components/brainstorm/types";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface UseBrainstormMessagesResult {
   messages: Message[];
@@ -43,13 +44,6 @@ export function useBrainstormMessages(userId: string | null): UseBrainstormMessa
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
-  // Stable per-mount channel suffix to avoid collisions across tabs.
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
-
   // Initial load
   React.useEffect(() => {
     let cancel = false;
@@ -76,36 +70,36 @@ export function useBrainstormMessages(userId: string | null): UseBrainstormMessa
   }, [userId]);
 
   // Realtime subscription
-  React.useEffect(() => {
-    const ch = supabase
-      .channel(`brainstorm-messages-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "brainstorm_messages" },
-        (payload) => {
-          const m = payload.new as Message;
-          if (m.deleted_at) return;
-          setMessages((prev) =>
-            prev.some((x) => x.id === m.id) ? prev : [...prev, m],
-          );
+  useRealtimeChannel(
+    "brainstorm-messages",
+    {
+      onPostgresChange: [
+        {
+          event: "INSERT",
+          table: "brainstorm_messages",
+          callback: (payload) => {
+            const m = payload.new as Message;
+            if (m.deleted_at) return;
+            setMessages((prev) =>
+              prev.some((x) => x.id === m.id) ? prev : [...prev, m],
+            );
+          },
         },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "brainstorm_messages" },
-        (payload) => {
-          const m = payload.new as Message;
-          setMessages((prev) => {
-            if (m.deleted_at) return prev.filter((x) => x.id !== m.id);
-            return prev.map((x) => (x.id === m.id ? m : x));
-          });
+        {
+          event: "UPDATE",
+          table: "brainstorm_messages",
+          callback: (payload) => {
+            const m = payload.new as Message;
+            setMessages((prev) => {
+              if (m.deleted_at) return prev.filter((x) => x.id !== m.id);
+              return prev.map((x) => (x.id === m.id ? m : x));
+            });
+          },
         },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [userId]);
+      ],
+    },
+    { deps: [userId] },
+  );
 
   const sendMessage = React.useCallback(
     async (

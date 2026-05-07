@@ -2,6 +2,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Emoji, Reaction } from "@/components/brainstorm/types";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface UseBrainstormReactionsResult {
   reactions: Reaction[];
@@ -41,12 +42,6 @@ export interface UseBrainstormReactionsResult {
 export function useBrainstormReactions(currentUserId: string): UseBrainstormReactionsResult {
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
 
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
-
   React.useEffect(() => {
     let cancel = false;
     void (async () => {
@@ -56,32 +51,37 @@ export function useBrainstormReactions(currentUserId: string): UseBrainstormReac
       if (cancel || !data) return;
       setReactions(data as Reaction[]);
     })();
-    const ch = supabase
-      .channel(`brainstorm-reactions-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "brainstorm_message_reactions" },
-        (payload) => {
-          const r = payload.new as Reaction;
-          setReactions((prev) =>
-            prev.some((x) => x.id === r.id) ? prev : [...prev, r],
-          );
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "brainstorm_message_reactions" },
-        (payload) => {
-          const r = payload.old as Reaction;
-          setReactions((prev) => prev.filter((x) => x.id !== r.id));
-        },
-      )
-      .subscribe();
     return () => {
       cancel = true;
-      void supabase.removeChannel(ch);
     };
   }, [currentUserId]);
+
+  useRealtimeChannel(
+    "brainstorm-reactions",
+    {
+      onPostgresChange: [
+        {
+          event: "INSERT",
+          table: "brainstorm_message_reactions",
+          callback: (payload) => {
+            const r = payload.new as Reaction;
+            setReactions((prev) =>
+              prev.some((x) => x.id === r.id) ? prev : [...prev, r],
+            );
+          },
+        },
+        {
+          event: "DELETE",
+          table: "brainstorm_message_reactions",
+          callback: (payload) => {
+            const r = payload.old as Reaction;
+            setReactions((prev) => prev.filter((x) => x.id !== r.id));
+          },
+        },
+      ],
+    },
+    { deps: [currentUserId] },
+  );
 
   const toggleReaction = React.useCallback(
     async (messageId: string, emoji: Emoji): Promise<{ success: boolean }> => {

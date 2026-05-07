@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Message, ReadState } from "@/components/brainstorm/types";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface UseBrainstormReadStateResult {
   readStates: Record<string, ReadState>;
@@ -51,11 +52,6 @@ export function useBrainstormReadState(
 ): UseBrainstormReadStateResult {
   const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
   const isTabVisibleRef = React.useRef(
     typeof document === "undefined" ? true : document.visibilityState === "visible",
   );
@@ -101,7 +97,7 @@ export function useBrainstormReadState(
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [markRead]);
 
-  // Initial fetch + realtime subscription.
+  // Initial fetch
   React.useEffect(() => {
     let cancel = false;
     void (async () => {
@@ -113,32 +109,38 @@ export function useBrainstormReadState(
       for (const r of data as ReadState[]) map[r.user_id] = r;
       setReadStates(map);
     })();
-    const ch = supabase
-      .channel(`brainstorm-read-state-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "brainstorm_read_state" },
-        (payload) => {
-          const r = (payload.new ?? payload.old) as Partial<ReadState> | null;
-          if (!r) return;
-          setReadStates((prev) => {
-            if (payload.eventType === "DELETE") {
-              const uid = r.user_id;
-              if (!uid) return prev;
-              const { [uid]: _, ...rest } = prev;
-              return rest;
-            }
-            const next = payload.new as ReadState;
-            return { ...prev, [next.user_id]: next };
-          });
-        },
-      )
-      .subscribe();
     return () => {
       cancel = true;
-      void supabase.removeChannel(ch);
     };
   }, [currentUserId]);
+
+  // Realtime subscription
+  useRealtimeChannel(
+    "brainstorm-read-state",
+    {
+      onPostgresChange: [
+        {
+          event: "*",
+          table: "brainstorm_read_state",
+          callback: (payload) => {
+            const r = (payload.new ?? payload.old) as Partial<ReadState> | null;
+            if (!r) return;
+            setReadStates((prev) => {
+              if (payload.eventType === "DELETE") {
+                const uid = r.user_id;
+                if (!uid) return prev;
+                const { [uid]: _, ...rest } = prev;
+                return rest;
+              }
+              const next = payload.new as ReadState;
+              return { ...prev, [next.user_id]: next };
+            });
+          },
+        },
+      ],
+    },
+    { deps: [currentUserId] },
+  );
 
   const getReadersFor = React.useCallback(
     (m: Message): ReadState[] => {

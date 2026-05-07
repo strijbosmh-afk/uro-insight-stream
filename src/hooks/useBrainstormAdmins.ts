@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AdminUser } from "@/components/brainstorm/types";
+import { useRealtimeChannel } from "@/hooks/useRealtimeChannel";
 
 export interface UseBrainstormAdminsResult {
   admins: AdminUser[];
@@ -47,12 +48,6 @@ export function useBrainstormAdmins(): UseBrainstormAdminsResult {
   const [admins, setAdmins] = React.useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
-
   const loadAdmins = React.useCallback(async () => {
     const { data: roles, error: rolesErr } = await supabase
       .from("user_roles")
@@ -84,23 +79,14 @@ export function useBrainstormAdmins(): UseBrainstormAdminsResult {
 
   React.useEffect(() => {
     void loadAdmins();
-    const ch = supabase
-      .channel(`brainstorm-profiles-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => void loadAdmins(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_roles" },
-        () => void loadAdmins(),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
   }, [loadAdmins]);
+
+  useRealtimeChannel("brainstorm-profiles", {
+    onPostgresChange: [
+      { event: "*", table: "profiles", callback: () => void loadAdmins() },
+      { event: "*", table: "user_roles", callback: () => void loadAdmins() },
+    ],
+  });
 
   const nameById = React.useMemo(() => {
     const map: Record<string, string> = {};
