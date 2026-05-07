@@ -58,17 +58,21 @@ function useBreadcrumb() {
     enabled: Boolean(sessionIdInPath),
   });
 
-  if (parts.length === 0) return ["UroFeed", "Dashboard"];
+  const root = { label: "UroFeed", to: "/" };
+  if (parts.length === 0) return [root, { label: "Dashboard", to: "/" }];
   return [
-    "UroFeed",
-    ...parts.map((p) => {
-      if (p === congressIdInPath && congress) return congress.shortCode;
-      if (p === sessionIdInPath && session) {
-        return session.title.length > 40
-          ? session.title.slice(0, 40) + "…"
-          : session.title;
-      }
-      return ROUTE_LABELS[p] ?? p;
+    root,
+    ...parts.map((p, idx) => {
+      let label: string;
+      if (p === congressIdInPath && congress) label = congress.shortCode;
+      else if (p === sessionIdInPath && session) {
+        label =
+          session.title.length > 40
+            ? session.title.slice(0, 40) + "…"
+            : session.title;
+      } else label = ROUTE_LABELS[p] ?? p;
+      const to = "/" + parts.slice(0, idx + 1).join("/");
+      return { label, to };
     }),
   ];
 }
@@ -117,23 +121,24 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       <nav className="flex items-center gap-1.5 text-[12px] min-w-0 flex-1 sm:flex-initial">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;
-          // On mobile, only show the last (current) crumb to save space.
           if (onOpenMobileNav && !last) return null;
+          const className =
+            "capitalize truncate " +
+            (last
+              ? "text-text-primary font-medium"
+              : "text-text-muted hover:text-text-primary transition-colors");
           return (
             <React.Fragment key={i}>
               {i > 0 && (
                 <ChevronRight className="w-3 h-3 text-text-muted shrink-0" />
               )}
-              <span
-                className={
-                  "capitalize truncate " +
-                  (last
-                    ? "text-text-primary font-medium"
-                    : "text-text-muted")
-                }
-              >
-                {c}
-              </span>
+              {last ? (
+                <span className={className}>{c.label}</span>
+              ) : (
+                <Link to={c.to} className={className}>
+                  {c.label}
+                </Link>
+              )}
             </React.Fragment>
           );
         })}
