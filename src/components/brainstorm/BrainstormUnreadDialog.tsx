@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-const SESSION_KEY = "brainstorm:unreadDialogShown";
+const SESSION_KEY_PREFIX = "brainstorm:unreadDialogShown:";
 
 /**
  * Shows a one-time popup per browser session to admins who have unread
@@ -32,10 +32,15 @@ export function BrainstormUnreadDialog() {
     if (evaluatedRef.current) return;
     if (pathname.startsWith("/configuration/brainstorm")) return;
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem(SESSION_KEY) === "1") return;
+    // Skip entirely if we don't have a user id — better than showing the
+    // dialog under a shared/static key to potentially the wrong account.
+    const userId = user.id;
+    if (!userId) return;
+    const key = `${SESSION_KEY_PREFIX}${userId}`;
+    if (sessionStorage.getItem(key) === "1") return;
     if (unread <= 0) return;
     evaluatedRef.current = true;
-    sessionStorage.setItem(SESSION_KEY, "1");
+    sessionStorage.setItem(key, "1");
     setOpen(true);
   }, [loading, isAdmin, user, unread, pathname]);
 

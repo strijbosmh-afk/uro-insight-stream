@@ -1,0 +1,1 @@
+ALTER TABLE public.brainstorm_read_state DROP COLUMN IF EXISTS user_display_name;

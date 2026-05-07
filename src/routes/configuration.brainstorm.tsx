@@ -62,7 +62,6 @@ type AdminUser = {
 
 type ReadState = {
   user_id: string;
-  user_display_name: string;
   last_read_at: string;
 };
 
@@ -120,6 +119,13 @@ function ChatRoom({
   const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
   const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  // Stable, unique suffix per component mount for realtime channel names.
+  // Avoids collisions when the same user has multiple tabs open.
+  const channelSuffixRef = React.useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
   const isTabVisibleRef = React.useRef(
     typeof document === "undefined" ? true : document.visibilityState === "visible",
   );
@@ -134,7 +140,6 @@ function ChatRoom({
     const { error } = await supabase.from("brainstorm_read_state").upsert(
       {
         user_id: currentUserId,
-        user_display_name: currentDisplayName,
         last_read_at: now,
         updated_at: now,
       },
@@ -194,7 +199,7 @@ function ChatRoom({
       setReactions(data as Reaction[]);
     })();
     const ch = supabase
-      .channel(`brainstorm-reactions-${Math.random().toString(36).slice(2)}`)
+      .channel(`brainstorm-reactions-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "brainstorm_message_reactions" },
@@ -249,7 +254,7 @@ function ChatRoom({
   React.useEffect(() => {
     void loadAdmins();
     const ch = supabase
-      .channel(`brainstorm-profiles-${Math.random().toString(36).slice(2)}`)
+      .channel(`brainstorm-profiles-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
@@ -270,26 +275,31 @@ function ChatRoom({
   React.useEffect(() => {
     let cancel = false;
     void (async () => {
-      const { data } = await supabase.from("brainstorm_read_state").select("*");
+      const { data } = await supabase
+        .from("brainstorm_read_state")
+        .select("user_id, last_read_at");
       if (cancel || !data) return;
       const map: Record<string, ReadState> = {};
       for (const r of data as ReadState[]) map[r.user_id] = r;
       setReadStates(map);
     })();
     const ch = supabase
-      .channel("brainstorm-read-state")
+      .channel(`brainstorm-read-state-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "brainstorm_read_state" },
         (payload) => {
-          const r = (payload.new ?? payload.old) as ReadState | null;
+          const r = (payload.new ?? payload.old) as Partial<ReadState> | null;
           if (!r) return;
           setReadStates((prev) => {
             if (payload.eventType === "DELETE") {
-              const { [r.user_id]: _, ...rest } = prev;
+              const uid = r.user_id;
+              if (!uid) return prev;
+              const { [uid]: _, ...rest } = prev;
               return rest;
             }
-            return { ...prev, [r.user_id]: payload.new as ReadState };
+            const next = payload.new as ReadState;
+            return { ...prev, [next.user_id]: next };
           });
         },
       )
@@ -303,7 +313,7 @@ function ChatRoom({
   // Realtime subscribe
   React.useEffect(() => {
     const ch = supabase
-      .channel("brainstorm-messages")
+      .channel(`brainstorm-messages-${channelSuffixRef.current}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "brainstorm_messages" },
@@ -334,7 +344,7 @@ function ChatRoom({
 
   // Presence (active admins + typing)
   React.useEffect(() => {
-    const ch = supabase.channel("brainstorm-presence", {
+    const ch = supabase.channel(`brainstorm-presence-${channelSuffixRef.current}`, {
       config: { presence: { key: currentUserId } },
     });
     presenceRef.current = ch;
@@ -397,13 +407,24 @@ function ChatRoom({
     if (!content) return;
     if (editing) {
       const original = editing;
+      // Snapshot for rollback if the update fails.
+      const snapshotMessages = messages;
+      const editedAt = new Date().toISOString();
       setEditing(null);
       setInput("");
+      // Optimistically apply the edit so the sender sees it immediately.
+      setMessages((prev) =>
+        prev.map((x) =>
+          x.id === original.id ? { ...x, content, edited_at: editedAt } : x,
+        ),
+      );
       const { error } = await supabase
         .from("brainstorm_messages")
-        .update({ content, edited_at: new Date().toISOString() })
+        .update({ content, edited_at: editedAt })
         .eq("id", original.id);
       if (error) {
+        // Roll back the optimistic edit.
+        setMessages(snapshotMessages);
         toast.error("Failed to save edit", { description: error.message });
         setEditing(original);
         setInput(content);
@@ -1047,7 +1068,7 @@ function MessageBubble({
                       <div className="space-y-0.5">
                         {readers.map((r) => (
                           <div key={r.user_id}>
-                            {displayNameFor(r.user_id, r.user_display_name)}
+                            {displayNameFor(r.user_id, "Unknown user")}
                           </div>
                         ))}
                       </div>
