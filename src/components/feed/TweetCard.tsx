@@ -66,6 +66,7 @@ interface Props {
   tweet: Tweet;
   source?: Source;
   isNew?: boolean;
+  isOpened?: boolean;
   onOpenThread?: (tweetId: string) => void;
 }
 
@@ -73,6 +74,7 @@ export const TweetCard = React.memo(function TweetCard({
   tweet,
   source,
   isNew,
+  isOpened,
   onOpenThread,
 }: Props) {
   const handle = source?.handle.replace(/^@/, "") ?? "unknown";
@@ -116,6 +118,8 @@ export const TweetCard = React.memo(function TweetCard({
           : "hover:border-accent/40",
         isReply && "border-l-2 border-l-accent/60",
         isNew && "tweet-new",
+        isOpened &&
+          "border-accent ring-2 ring-accent/60 shadow-[0_0_0_4px_color-mix(in_oklab,var(--accent)_15%,transparent)]",
       )}
       title={onOpenThread ? "Click to open thread" : undefined}
     >
