@@ -25,11 +25,11 @@ import { PresenceList } from "@/components/brainstorm/PresenceList";
 import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer";
 import { useBrainstormMessages } from "@/hooks/useBrainstormMessages";
 import { useBrainstormReactions } from "@/hooks/useBrainstormReactions";
+import { useBrainstormReadState } from "@/hooks/useBrainstormReadState";
 import {
   type Emoji,
   type Message,
   type AdminUser,
-  type ReadState,
 } from "@/components/brainstorm/types";
 
 export const Route = createFileRoute("/configuration/brainstorm")({
@@ -75,6 +75,8 @@ function ChatRoom({
     deleteMessage,
   } = useBrainstormMessages(currentUserId);
   const { reactions, toggleReaction } = useBrainstormReactions(currentUserId);
+  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+  const { getReadersFor } = useBrainstormReadState(currentUserId, latestMessageId);
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
@@ -83,7 +85,6 @@ function ChatRoom({
   const [typingUsers, setTypingUsers] = React.useState<string[]>([]);
   const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
   const [admins, setAdmins] = React.useState<AdminUser[]>([]);
-  const [readStates, setReadStates] = React.useState<Record<string, ReadState>>({});
 
   const messageListRef = React.useRef<MessageListHandle>(null);
   const composerRef = React.useRef<ComposerHandle>(null);
@@ -96,44 +97,6 @@ function ChatRoom({
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2),
   );
-  const isTabVisibleRef = React.useRef(
-    typeof document === "undefined" ? true : document.visibilityState === "visible",
-  );
-
-  // Mark read in DB whenever new messages arrive (and tab is visible)
-  const markRead = React.useCallback(async () => {
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-    const now = new Date().toISOString();
-    if (typeof window !== "undefined") {
-      localStorage.setItem("brainstorm:lastReadAt", now);
-    }
-    const { error } = await supabase.from("brainstorm_read_state").upsert(
-      {
-        user_id: currentUserId,
-        last_read_at: now,
-        updated_at: now,
-      },
-      { onConflict: "user_id" },
-    );
-    if (error) {
-      // Non-fatal; receipts will just be slightly stale
-      console.warn("Failed to update read state", error.message);
-    }
-  }, [currentUserId, currentDisplayName]);
-
-  React.useEffect(() => {
-    void markRead();
-  }, [markRead, messages.length]);
-
-  React.useEffect(() => {
-    if (typeof document === "undefined") return;
-    const onVis = () => {
-      isTabVisibleRef.current = document.visibilityState === "visible";
-      if (isTabVisibleRef.current) void markRead();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [markRead]);
 
   // Load admin user list (people with access) and keep it in sync with
   // profile changes so renames in the user profile show up immediately.
@@ -180,45 +143,6 @@ function ChatRoom({
       void supabase.removeChannel(ch);
     };
   }, [loadAdmins]);
-
-  // Load read states + subscribe
-  React.useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      const { data } = await supabase
-        .from("brainstorm_read_state")
-        .select("user_id, last_read_at");
-      if (cancel || !data) return;
-      const map: Record<string, ReadState> = {};
-      for (const r of data as ReadState[]) map[r.user_id] = r;
-      setReadStates(map);
-    })();
-    const ch = supabase
-      .channel(`brainstorm-read-state-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "brainstorm_read_state" },
-        (payload) => {
-          const r = (payload.new ?? payload.old) as Partial<ReadState> | null;
-          if (!r) return;
-          setReadStates((prev) => {
-            if (payload.eventType === "DELETE") {
-              const uid = r.user_id;
-              if (!uid) return prev;
-              const { [uid]: _, ...rest } = prev;
-              return rest;
-            }
-            const next = payload.new as ReadState;
-            return { ...prev, [next.user_id]: next };
-          });
-        },
-      )
-      .subscribe();
-    return () => {
-      cancel = true;
-      void supabase.removeChannel(ch);
-    };
-  }, []);
 
   // Presence (active admins + typing)
   React.useEffect(() => {
@@ -307,19 +231,6 @@ function ChatRoom({
     setConfirmDelete(null);
     await deleteMessage(m.id);
   };
-
-  const getReadersFor = React.useCallback(
-    (m: Message): ReadState[] => {
-      const created = new Date(m.created_at).getTime();
-      const out: ReadState[] = [];
-      for (const r of Object.values(readStates)) {
-        if (r.user_id === m.user_id) continue;
-        if (new Date(r.last_read_at).getTime() >= created) out.push(r);
-      }
-      return out;
-    },
-    [readStates],
-  );
 
   // Live name lookup so renames in profiles propagate everywhere in the
   // chatroom (message headers, reply previews, read receipts), even though
