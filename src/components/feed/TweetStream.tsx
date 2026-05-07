@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUp, Pause, Play, RefreshCw, Radio } from "lucide-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
 import { TweetCard } from "./TweetCard";
@@ -17,7 +18,19 @@ export function TweetStream({ data }: { data: FeedDataset }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = React.useState(true);
   const [pendingNew, setPendingNew] = React.useState(0);
-  const [threadId, setThreadId] = React.useState<string | null>(null);
+  const search = useSearch({ strict: false }) as unknown as { thread?: string };
+  const navigate = useNavigate();
+  const threadId: string | null = search.thread ?? null;
+  const setThreadId = React.useCallback(
+    (id: string | null) => {
+      navigate({
+        to: "/feed",
+        search: (prev: Record<string, unknown>) => ({ ...prev, thread: id ?? undefined }),
+        replace: false,
+      });
+    },
+    [navigate],
+  );
 
   // Track which tweet IDs have been seen so we can:
   // 1. tag fresh arrivals with `isNew` for the cyan pulse

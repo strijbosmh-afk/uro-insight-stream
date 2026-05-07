@@ -1,12 +1,13 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, MessagesSquare } from "lucide-react";
+import { AlertTriangle, Check, Copy, MessagesSquare, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { feedService } from "@/services/feedService";
 import { TweetCard } from "./TweetCard";
 import type { Source } from "@/types";
+import { toast } from "sonner";
 
 interface Props {
   tweetId: string | null;
@@ -16,6 +17,50 @@ interface Props {
 
 export function ThreadDialog({ tweetId, sourcesById, onClose }: Props) {
   const open = !!tweetId;
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setCopied(false);
+  }, [open, tweetId]);
+
+  const shareUrl = React.useMemo(() => {
+    if (!tweetId || typeof window === "undefined") return "";
+    const u = new URL(window.location.href);
+    u.pathname = "/feed";
+    u.search = "";
+    u.searchParams.set("thread", tweetId);
+    u.hash = "";
+    return u.toString();
+  }, [tweetId]);
+
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success("Link copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
+
+  const handleShare = async () => {
+    if (!shareUrl) return;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "Tweet thread", url: shareUrl });
+        return;
+      } catch {
+        // user cancelled or share failed — fall back to copy
+      }
+    }
+    handleCopy();
+  };
+
+  const canNativeShare =
+    typeof navigator !== "undefined" && typeof navigator.share === "function";
+
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["tweet-thread", tweetId],
     enabled: open && !!tweetId,
@@ -27,10 +72,49 @@ export function ThreadDialog({ tweetId, sourcesById, onClose }: Props) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 bg-panel border-border">
         <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
-          <DialogTitle className="text-[12px] font-mono uppercase tracking-wider text-text-muted flex items-center gap-2">
-            <MessagesSquare className="w-3.5 h-3.5 text-accent" />
-            Thread {data ? `· ${data.length} ${data.length === 1 ? "post" : "posts"}` : ""}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-[12px] font-mono uppercase tracking-wider text-text-muted flex items-center gap-2 flex-1 min-w-0">
+              <MessagesSquare className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span className="truncate">
+                Thread {data ? `· ${data.length} ${data.length === 1 ? "post" : "posts"}` : ""}
+              </span>
+            </DialogTitle>
+            <div className="flex items-center gap-1 shrink-0 mr-6">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                disabled={!tweetId}
+                className="h-7 px-2 text-[11px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary"
+                title="Copy link to this thread"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 mr-1 text-accent" />
+                    copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3 mr-1" />
+                    copy link
+                  </>
+                )}
+              </Button>
+              {canNativeShare && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  disabled={!tweetId}
+                  className="h-7 px-2 text-[11px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary"
+                  title="Share thread"
+                >
+                  <Share2 className="w-3 h-3 mr-1" />
+                  share
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
         <div className="flex-1 overflow-auto ios-scroll p-3 space-y-2">
           {isLoading && (

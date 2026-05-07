@@ -8,6 +8,9 @@ import { useFilteredTweets } from "@/components/feed/useFilteredTweets";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Live Feed — UroFeed" }] }),
+  validateSearch: (search: Record<string, unknown>): { thread?: string } => ({
+    thread: typeof search.thread === "string" ? (search.thread as string) : undefined,
+  }),
   component: FeedPage,
 });
 
