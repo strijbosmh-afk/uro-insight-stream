@@ -547,48 +547,21 @@ function ChatRoom({
         </div>
 
         {/* Messages */}
-        <div
-          ref={scrollRef}
-          onScroll={onScroll}
-          className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
-        >
-          {loading ? (
-            <div className="text-text-muted text-sm">Loading messages…</div>
-          ) : items.length === 0 ? (
-            <EmptyState />
-          ) : (
-            items.map((it) =>
-              it.type === "date" ? (
-                <div key={it.key} className="flex justify-center my-3">
-                  <span className="text-[10px] uppercase tracking-wider font-mono text-text-muted bg-panel-elevated/60 border border-border px-2 py-0.5 rounded-full">
-                    {it.label}
-                  </span>
-                </div>
-              ) : (
-                <MessageItem
-                  key={it.key}
-                  msg={it.msg}
-                  parent={it.parent}
-                  showHeader={it.showHeader}
-                  isOwn={it.msg.user_id === currentUserId}
-                  currentUserId={currentUserId}
-                  reactions={reactions.filter((r) => r.message_id === it.msg.id)}
-                  readers={getReadersFor(it.msg)}
-                  totalOtherAdmins={Math.max(admins.length - 1, 0)}
-                  displayNameFor={displayNameFor}
-                  onReply={() => startReply(it.msg)}
-                  onEdit={() => startEdit(it.msg)}
-                  onDelete={() => setConfirmDelete(it.msg)}
-                  onReact={(e) => toggleReaction(it.msg, e)}
-                  onJumpTo={(id) => scrollToMessage(id)}
-                  registerRef={(el) => {
-                    messageRefs.current[it.msg.id] = el;
-                  }}
-                />
-              ),
-            )
-          )}
-        </div>
+        <MessageList
+          ref={messageListRef}
+          messages={messages}
+          reactions={reactions}
+          search={search}
+          loading={loading}
+          currentUserId={currentUserId}
+          totalOtherAdmins={Math.max(admins.length - 1, 0)}
+          getReadersFor={getReadersFor}
+          displayNameFor={displayNameFor}
+          onReply={startReply}
+          onEdit={startEdit}
+          onDelete={(m) => setConfirmDelete(m)}
+          onReact={toggleReaction}
+        />
 
         {/* Typing indicator */}
         {typingUsers.length > 0 && (
