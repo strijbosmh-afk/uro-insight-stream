@@ -22,10 +22,12 @@ function graphemeLength(s: string): number {
 export const getXConnectionStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data, error } = await supabase
-      .from("user_x_connection_status")
-      .select("*")
+    const { userId } = context;
+    const { data, error } = await supabaseAdmin
+      .from("user_x_credentials")
+      .select(
+        "user_id, x_user_id, x_username, last_verified_at, last_post_at, scope_write, post_count_today, post_count_window_start, revoked_at"
+      )
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);

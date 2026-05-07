@@ -33,6 +33,8 @@ import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
 
 const DAILY_CAP = 50;
 
+type XConnectionStatus = NonNullable<Awaited<ReturnType<typeof getXConnectionStatus>>>;
+
 export function XSettings() {
   const qc = useQueryClient();
   const { data: status, isLoading } = useQuery({
@@ -41,12 +43,19 @@ export function XSettings() {
   });
 
   const [editing, setEditing] = React.useState(false);
+  const [justConnectedStatus, setJustConnectedStatus] = React.useState<XConnectionStatus | null>(null);
+
+  React.useEffect(() => {
+    if (status) setJustConnectedStatus(null);
+  }, [status]);
 
   if (isLoading) {
     return <div className="text-text-muted text-sm">Loading…</div>;
   }
 
-  const connected = !!status && !status.revoked_at;
+  const visibleStatus = status ?? justConnectedStatus;
+  const connectedStatus = visibleStatus && !visibleStatus.revoked_at ? visibleStatus : null;
+  const connected = !!connectedStatus;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -60,17 +69,19 @@ export function XSettings() {
 
       {connected && !editing ? (
         <ConnectedView
-          status={status}
+          status={connectedStatus}
           onReplace={() => setEditing(true)}
           onDisconnect={async () => {
             await disconnectX();
             toast.success("Disconnected from X");
+            setJustConnectedStatus(null);
             qc.invalidateQueries({ queryKey: ["x-connection-status"] });
           }}
         />
       ) : (
         <ConnectForm
-          onConnected={() => {
+          onConnected={(nextStatus) => {
+            setJustConnectedStatus(nextStatus);
             setEditing(false);
             qc.invalidateQueries({ queryKey: ["x-connection-status"] });
           }}
@@ -85,7 +96,7 @@ function ConnectForm({
   onConnected,
   onCancel,
 }: {
-  onConnected: () => void;
+  onConnected: (status: XConnectionStatus) => void;
   onCancel?: () => void;
 }) {
   const [consumerKey, setConsumerKey] = React.useState("");
@@ -105,7 +116,17 @@ function ConnectForm({
         setConsumerSecret("");
         setAccessToken("");
         setAccessTokenSecret("");
-        onConnected();
+        onConnected({
+          user_id: "",
+          x_user_id: res.xUserId,
+          x_username: res.xUsername,
+          last_verified_at: new Date().toISOString(),
+          last_post_at: null,
+          scope_write: true,
+          post_count_today: 0,
+          post_count_window_start: null,
+          revoked_at: null,
+        });
       } else {
         toast.error(res.message);
       }
