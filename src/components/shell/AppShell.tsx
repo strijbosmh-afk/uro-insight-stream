@@ -8,6 +8,7 @@ import { useOnboardingGate } from "@/hooks/useOnboardingGate";
 import { OnboardingWizard } from "@/components/wizard/OnboardingWizard";
 import { ResumeBanner } from "@/components/wizard/ResumeBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BrainstormUnreadDialog } from "@/components/brainstorm/BrainstormUnreadDialog";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -97,6 +98,7 @@ export function AppShell() {
       </div>
       {!isMobile && <StatusBar />}
       {isMobile && <div className="safe-pb bg-panel" />}
+      <BrainstormUnreadDialog />
       {wizardOpen && (
         <OnboardingWizard
           initialStep={gate.currentStep}
