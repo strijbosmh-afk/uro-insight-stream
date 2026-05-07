@@ -52,13 +52,13 @@ function bucketStart(now: Date, windowMs: number): Date {
 
 async function authenticate(request: Request): Promise<{ userId: string } | Response> {
   const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  if (!auth?.startsWith("Bearer ")) return jsonResponse({ error: "unauthorized" }, { status: 401 }, request);
   const token = auth.slice(7);
   const client = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await client.auth.getClaims(token);
-  if (error || !data?.claims?.sub) return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  if (error || !data?.claims?.sub) return jsonResponse({ error: "unauthorized" }, { status: 401 }, request);
   return { userId: data.claims.sub as string };
 }
 
@@ -236,12 +236,12 @@ export const Route = createFileRoute("/api/suggest-congress")({
         try {
           body = (await request.json()) as { query?: unknown };
         } catch {
-          return jsonResponse({ error: "invalid_json" }, { status: 400 });
+          return jsonResponse({ error: "invalid_json" }, { status: 400 }, request);
         }
         const raw = typeof body.query === "string" ? body.query : "";
         const query = normalizeQuery(raw);
         if (query.length < 3) {
-          return jsonResponse({ matches: [], too_short: true });
+          return jsonResponse({ matches: [], too_short: true }, {}, request);
         }
 
         // cache
@@ -276,7 +276,7 @@ export const Route = createFileRoute("/api/suggest-congress")({
 
         const llm = await callLLM(query);
         if (!llm) {
-          return jsonResponse({ matches: [], error: "lookup_failed" });
+          return jsonResponse({ matches: [], error: "lookup_failed" }, {}, request);
         }
 
         await supabaseAdmin
