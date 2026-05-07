@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,6 @@ import {
   switchActiveXAccount,
 } from "@/serverFns/x-credentials";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
-import { CheckCircle2 as Check, Plus, RefreshCw } from "lucide-react";
 
 const DAILY_CAP = 50;
 
