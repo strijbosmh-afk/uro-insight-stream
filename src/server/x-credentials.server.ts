@@ -2,7 +2,7 @@
 // Uses AES-256-GCM via Node's crypto (Worker-compatible with nodejs_compat).
 // Plaintext secrets must NEVER leave this module.
 
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 import OAuth from "oauth-1.0a";
 import { createHmac } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -14,9 +14,7 @@ function getKey(): Buffer {
   if (key.length !== 32) {
     // Allow raw 32-char strings as fallback; otherwise derive via SHA-256.
     if (b64.length === 32) return Buffer.from(b64, "utf8");
-    return Buffer.from(
-      require("crypto").createHash("sha256").update(b64).digest()
-    );
+    return Buffer.from(createHash("sha256").update(b64).digest());
   }
   return key;
 }
