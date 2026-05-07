@@ -18,14 +18,14 @@ export function TweetStream({ data }: { data: FeedDataset }) {
   const parentRef = React.useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = React.useState(true);
   const [pendingNew, setPendingNew] = React.useState(0);
-  const search = useSearch({ from: "/feed", strict: false }) as { thread?: string };
+  const search = useSearch({ from: "/feed", strict: false }) as unknown as { thread?: string };
   const navigate = useNavigate();
-  const threadId = search.thread ?? null;
+  const threadId: string | null = search.thread ?? null;
   const setThreadId = React.useCallback(
     (id: string | null) => {
       navigate({
         to: "/feed",
-        search: (prev) => ({ ...prev, thread: id ?? undefined }),
+        search: (prev: Record<string, unknown>) => ({ ...prev, thread: id ?? undefined }),
         replace: false,
       });
     },
