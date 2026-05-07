@@ -155,7 +155,7 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
   const { error } = await supabaseAdmin
     .from("user_x_credentials")
     .upsert(
-      {
+      [{
         user_id: input.userId,
         auth_mode: "oauth1_byok",
         consumer_key: input.consumerKey,
@@ -167,7 +167,7 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
         scope_write: true, // provisional; first failed POST will surface read-only tokens
         last_verified_at: new Date().toISOString(),
         revoked_at: null,
-      },
+      }],
       { onConflict: "user_id" }
     );
   if (error) {
