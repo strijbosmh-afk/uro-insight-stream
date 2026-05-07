@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search, Users, Check, CheckCheck } from "lucide-react";
+import { Lightbulb, Send, Smile, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -24,46 +24,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🚀", "💡"] as const;
-type Emoji = (typeof REACTION_EMOJIS)[number];
-
-type Message = {
-  id: string;
-  user_id: string;
-  user_display_name: string;
-  content: string;
-  reply_to_id: string | null;
-  created_at: string;
-  edited_at: string | null;
-  deleted_at: string | null;
-};
-
-type Reaction = {
-  id: string;
-  message_id: string;
-  user_id: string;
-  emoji: Emoji;
-  created_at: string;
-};
-
-type AdminUser = {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-};
-
-type ReadState = {
-  user_id: string;
-  last_read_at: string;
-};
+import { MessageItem } from "@/components/brainstorm/MessageItem";
+import { PresenceList } from "@/components/brainstorm/PresenceList";
+import {
+  REACTION_EMOJIS,
+  type Emoji,
+  type Message,
+  type Reaction,
+  type AdminUser,
+  type ReadState,
+} from "@/components/brainstorm/types";
 
 export const Route = createFileRoute("/configuration/brainstorm")({
   head: () => ({ meta: [{ title: "Brainstorm — UroFeed" }] }),
