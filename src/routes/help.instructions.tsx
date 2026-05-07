@@ -189,11 +189,45 @@ function InstructionsPage() {
   const [query, setQuery] = React.useState("");
   const [showTop, setShowTop] = React.useState(false);
   const [tocOpen, setTocOpen] = React.useState(false);
+  const [activeId, setActiveId] = React.useState<string>(SECTIONS[0]?.id ?? "");
 
   React.useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 600);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  React.useEffect(() => {
+    const ids = SECTIONS.map((s) => s.id);
+    const elements = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => !!el);
+    if (elements.length === 0) return;
+
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            visible.set(e.target.id, e.intersectionRatio);
+          } else {
+            visible.delete(e.target.id);
+          }
+        }
+        if (visible.size > 0) {
+          // Pick the topmost visible section in document order.
+          for (const id of ids) {
+            if (visible.has(id)) {
+              setActiveId(id);
+              break;
+            }
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] },
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
   }, []);
 
   const filtered = React.useMemo(() => {
@@ -259,8 +293,15 @@ function InstructionsPage() {
                   <button
                     type="button"
                     onClick={() => scrollTo(s.id)}
-                    className="w-full text-left text-[13px] text-text-muted hover:text-text-primary py-1"
+                    className={`relative w-full text-left text-[13px] py-1 pl-3 rounded-sm transition-colors ${
+                      activeId === s.id
+                        ? "text-text-primary bg-panel-elevated"
+                        : "text-text-muted hover:text-text-primary"
+                    }`}
                   >
+                    {activeId === s.id && (
+                      <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-accent rounded-full" />
+                    )}
                     <span className="font-mono text-accent mr-2">{s.number}.</span>
                     {s.title}
                   </button>
