@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,42 +344,7 @@ function ConnectForm({
 
   return (
     <div className="space-y-4">
-      <Accordion type="single" collapsible>
-        <AccordionItem value="how" className="border border-border rounded-[3px] px-3">
-          <AccordionTrigger className="text-sm">
-            How to get these credentials
-          </AccordionTrigger>
-          <AccordionContent className="text-sm text-text-muted space-y-2">
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>
-                Go to the{" "}
-                <a
-                  href="https://developer.x.com/en/portal/dashboard"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent inline-flex items-center gap-1"
-                >
-                  X Developer Portal <ExternalLink className="w-3 h-3" />
-                </a>{" "}
-                and create (or open) an App.
-              </li>
-              <li>
-                Under <b>User authentication settings</b>, set permissions to{" "}
-                <b>Read and write</b>.
-              </li>
-              <li>
-                Under <b>Keys and tokens</b>, generate (or reveal) the{" "}
-                <b>Consumer Keys</b> — copy Key + Secret.
-              </li>
-              <li>
-                Generate the <b>Access Token and Secret</b> for your own user.
-                These must be created <i>after</i> Read+Write is enabled.
-              </li>
-              <li>Paste all four values below.</li>
-            </ol>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      <HelpPanel />
 
       <div className="grid gap-3">
         <Field label="Consumer Key" value={consumerKey} onChange={setConsumerKey} />
