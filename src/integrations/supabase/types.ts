@@ -199,6 +199,27 @@ export type Database = {
           },
         ]
       }
+      brainstorm_read_state: {
+        Row: {
+          last_read_at: string
+          updated_at: string
+          user_display_name: string
+          user_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          updated_at?: string
+          user_display_name: string
+          user_id: string
+        }
+        Update: {
+          last_read_at?: string
+          updated_at?: string
+          user_display_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cancer_area_signals: {
         Row: {
           cancer_area_id: string
