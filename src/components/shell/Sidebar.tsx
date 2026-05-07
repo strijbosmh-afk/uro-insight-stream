@@ -18,7 +18,6 @@ import {
   Users2,
   BookOpen,
   AtSign,
-  MailCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -70,7 +69,6 @@ const ADMIN_SECTION: NavSection = {
     { label: "Groups", to: "/admin/groups", icon: Users2 },
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
     { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
-    { label: "Email diagnostics", to: "/admin/email-diagnostics", icon: MailCheck },
   ],
 };
 
