@@ -223,7 +223,7 @@ function ConnectedView({
     x_username: string | null;
     last_verified_at: string | null;
     last_post_at: string | null;
-    scope_write: boolean;
+    scope_write: boolean | null;
     post_count_today: number | null;
     post_count_window_start: string | null;
   };
