@@ -1,0 +1,1 @@
+UPDATE public.profiles SET display_name = 'Michiel Strijbos' WHERE email = 'strijbosmh@gmail.com';
