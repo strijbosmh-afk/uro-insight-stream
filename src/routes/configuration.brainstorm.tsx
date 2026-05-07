@@ -175,37 +175,51 @@ function ChatRoom({
     };
   }, []);
 
-  // Load admin user list (people with access)
-  React.useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      const { data: roles, error: rolesErr } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin");
-      if (cancel || rolesErr) return;
-      const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
-      if (ids.length === 0) {
-        setAdmins([]);
-        return;
-      }
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, display_name, email, avatar_url")
-        .in("id", ids);
-      if (cancel) return;
-      setAdmins(
-        (profs ?? []).sort((a, b) =>
-          (a.display_name ?? a.email ?? "").localeCompare(
-            b.display_name ?? b.email ?? "",
-          ),
-        ) as AdminUser[],
-      );
-    })();
-    return () => {
-      cancel = true;
-    };
+  // Load admin user list (people with access) and keep it in sync with
+  // profile changes so renames in the user profile show up immediately.
+  const loadAdmins = React.useCallback(async () => {
+    const { data: roles, error: rolesErr } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+    if (rolesErr) return;
+    const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
+    if (ids.length === 0) {
+      setAdmins([]);
+      return;
+    }
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, display_name, email, avatar_url")
+      .in("id", ids);
+    setAdmins(
+      (profs ?? []).sort((a, b) =>
+        (a.display_name ?? a.email ?? "").localeCompare(
+          b.display_name ?? b.email ?? "",
+        ),
+      ) as AdminUser[],
+    );
   }, []);
+
+  React.useEffect(() => {
+    void loadAdmins();
+    const ch = supabase
+      .channel(`brainstorm-profiles-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => void loadAdmins(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles" },
+        () => void loadAdmins(),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [loadAdmins]);
 
   // Load read states + subscribe
   React.useEffect(() => {
