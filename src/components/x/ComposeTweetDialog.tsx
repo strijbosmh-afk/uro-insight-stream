@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, ExternalLink, AlertCircle } from "lucide-react";
+import { Loader2, Send, ExternalLink, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getXConnectionStatus,
   postTweet,
@@ -44,9 +45,16 @@ interface Props {
 export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply }: Props) {
   const qc = useQueryClient();
   const [text, setText] = React.useState(initialText);
+  const [suggestions, setSuggestions] = React.useState<
+    { text: string; angle: string }[]
+  >([]);
+  const [suggestLoading, setSuggestLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setText(initialText || (reply ? `@${reply.authorHandle} ` : ""));
+    if (open) {
+      setText(initialText || (reply ? `@${reply.authorHandle} ` : ""));
+      setSuggestions([]);
+    }
   }, [open, initialText, reply]);
 
   const { data: status, isLoading: statusLoading } = useQuery({
@@ -84,6 +92,27 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
   });
 
   const notConnected = !statusLoading && !status;
+
+  async function handleSuggest() {
+    setSuggestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-summarize", {
+        body: {
+          mode: "suggest_replies",
+          parentAuthor: reply?.authorHandle,
+          parentText: reply?.text ?? "",
+          draft: text,
+        },
+      });
+      if (error) throw new Error(error.message || "AI request failed");
+      if (!data?.ok) throw new Error(data?.error || "AI request failed");
+      setSuggestions(data.replies ?? []);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSuggestLoading(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,6 +180,45 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 {len}/280
               </span>
             </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSuggest}
+                disabled={suggestLoading || mutation.isPending}
+                className="text-[11px]"
+              >
+                {suggestLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                AI suggest {reply ? "replies" : "drafts"}
+              </Button>
+            </div>
+            {suggestions.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Suggestions — click to insert
+                </div>
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setText(s.text)}
+                    className="w-full text-left border border-border rounded-[3px] p-2 bg-panel-elevated hover:border-accent hover:bg-panel transition-colors"
+                  >
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-accent mb-1">
+                      {s.angle}
+                    </div>
+                    <div className="text-[12px] text-text-primary whitespace-pre-wrap">
+                      {s.text}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <DialogFooter>
               <Button
                 variant="ghost"

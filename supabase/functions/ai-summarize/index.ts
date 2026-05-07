@@ -13,12 +13,17 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 
 interface SummarizeBody {
-  mode?: "summarize" | "ping";
+  mode?: "summarize" | "ping" | "suggest_replies";
   model?: string;
   systemPrompt?: string;
   userPrompt?: string;
   // For ping
   message?: string;
+  // For suggest_replies
+  parentAuthor?: string;
+  parentText?: string;
+  draft?: string;
+  tone?: string;
 }
 
 const SUMMARY_TOOL = {
@@ -123,6 +128,86 @@ Deno.serve(async (req) => {
       const text =
         data?.choices?.[0]?.message?.content ?? "(no content)";
       return jsonResponse({ ok: true, model, text });
+    }
+
+    if (mode === "suggest_replies") {
+      const parentAuthor = body.parentAuthor || "the author";
+      const parentText = body.parentText || "";
+      const draft = body.draft || "";
+      const tone = body.tone || "professional, collegial";
+      const sys =
+        "You are a clinician on X drafting reply tweets. Write concise, substantive replies (<=270 chars). No hashtags spam, no emojis unless natural, no @mentions (the platform adds them).";
+      const user = [
+        `Parent tweet by @${parentAuthor}:`,
+        parentText,
+        "",
+        draft ? `User's current draft (improve/vary, do not just echo):\n${draft}` : "",
+        "",
+        `Tone: ${tone}.`,
+        "Generate exactly 3 distinct reply options with different angles (e.g. agree+add, ask a question, offer counterpoint).",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const tool = {
+        type: "function",
+        function: {
+          name: "emit_replies",
+          description: "Return 3 reply tweet drafts.",
+          parameters: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              replies: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    text: { type: "string" },
+                    angle: { type: "string" },
+                  },
+                  required: ["text", "angle"],
+                },
+              },
+            },
+            required: ["replies"],
+          },
+        },
+      };
+      const resp = await fetch(GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: user },
+          ],
+          tools: [tool],
+          tool_choice: { type: "function", function: { name: "emit_replies" } },
+        }),
+      });
+      if (!resp.ok) return passThroughError(resp);
+      const data = await resp.json();
+      const call =
+        data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+      if (!call) {
+        return jsonResponse({ error: "No tool call in response" }, 502);
+      }
+      let parsed: { replies?: { text: string; angle: string }[] };
+      try {
+        parsed = JSON.parse(call);
+      } catch {
+        return jsonResponse({ error: "Failed to parse tool call JSON" }, 502);
+      }
+      return jsonResponse({
+        ok: true,
+        model,
+        replies: (parsed.replies ?? []).slice(0, 3),
+      });
     }
 
     // summarize mode
