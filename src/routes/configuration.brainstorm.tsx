@@ -483,6 +483,19 @@ function ChatRoom({
     return out;
   }, [filtered, messages]);
 
+  const getReadersFor = React.useCallback(
+    (m: Message): ReadState[] => {
+      const created = new Date(m.created_at).getTime();
+      const out: ReadState[] = [];
+      for (const r of Object.values(readStates)) {
+        if (r.user_id === m.user_id) continue;
+        if (new Date(r.last_read_at).getTime() >= created) out.push(r);
+      }
+      return out;
+    },
+    [readStates],
+  );
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-full min-h-0 -m-3 sm:-m-3">
