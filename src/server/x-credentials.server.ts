@@ -159,9 +159,9 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
         user_id: input.userId,
         auth_mode: "oauth1_byok",
         consumer_key: input.consumerKey,
-        consumer_secret_encrypted: consumerSecretEnc,
+        consumer_secret_encrypted: consumerSecretEnc as unknown as string,
         access_token: input.accessToken,
-        access_token_secret_encrypted: accessSecretEnc,
+        access_token_secret_encrypted: accessSecretEnc as unknown as string,
         x_user_id: json.data.id,
         x_username: json.data.username,
         scope_write: true, // provisional; first failed POST will surface read-only tokens
