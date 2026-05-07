@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ExternalLink, Trash2, Send, Plus, RefreshCw, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,42 +344,7 @@ function ConnectForm({
 
   return (
     <div className="space-y-4">
-      <Accordion type="single" collapsible>
-        <AccordionItem value="how" className="border border-border rounded-[3px] px-3">
-          <AccordionTrigger className="text-sm">
-            How to get these credentials
-          </AccordionTrigger>
-          <AccordionContent className="text-sm text-text-muted space-y-2">
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>
-                Go to the{" "}
-                <a
-                  href="https://developer.x.com/en/portal/dashboard"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent inline-flex items-center gap-1"
-                >
-                  X Developer Portal <ExternalLink className="w-3 h-3" />
-                </a>{" "}
-                and create (or open) an App.
-              </li>
-              <li>
-                Under <b>User authentication settings</b>, set permissions to{" "}
-                <b>Read and write</b>.
-              </li>
-              <li>
-                Under <b>Keys and tokens</b>, generate (or reveal) the{" "}
-                <b>Consumer Keys</b> — copy Key + Secret.
-              </li>
-              <li>
-                Generate the <b>Access Token and Secret</b> for your own user.
-                These must be created <i>after</i> Read+Write is enabled.
-              </li>
-              <li>Paste all four values below.</li>
-            </ol>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      <HelpPanel />
 
       <div className="grid gap-3">
         <Field label="Consumer Key" value={consumerKey} onChange={setConsumerKey} />
@@ -413,6 +378,168 @@ function ConnectForm({
             "Connect"
           )}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+  return (
+    <code className="font-mono text-[12px] bg-panel-elevated border border-border rounded px-1.5 py-0.5 text-text-primary">
+      {children}
+    </code>
+  );
+}
+
+function StepBadge({ n }: { n: number }) {
+  return (
+    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent text-accent-foreground text-xs font-semibold shrink-0">
+      {n}
+    </span>
+  );
+}
+
+function HelpPanel() {
+  return (
+    <Accordion type="single" collapsible defaultValue="how">
+      <AccordionItem value="how" className="border border-border rounded-[3px] px-3">
+        <AccordionTrigger className="text-sm">
+          How to get these credentials{" "}
+          <span className="text-text-muted ml-2">(~3 minutes)</span>
+        </AccordionTrigger>
+        <AccordionContent className="text-sm text-text-muted space-y-4 pt-2">
+          <div className="flex gap-2 items-start border border-warning/40 bg-warning/10 rounded-[3px] p-3">
+            <Info className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+            <p className="text-text-primary text-xs leading-relaxed">
+              UroFeed uses <b>OAuth 1.0a</b> — <b>NOT</b> OAuth 2.0. Ignore any
+              "Client ID / Client Secret" dialogs you see in the X portal; you
+              need four different values listed below.
+            </p>
+          </div>
+
+          <Step n={1} title="Open or create your app">
+            <p>
+              Go to the{" "}
+              <a
+                href="https://developer.x.com/en/portal/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent inline-flex items-center gap-1"
+              >
+                X Developer Portal <ExternalLink className="w-3 h-3" />
+              </a>{" "}
+              → Projects & Apps → select your app (or create one inside a
+              Project).
+            </p>
+          </Step>
+
+          <Step n={2} title="Enable write access FIRST (order matters)">
+            <p>
+              In your app, scroll to <b>User authentication settings</b> → click{" "}
+              <b>Set up</b>.
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-1">
+              <li>
+                App permissions: select <b>Read and write</b>
+              </li>
+              <li>
+                Type of App: select <b>Web App, Automated App or Bot</b>
+              </li>
+              <li>
+                Callback URI: <Code>https://localhost</Code> (any valid URL
+                works — UroFeed doesn't use it)
+              </li>
+              <li>
+                Website URL: your site, or <Code>https://localhost</Code>
+              </li>
+              <li>Save.</li>
+            </ul>
+            <div className="flex gap-2 items-start border border-destructive/40 bg-destructive/10 rounded-[3px] p-3 mt-3">
+              <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-text-primary text-xs leading-relaxed">
+                Skipping or delaying this step is the <b>#1 reason Connect
+                fails</b>. Access Tokens are permanently locked to whatever
+                permission level exists when they're generated.
+              </p>
+            </div>
+          </Step>
+
+          <Step n={3} title="Get your Consumer Key + Secret">
+            <p>
+              Go to the <b>Keys and tokens</b> tab → <b>Consumer Keys</b>{" "}
+              section → click <b>Regenerate</b>.
+            </p>
+            <p className="mt-1">
+              Copy <b>BOTH</b> values into the fields below immediately — the
+              Secret is shown only once.
+            </p>
+          </Step>
+
+          <Step n={4} title="Generate Access Token + Secret">
+            <p>
+              Same page, <b>Authentication Tokens</b> section →{" "}
+              <b>Access Token and Secret</b> → click <b>Generate</b> (or
+              Regenerate if one already exists).
+            </p>
+            <p className="mt-1">
+              Verify the token shows <Code>Read and Write</Code> beneath it. If
+              it says <Code>Read</Code> only, return to Step 2.
+            </p>
+            <p className="mt-1">
+              Copy <b>BOTH</b> values immediately — the Secret is shown only
+              once.
+            </p>
+          </Step>
+
+          <Step n={5} title="Paste all four values into the form below and click Connect.">
+            <></>
+          </Step>
+
+          <Accordion type="single" collapsible>
+            <AccordionItem
+              value="trouble"
+              className="border border-border rounded-[3px] px-3"
+            >
+              <AccordionTrigger className="text-sm">
+                Troubleshooting
+              </AccordionTrigger>
+              <AccordionContent className="text-xs text-text-muted space-y-2 pt-2">
+                <p>
+                  <b>401 Unauthorized:</b> wrong key, secret, or trailing
+                  whitespace when pasting. Re-copy carefully.
+                </p>
+                <p>
+                  <b>403 Forbidden:</b> Access Token was generated before
+                  Read+Write was enabled. Regenerate it (Step 4).
+                </p>
+                <p>
+                  <b>453:</b> your X API tier doesn't permit posting. Upgrade
+                  to Basic or Pro tier at developer.x.com.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+function Step({
+  n,
+  title,
+  children,
+}: {
+  n: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-3">
+      <StepBadge n={n} />
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="text-text-primary font-medium text-sm">{title}</div>
+        <div className="text-xs leading-relaxed">{children}</div>
       </div>
     </div>
   );
