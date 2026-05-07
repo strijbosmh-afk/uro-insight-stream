@@ -26,6 +26,7 @@ import { Composer, type ComposerHandle } from "@/components/brainstorm/Composer"
 import { useBrainstormMessages } from "@/hooks/useBrainstormMessages";
 import { useBrainstormReactions } from "@/hooks/useBrainstormReactions";
 import { useBrainstormReadState } from "@/hooks/useBrainstormReadState";
+import { useBrainstormPresence } from "@/hooks/useBrainstormPresence";
 import {
   type Emoji,
   type Message,
@@ -77,19 +78,19 @@ function ChatRoom({
   const { reactions, toggleReaction } = useBrainstormReactions(currentUserId);
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
   const { getReadersFor } = useBrainstormReadState(currentUserId, latestMessageId);
+  const { onlineIds, typingUsers, broadcastTyping } = useBrainstormPresence(
+    currentUserId,
+    currentDisplayName,
+  );
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
   const [showSearch, setShowSearch] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState<Message | null>(null);
-  const [typingUsers, setTypingUsers] = React.useState<string[]>([]);
-  const [onlineIds, setOnlineIds] = React.useState<Set<string>>(new Set());
   const [admins, setAdmins] = React.useState<AdminUser[]>([]);
 
   const messageListRef = React.useRef<MessageListHandle>(null);
   const composerRef = React.useRef<ComposerHandle>(null);
-  const presenceRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const typingTimeoutRef = React.useRef<number | null>(null);
   // Stable, unique suffix per component mount for realtime channel names.
   // Avoids collisions when the same user has multiple tabs open.
   const channelSuffixRef = React.useRef<string>(
@@ -144,48 +145,7 @@ function ChatRoom({
     };
   }, [loadAdmins]);
 
-  // Presence (active admins + typing)
-  React.useEffect(() => {
-    const ch = supabase.channel(`brainstorm-presence-${channelSuffixRef.current}`, {
-      config: { presence: { key: currentUserId } },
-    });
-    presenceRef.current = ch;
-    ch.on("presence", { event: "sync" }, () => {
-      const state = ch.presenceState() as Record<
-        string,
-        Array<{ display_name: string; typing?: boolean }>
-      >;
-      setOnlineIds(new Set(Object.keys(state)));
-      const typing: string[] = [];
-      for (const [uid, metas] of Object.entries(state)) {
-        if (uid === currentUserId) continue;
-        const m = metas[0];
-        if (m?.typing) typing.push(m.display_name);
-      }
-      setTypingUsers(typing);
-    });
-    ch.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await ch.track({ display_name: currentDisplayName, typing: false });
-      }
-    });
-    return () => {
-      void supabase.removeChannel(ch);
-      presenceRef.current = null;
-    };
-  }, [currentUserId, currentDisplayName]);
-
-  const broadcastTyping = (typing: boolean) => {
-    const ch = presenceRef.current;
-    if (!ch) return;
-    void ch.track({ display_name: currentDisplayName, typing });
-  };
-
-  const onType = () => {
-    broadcastTyping(true);
-    if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = window.setTimeout(() => broadcastTyping(false), 3000);
-  };
+  const onType = () => broadcastTyping(true);
 
   const handleSend = async (content: string): Promise<boolean> => {
     broadcastTyping(false);
