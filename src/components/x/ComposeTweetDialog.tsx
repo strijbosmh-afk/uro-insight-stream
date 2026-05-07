@@ -216,6 +216,23 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 )}
                 AI suggest {reply ? "replies" : "drafts"}
               </Button>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Tone
+                </span>
+                <Select value={tone} onValueChange={(v) => setTone(v as ToneValue)}>
+                  <SelectTrigger className="h-7 text-[11px] w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TONE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value} className="text-[12px]">
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {suggestions.length > 0 && (
               <div className="space-y-2">
