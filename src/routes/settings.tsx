@@ -5,6 +5,7 @@ import { TeamSettings } from "@/components/settings/TeamSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";
 import { IngestionSettings } from "@/components/settings/IngestionSettings";
 import { InterestsSettings } from "@/components/settings/InterestsSettings";
+import { XSettings } from "@/components/settings/XSettings";
 import { useAuth } from "@/auth/AuthProvider";
 
 export const Route = createFileRoute("/settings")({
@@ -22,6 +23,7 @@ function SettingsPage() {
           <TabsTrigger value="interests">Interests</TabsTrigger>
           <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="x">X (Twitter)</TabsTrigger>
           {isAdmin && <TabsTrigger value="ingestion">Ingestion</TabsTrigger>}
         </TabsList>
         <TabsContent value="preferences" className="mt-6">
@@ -35,6 +37,9 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="team" className="mt-6">
           <TeamSettings />
+        </TabsContent>
+        <TabsContent value="x" className="mt-6">
+          <XSettings />
         </TabsContent>
         {isAdmin && (
           <TabsContent value="ingestion" className="mt-6">
