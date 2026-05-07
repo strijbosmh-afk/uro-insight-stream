@@ -5,6 +5,14 @@ deferred** so the next polish turn can pick them up cleanly.
 
 ## Deferred
 
+- **Brainstorm Composer: Escape to cancel reply/edit** — deferred from
+  Phase 5b refactor (2026-05-07). Spec called for it, but original code
+  did not implement it; refactor preserves current behavior. Add as a
+  separate keystroke handler.
+- **Brainstorm MessageList: "back to top" / "new messages below"
+  affordance** — deferred from Phase 5c refactor (2026-05-07). Spec
+  called for it, but original code did not implement it; refactor
+  preserves current behavior.
 - **Mobile responsive shell @ 768px (bottom tab bar, collapsing top bar with
   expandable search, stacked panels with sticky tab strip)** — touches the
   shell + every multi-pane route; needs its own turn so it can be tested on a

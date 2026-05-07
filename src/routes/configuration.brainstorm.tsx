@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb, Send, Smile, X, Reply, Pencil, Trash2, Search, Users, Check, CheckCheck } from "lucide-react";
+import { Lightbulb, Send, Smile, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -24,46 +24,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉", "🚀", "💡"] as const;
-type Emoji = (typeof REACTION_EMOJIS)[number];
-
-type Message = {
-  id: string;
-  user_id: string;
-  user_display_name: string;
-  content: string;
-  reply_to_id: string | null;
-  created_at: string;
-  edited_at: string | null;
-  deleted_at: string | null;
-};
-
-type Reaction = {
-  id: string;
-  message_id: string;
-  user_id: string;
-  emoji: Emoji;
-  created_at: string;
-};
-
-type AdminUser = {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-};
-
-type ReadState = {
-  user_id: string;
-  last_read_at: string;
-};
+import { MessageItem } from "@/components/brainstorm/MessageItem";
+import { PresenceList } from "@/components/brainstorm/PresenceList";
+import {
+  REACTION_EMOJIS,
+  type Emoji,
+  type Message,
+  type Reaction,
+  type AdminUser,
+  type ReadState,
+} from "@/components/brainstorm/types";
 
 export const Route = createFileRoute("/configuration/brainstorm")({
   head: () => ({ meta: [{ title: "Brainstorm — UroFeed" }] }),
@@ -690,7 +662,7 @@ function ChatRoom({
                   </span>
                 </div>
               ) : (
-                <MessageBubble
+                <MessageItem
                   key={it.key}
                   msg={it.msg}
                   parent={it.parent}
@@ -830,112 +802,16 @@ function ChatRoom({
         </AlertDialog>
         </div>
 
-        {/* Members sidebar */}
-        <aside className="hidden md:flex flex-col w-60 shrink-0 border-l border-border bg-panel min-h-0">
-          <div className="flex items-center gap-2 px-4 h-14 border-b border-border shrink-0">
-            <Users className="w-4 h-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Members</h2>
-            <Badge variant="outline" className="ml-auto text-[10px]">
-              {admins.length}
-            </Badge>
-          </div>
-          <div className="flex-1 overflow-y-auto py-2">
-            {admins.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-text-muted">No members</div>
-            ) : (
-              <>
-                {admins.some((a) => onlineIds.has(a.id)) && (
-                  <SectionLabel>Online</SectionLabel>
-                )}
-                {admins
-                  .filter((a) => onlineIds.has(a.id))
-                  .map((a) => (
-                    <MemberRow
-                      key={a.id}
-                      user={a}
-                      online
-                      isMe={a.id === currentUserId}
-                    />
-                  ))}
-                {admins.some((a) => !onlineIds.has(a.id)) && (
-                  <SectionLabel>Offline</SectionLabel>
-                )}
-                {admins
-                  .filter((a) => !onlineIds.has(a.id))
-                  .map((a) => (
-                    <MemberRow
-                      key={a.id}
-                      user={a}
-                      online={false}
-                      isMe={a.id === currentUserId}
-                    />
-                  ))}
-              </>
-            )}
-          </div>
-        </aside>
+        <PresenceList
+          admins={admins}
+          onlineIds={onlineIds}
+          currentUserId={currentUserId}
+        />
       </div>
     </TooltipProvider>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider font-mono text-text-muted">
-      {children}
-    </div>
-  );
-}
-
-function MemberRow({
-  user,
-  online,
-  isMe,
-}: {
-  user: AdminUser;
-  online: boolean;
-  isMe: boolean;
-}) {
-  const name = user.display_name ?? user.email ?? "Unknown";
-  const initials = name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 px-4 py-1.5 text-sm",
-        online ? "text-text-primary" : "text-text-muted",
-      )}
-    >
-      <div className="relative">
-        <div
-          className={cn(
-            "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold border",
-            online
-              ? "bg-accent/15 border-accent/40 text-text-primary"
-              : "bg-panel-elevated border-border text-text-muted",
-          )}
-        >
-          {initials || "?"}
-        </div>
-        <span
-          className={cn(
-            "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-panel",
-            online ? "bg-success" : "bg-text-muted/40",
-          )}
-        />
-      </div>
-      <div className="min-w-0 flex-1 truncate">
-        {name}
-        {isMe && <span className="ml-1 text-[10px] text-text-muted">(you)</span>}
-      </div>
-    </div>
-  );
-}
 
 function EmptyState() {
   return (
@@ -947,255 +823,7 @@ function EmptyState() {
   );
 }
 
-function MessageBubble({
-  msg,
-  parent,
-  showHeader,
-  isOwn,
-  currentUserId,
-  reactions,
-  readers,
-  totalOtherAdmins,
-  displayNameFor,
-  onReply,
-  onEdit,
-  onDelete,
-  onReact,
-  onJumpTo,
-  registerRef,
-}: {
-  msg: Message;
-  parent: Message | null;
-  showHeader: boolean;
-  isOwn: boolean;
-  currentUserId: string;
-  reactions: Reaction[];
-  readers: ReadState[];
-  totalOtherAdmins: number;
-  displayNameFor: (userId: string, fallback: string) => string;
-  onReply: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onReact: (e: Emoji) => void;
-  onJumpTo: (id: string) => void;
-  registerRef: (el: HTMLDivElement | null) => void;
-}) {
-  const reactionEntries = React.useMemo(() => {
-    const grouped = new Map<Emoji, string[]>();
-    for (const r of reactions) {
-      const arr = grouped.get(r.emoji) ?? [];
-      arr.push(r.user_id);
-      grouped.set(r.emoji, arr);
-    }
-    return Array.from(grouped.entries());
-  }, [reactions]);
-  const allRead = totalOtherAdmins > 0 && readers.length >= totalOtherAdmins;
-  const someRead = readers.length > 0;
-  return (
-    <div
-      ref={registerRef}
-      className={cn(
-        "group flex flex-col rounded-md transition-shadow",
-        isOwn ? "items-end" : "items-start",
-        showHeader ? "mt-3" : "mt-0.5",
-      )}
-      style={{ animation: "fade-in 150ms ease-out" }}
-    >
-      <div
-        className={cn(
-          "relative max-w-[78%] sm:max-w-[60%] rounded-2xl px-3 py-2 shadow-sm",
-          isOwn
-            ? "bg-accent/15 border border-accent/30 rounded-br-sm"
-            : "bg-panel-elevated border border-border rounded-bl-sm",
-        )}
-      >
-        {showHeader && !isOwn && (
-          <div className="text-[11px] font-semibold text-accent mb-0.5">
-            {displayNameFor(msg.user_id, msg.user_display_name)}
-          </div>
-        )}
-        {parent && (
-          <button
-            type="button"
-            onClick={() => onJumpTo(parent.id)}
-            className="block w-full text-left mb-1 px-2 py-1 rounded border-l-2 border-accent/60 bg-panel/60 hover:bg-panel"
-          >
-            <div className="text-[10px] font-semibold text-accent">
-              {displayNameFor(parent.user_id, parent.user_display_name)}
-            </div>
-            <div className="text-[11px] text-text-muted truncate">
-              {parent.content}
-            </div>
-          </button>
-        )}
-        <div className="text-sm whitespace-pre-wrap break-words text-text-primary">
-          {msg.content}
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-text-muted">
-          <span>{relativeTime(msg.created_at)}</span>
-          {msg.edited_at && <span className="italic">edited</span>}
-          {isOwn && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-0.5 ml-1",
-                    allRead ? "text-accent" : someRead ? "text-text-primary" : "text-text-muted/60",
-                  )}
-                  aria-label={
-                    someRead
-                      ? `Read by ${readers.length} of ${totalOtherAdmins}`
-                      : "Sent"
-                  }
-                >
-                  {someRead ? (
-                    <CheckCheck className="w-3 h-3" />
-                  ) : (
-                    <Check className="w-3 h-3" />
-                  )}
-                  {totalOtherAdmins > 0 && (
-                    <span>
-                      {readers.length}/{totalOtherAdmins}
-                    </span>
-                  )}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <div className="text-xs max-w-[220px]">
-                  {someRead ? (
-                    <>
-                      <div className="font-semibold mb-0.5">Read by</div>
-                      <div className="space-y-0.5">
-                        {readers.map((r) => (
-                          <div key={r.user_id}>
-                            {displayNameFor(r.user_id, "Unknown user")}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <span>Delivered. No one has read this yet.</span>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
 
-        {/* Action toolbar */}
-        <div
-          className={cn(
-            "absolute -top-3 flex items-center gap-0.5 bg-panel border border-border rounded-md shadow-sm opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity",
-            isOwn ? "right-2" : "left-2",
-          )}
-        >
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label="Add reaction"
-                className="p-1 hover:bg-panel-elevated rounded"
-              >
-                <Smile className="w-3.5 h-3.5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-1" side="top">
-              <div className="flex gap-0.5">
-                {REACTION_EMOJIS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => onReact(e)}
-                    className="text-lg w-7 h-7 rounded hover:bg-panel-elevated"
-                    aria-label={`React ${e}`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <button
-            type="button"
-            onClick={onReply}
-            aria-label="Reply"
-            className="p-1 hover:bg-panel-elevated rounded"
-          >
-            <Reply className="w-3.5 h-3.5" />
-          </button>
-          {isOwn && (
-            <>
-              <button
-                type="button"
-                onClick={onEdit}
-                aria-label="Edit"
-                className="p-1 hover:bg-panel-elevated rounded"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                aria-label="Delete"
-                className="p-1 hover:bg-panel-elevated rounded text-destructive"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {reactionEntries.length > 0 && (
-        <div className={cn("flex flex-wrap gap-1 mt-1", isOwn ? "justify-end" : "")}>
-          {reactionEntries.map(([emoji, ids]) => {
-            const mine = ids.includes(currentUserId);
-            return (
-              <Tooltip key={emoji}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onReact(emoji as Emoji)}
-                    className={cn(
-                      "text-[11px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 transition-colors",
-                      mine
-                        ? "border-accent/60 bg-accent/15 text-text-primary"
-                        : "border-border bg-panel-elevated/60 text-text-muted hover:text-text-primary",
-                    )}
-                  >
-                    <span>{emoji}</span>
-                    <span>{ids.length}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="text-xs">{ids.length} reactor(s)</div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function relativeTime(iso: string): string {
-  const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  const today = new Date();
-  const yest = new Date();
-  yest.setDate(today.getDate() - 1);
-  const sameDay = d.toDateString() === today.toDateString();
-  const wasYest = d.toDateString() === yest.toDateString();
-  if (sameDay) return `${h}h ago`;
-  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (wasYest) return `yesterday at ${time}`;
-  return d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + time;
-}
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);
