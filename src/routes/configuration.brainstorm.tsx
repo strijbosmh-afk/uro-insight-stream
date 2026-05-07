@@ -496,6 +496,24 @@ function ChatRoom({
     [readStates],
   );
 
+  // Live name lookup so renames in profiles propagate everywhere in the
+  // chatroom (message headers, reply previews, read receipts), even though
+  // each row also stores a snapshot of the name at write time.
+  const nameById = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of admins) {
+      map[a.id] = a.display_name ?? a.email ?? "";
+    }
+    return map;
+  }, [admins]);
+  const displayNameFor = React.useCallback(
+    (userId: string, fallback: string) => {
+      const n = nameById[userId];
+      return n && n.trim().length > 0 ? n : fallback;
+    },
+    [nameById],
+  );
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-full min-h-0 -m-3 sm:-m-3">
@@ -568,6 +586,7 @@ function ChatRoom({
                   currentUserId={currentUserId}
                   readers={getReadersFor(it.msg)}
                   totalOtherAdmins={Math.max(admins.length - 1, 0)}
+                  displayNameFor={displayNameFor}
                   onReply={() => startReply(it.msg)}
                   onEdit={() => startEdit(it.msg)}
                   onDelete={() => setConfirmDelete(it.msg)}
