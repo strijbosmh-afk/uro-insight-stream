@@ -404,13 +404,24 @@ function ChatRoom({
     if (!content) return;
     if (editing) {
       const original = editing;
+      // Snapshot for rollback if the update fails.
+      const snapshotMessages = messages;
+      const editedAt = new Date().toISOString();
       setEditing(null);
       setInput("");
+      // Optimistically apply the edit so the sender sees it immediately.
+      setMessages((prev) =>
+        prev.map((x) =>
+          x.id === original.id ? { ...x, content, edited_at: editedAt } : x,
+        ),
+      );
       const { error } = await supabase
         .from("brainstorm_messages")
-        .update({ content, edited_at: new Date().toISOString() })
+        .update({ content, edited_at: editedAt })
         .eq("id", original.id);
       if (error) {
+        // Roll back the optimistic edit.
+        setMessages(snapshotMessages);
         toast.error("Failed to save edit", { description: error.message });
         setEditing(original);
         setInput(content);
