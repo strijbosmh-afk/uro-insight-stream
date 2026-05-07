@@ -496,6 +496,24 @@ function ChatRoom({
     [readStates],
   );
 
+  // Live name lookup so renames in profiles propagate everywhere in the
+  // chatroom (message headers, reply previews, read receipts), even though
+  // each row also stores a snapshot of the name at write time.
+  const nameById = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of admins) {
+      map[a.id] = a.display_name ?? a.email ?? "";
+    }
+    return map;
+  }, [admins]);
+  const displayNameFor = React.useCallback(
+    (userId: string, fallback: string) => {
+      const n = nameById[userId];
+      return n && n.trim().length > 0 ? n : fallback;
+    },
+    [nameById],
+  );
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-full min-h-0 -m-3 sm:-m-3">
@@ -568,6 +586,7 @@ function ChatRoom({
                   currentUserId={currentUserId}
                   readers={getReadersFor(it.msg)}
                   totalOtherAdmins={Math.max(admins.length - 1, 0)}
+                  displayNameFor={displayNameFor}
                   onReply={() => startReply(it.msg)}
                   onEdit={() => startEdit(it.msg)}
                   onDelete={() => setConfirmDelete(it.msg)}
@@ -596,7 +615,13 @@ function ChatRoom({
           <div className="px-4 py-2 border-t border-border bg-panel-elevated/60 flex items-center justify-between gap-2 shrink-0">
             <div className="text-xs min-w-0">
               <div className="text-text-muted">
-                {editing ? "Editing message" : `Replying to ${replyTo?.user_display_name}`}
+                {editing
+                  ? "Editing message"
+                  : `Replying to ${
+                      replyTo
+                        ? displayNameFor(replyTo.user_id, replyTo.user_display_name)
+                        : ""
+                    }`}
               </div>
               <div className="text-text-primary truncate">
                 {(editing ?? replyTo)?.content}
@@ -816,6 +841,7 @@ function MessageBubble({
   currentUserId,
   readers,
   totalOtherAdmins,
+  displayNameFor,
   onReply,
   onEdit,
   onDelete,
@@ -830,6 +856,7 @@ function MessageBubble({
   currentUserId: string;
   readers: ReadState[];
   totalOtherAdmins: number;
+  displayNameFor: (userId: string, fallback: string) => string;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -862,7 +889,7 @@ function MessageBubble({
       >
         {showHeader && !isOwn && (
           <div className="text-[11px] font-semibold text-accent mb-0.5">
-            {msg.user_display_name}
+            {displayNameFor(msg.user_id, msg.user_display_name)}
           </div>
         )}
         {parent && (
@@ -872,7 +899,7 @@ function MessageBubble({
             className="block w-full text-left mb-1 px-2 py-1 rounded border-l-2 border-accent/60 bg-panel/60 hover:bg-panel"
           >
             <div className="text-[10px] font-semibold text-accent">
-              {parent.user_display_name}
+              {displayNameFor(parent.user_id, parent.user_display_name)}
             </div>
             <div className="text-[11px] text-text-muted truncate">
               {parent.content}
@@ -918,7 +945,9 @@ function MessageBubble({
                       <div className="font-semibold mb-0.5">Read by</div>
                       <div className="space-y-0.5">
                         {readers.map((r) => (
-                          <div key={r.user_id}>{r.user_display_name}</div>
+                          <div key={r.user_id}>
+                            {displayNameFor(r.user_id, r.user_display_name)}
+                          </div>
                         ))}
                       </div>
                     </>
