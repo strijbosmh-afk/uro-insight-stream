@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ChevronRight, Menu } from "lucide-react";
+import { Search, ChevronRight, Menu, PenSquare } from "lucide-react";
 import { feedService } from "@/services/feedService";
+import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "Dashboard",
@@ -155,6 +156,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       </div>
 
       {/* Avatar */}
+      <ComposeButton />
       <button
         type="button"
         className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
@@ -163,6 +165,25 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
         UR
       </button>
     </header>
+  );
+}
+
+function ComposeButton() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Compose a tweet"
+        aria-label="Compose tweet"
+        className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
+      >
+        <PenSquare className="w-3.5 h-3.5" />
+        <span className="hidden md:inline">Compose</span>
+      </button>
+      <ComposeTweetDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
