@@ -27,10 +27,10 @@ import { useBrainstormMessages } from "@/hooks/useBrainstormMessages";
 import { useBrainstormReactions } from "@/hooks/useBrainstormReactions";
 import { useBrainstormReadState } from "@/hooks/useBrainstormReadState";
 import { useBrainstormPresence } from "@/hooks/useBrainstormPresence";
+import { useBrainstormAdmins } from "@/hooks/useBrainstormAdmins";
 import {
   type Emoji,
   type Message,
-  type AdminUser,
 } from "@/components/brainstorm/types";
 
 export const Route = createFileRoute("/configuration/brainstorm")({
@@ -82,68 +82,15 @@ function ChatRoom({
     currentUserId,
     currentDisplayName,
   );
+  const { admins, displayNameFor } = useBrainstormAdmins();
   const [replyTo, setReplyTo] = React.useState<Message | null>(null);
   const [editing, setEditing] = React.useState<Message | null>(null);
   const [search, setSearch] = React.useState("");
   const [showSearch, setShowSearch] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState<Message | null>(null);
-  const [admins, setAdmins] = React.useState<AdminUser[]>([]);
 
   const messageListRef = React.useRef<MessageListHandle>(null);
   const composerRef = React.useRef<ComposerHandle>(null);
-  // Stable, unique suffix per component mount for realtime channel names.
-  // Avoids collisions when the same user has multiple tabs open.
-  const channelSuffixRef = React.useRef<string>(
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
-  );
-
-  // Load admin user list (people with access) and keep it in sync with
-  // profile changes so renames in the user profile show up immediately.
-  const loadAdmins = React.useCallback(async () => {
-    const { data: roles, error: rolesErr } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "admin");
-    if (rolesErr) return;
-    const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
-    if (ids.length === 0) {
-      setAdmins([]);
-      return;
-    }
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id, display_name, email, avatar_url")
-      .in("id", ids);
-    setAdmins(
-      (profs ?? []).sort((a, b) =>
-        (a.display_name ?? a.email ?? "").localeCompare(
-          b.display_name ?? b.email ?? "",
-        ),
-      ) as AdminUser[],
-    );
-  }, []);
-
-  React.useEffect(() => {
-    void loadAdmins();
-    const ch = supabase
-      .channel(`brainstorm-profiles-${channelSuffixRef.current}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => void loadAdmins(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_roles" },
-        () => void loadAdmins(),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [loadAdmins]);
 
   const onType = () => broadcastTyping(true);
 
@@ -191,24 +138,6 @@ function ChatRoom({
     setConfirmDelete(null);
     await deleteMessage(m.id);
   };
-
-  // Live name lookup so renames in profiles propagate everywhere in the
-  // chatroom (message headers, reply previews, read receipts), even though
-  // each row also stores a snapshot of the name at write time.
-  const nameById = React.useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const a of admins) {
-      map[a.id] = a.display_name ?? a.email ?? "";
-    }
-    return map;
-  }, [admins]);
-  const displayNameFor = React.useCallback(
-    (userId: string, fallback: string) => {
-      const n = nameById[userId];
-      return n && n.trim().length > 0 ? n : fallback;
-    },
-    [nameById],
-  );
 
   return (
     <TooltipProvider delayDuration={300}>
