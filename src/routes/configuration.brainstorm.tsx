@@ -615,7 +615,13 @@ function ChatRoom({
           <div className="px-4 py-2 border-t border-border bg-panel-elevated/60 flex items-center justify-between gap-2 shrink-0">
             <div className="text-xs min-w-0">
               <div className="text-text-muted">
-                {editing ? "Editing message" : `Replying to ${replyTo?.user_display_name}`}
+                {editing
+                  ? "Editing message"
+                  : `Replying to ${
+                      replyTo
+                        ? displayNameFor(replyTo.user_id, replyTo.user_display_name)
+                        : ""
+                    }`}
               </div>
               <div className="text-text-primary truncate">
                 {(editing ?? replyTo)?.content}
