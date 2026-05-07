@@ -16,9 +16,21 @@ import {
   Mail,
   Users as UsersIcon,
   Users2,
+  LifeBuoy,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
+  AtSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type NavItem = {
   label: string;
@@ -75,6 +87,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     () => (isAdmin ? [...BASE_SECTIONS, ADMIN_SECTION] : BASE_SECTIONS),
     [isAdmin],
   );
+  const [helpOpen, setHelpOpen] = React.useState(
+    () => pathname.startsWith("/help"),
+  );
+  const [contactOpen, setContactOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (pathname.startsWith("/help")) setHelpOpen(true);
+  }, [pathname]);
 
   return (
     <aside
@@ -154,6 +174,71 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </ul>
           </div>
         ))}
+
+        {/* Help section */}
+        <div className="mb-4">
+          {!collapsed && (
+            <div className="px-4 mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+              Help
+            </div>
+          )}
+          <ul>
+            <li>
+              <button
+                type="button"
+                onClick={() => setHelpOpen((v) => !v)}
+                className={cn(
+                  "relative w-full flex items-center gap-3 h-8 text-[13px] transition-colors text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+                  collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+                )}
+                aria-expanded={helpOpen}
+              >
+                <LifeBuoy className="w-4 h-4 shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="truncate flex-1 text-left">Help</span>
+                    {helpOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                  </>
+                )}
+              </button>
+            </li>
+            {helpOpen && !collapsed && (
+              <>
+                <li>
+                  <Link
+                    to="/help/instructions"
+                    className={cn(
+                      "relative flex items-center gap-3 h-8 text-[13px] transition-colors pl-10 pr-4",
+                      pathname === "/help/instructions"
+                        ? "text-text-primary bg-panel-elevated"
+                        : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+                    )}
+                  >
+                    {pathname === "/help/instructions" && (
+                      <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
+                    )}
+                    <BookOpen className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Instructions</span>
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setContactOpen(true)}
+                    className="relative w-full flex items-center gap-3 h-8 text-[13px] pl-10 pr-4 text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left"
+                  >
+                    <AtSign className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Contact</span>
+                  </button>
+                </li>
+              </>
+            )}
+          </ul>
+        </div>
       </nav>
 
       {/* Collapse toggle */}
@@ -174,6 +259,35 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </>
         )}
       </button>
+
+      <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contact</DialogTitle>
+            <DialogDescription>This app was created by:</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <div className="text-lg font-semibold text-text-primary">
+                Michiel Strijbos
+              </div>
+              <div className="text-sm text-text-muted">Creator &amp; Developer</div>
+            </div>
+            <div className="text-sm text-text-primary">
+              Email:{" "}
+              <a
+                href="mailto:strijbosmh@gmail.com"
+                className="text-accent hover:underline"
+              >
+                strijbosmh@gmail.com
+              </a>
+            </div>
+            <p className="text-xs text-text-muted">
+              Feedback, bug reports, and feature requests welcome.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
