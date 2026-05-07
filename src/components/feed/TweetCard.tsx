@@ -109,11 +109,14 @@ export const TweetCard = React.memo(function TweetCard({
       tabIndex={onOpenThread ? 0 : undefined}
       className={cn(
         "relative border border-border bg-panel rounded-[3px] p-3",
-        "hover:border-accent/40 transition-colors",
-        onOpenThread && "cursor-pointer focus:outline-none focus:border-accent",
+        "transition-all duration-150",
+        onOpenThread
+          ? "cursor-pointer hover:border-accent hover:bg-panel-elevated hover:shadow-[0_0_0_1px_hsl(var(--accent)/0.4)] focus:outline-none focus:border-accent focus:shadow-[0_0_0_1px_hsl(var(--accent)/0.6)]"
+          : "hover:border-accent/40",
         isReply && "border-l-2 border-l-accent/60",
         isNew && "tweet-new",
       )}
+      title={onOpenThread ? "Click to open thread" : undefined}
     >
       {isReply && tweet.parentHandle && (
         <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
