@@ -553,6 +553,8 @@ function ChatRoom({
                   showHeader={it.showHeader}
                   isOwn={it.msg.user_id === currentUserId}
                   currentUserId={currentUserId}
+                  readers={getReadersFor(it.msg)}
+                  totalOtherAdmins={Math.max(admins.length - 1, 0)}
                   onReply={() => startReply(it.msg)}
                   onEdit={() => startEdit(it.msg)}
                   onDelete={() => setConfirmDelete(it.msg)}
