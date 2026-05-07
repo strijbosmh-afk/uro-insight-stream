@@ -29,7 +29,7 @@ export function useBrainstormUnread() {
     if (!isAdmin) return;
     void refresh();
     const ch = supabase
-      .channel("brainstorm-unread")
+      .channel(`brainstorm-unread-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "brainstorm_messages" },
