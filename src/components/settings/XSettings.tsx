@@ -160,7 +160,7 @@ function AccountList({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   {isActive ? (
-                    <Check className="w-4 h-4 text-success" />
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                   ) : (
                     <span className="w-4 h-4 inline-block" />
                   )}
