@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
   try {
     body = (await req.json()) as SummarizeBody;
   } catch {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
+    return jsonResponse({ error: "Invalid JSON body" }, 400, req);
   }
 
   const model = body.model || DEFAULT_MODEL;
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       const data = await resp.json();
       const text =
         data?.choices?.[0]?.message?.content ?? "(no content)";
-      return jsonResponse({ ok: true, model, text });
+      return jsonResponse({ ok: true, model, text }, 200, req);
     }
 
     if (mode === "suggest_replies") {
@@ -222,13 +222,13 @@ Deno.serve(async (req) => {
       const call =
         data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
       if (!call) {
-        return jsonResponse({ error: "No tool call in response" }, 502);
+        return jsonResponse({ error: "No tool call in response" }, 502, req);
       }
       let parsed: { replies?: { text: string; angle: string }[] };
       try {
         parsed = JSON.parse(call);
       } catch {
-        return jsonResponse({ error: "Failed to parse tool call JSON" }, 502);
+        return jsonResponse({ error: "Failed to parse tool call JSON" }, 502, req);
       }
       return jsonResponse({
         ok: true,
