@@ -93,7 +93,7 @@ export function QuickStartPanel() {
   const handleAction = (key: CardDef["key"]) => {
     if (key === "follow") {
       void dismiss();
-      navigate({ to: "/discover", search: { tab: "by-specialty" } as never });
+      navigate({ to: "/discover", search: { tab: "by-specialty" } });
     } else if (key === "digest") {
       setDigestOpen(true);
     } else if (key === "post") {
