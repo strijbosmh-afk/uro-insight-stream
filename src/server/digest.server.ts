@@ -103,7 +103,9 @@ export interface DigestPayload {
 export async function buildDigestPayload(digestId: string): Promise<DigestPayload | null> {
   const { data: digest, error: digestErr } = await supabaseAdmin
     .from("digest_subscriptions")
-    .select("id, name, frequency, last_sent_at, next_send_at")
+    .select(
+      "id, name, frequency, last_sent_at, next_send_at, specialty_id, congress_id, hashtags",
+    )
     .eq("id", digestId)
     .maybeSingle();
   if (digestErr || !digest) return null;
@@ -113,7 +115,21 @@ export async function buildDigestPayload(digestId: string): Promise<DigestPayloa
     .select("source_id")
     .eq("digest_id", digestId);
   const sourceIds = (srcs ?? []).map((r: { source_id: string }) => r.source_id);
-  if (sourceIds.length === 0) return null;
+
+  const specialtyId: string | null = (digest as any).specialty_id ?? null;
+  const congressId: string | null = (digest as any).congress_id ?? null;
+  const hashtags: string[] = ((digest as any).hashtags ?? []) as string[];
+
+  // Defensive — must have at least one binding.
+  if (
+    sourceIds.length === 0 &&
+    !specialtyId &&
+    !congressId &&
+    hashtags.length === 0
+  ) {
+    console.warn(`[digest] ${digestId} has no bindings — skipping`);
+    return null;
+  }
 
   const { data: recs } = await supabaseAdmin
     .from("digest_subscription_recipients")
@@ -130,22 +146,64 @@ export async function buildDigestPayload(digestId: string): Promise<DigestPayloa
   const windowStart = new Date(windowStartMs).toISOString();
   const windowEnd = new Date(now).toISOString();
 
-  // Fetch tweets for sources in the window.
-  const { data: tweets } = await supabaseAdmin
+  // Resolve specialty → matching source ids (sources whose specialty[] includes the id).
+  let specialtySourceIds: string[] = [];
+  if (specialtyId) {
+    const { data: specSources } = await supabaseAdmin
+      .from("sources")
+      .select("id")
+      .contains("specialty", [specialtyId]);
+    specialtySourceIds = ((specSources ?? []) as Array<{ id: string }>).map((r) => r.id);
+  }
+
+  // Build the OR filter across all four bindings.
+  const orParts: string[] = [];
+  const unionSourceIds = Array.from(new Set([...sourceIds, ...specialtySourceIds]));
+  if (unionSourceIds.length > 0) {
+    orParts.push(`source_id.in.(${unionSourceIds.map((s) => `"${s}"`).join(",")})`);
+  }
+  if (congressId) {
+    orParts.push(`congress_id.eq.${congressId}`);
+  }
+  if (hashtags.length > 0) {
+    // overlap: tweets whose hashtags array shares any element with the binding list
+    orParts.push(`hashtags.ov.{${hashtags.map((h) => `"${h}"`).join(",")}}`);
+  }
+
+  let tweetsQuery = supabaseAdmin
     .from("tweets")
     .select(
       "id, source_id, author_handle, author_display_name, text, created_at, like_count, retweet_count, reply_count",
     )
-    .in("source_id", sourceIds)
     .gte("created_at", windowStart)
     .lte("created_at", windowEnd)
     .order("created_at", { ascending: false })
     .limit(2000);
 
-  const { data: sources } = await supabaseAdmin
-    .from("sources")
-    .select("id, handle, display_name")
-    .in("id", sourceIds);
+  if (orParts.length === 0) {
+    return null;
+  }
+  tweetsQuery = tweetsQuery.or(orParts.join(","));
+
+  const { data: tweets } = await tweetsQuery;
+
+  // Collect every source_id present in the result so we can label groups.
+  const tweetSourceIds = Array.from(
+    new Set(
+      ((tweets ?? []) as TweetRow[])
+        .map((t) => t.source_id)
+        .filter((s): s is string => !!s),
+    ),
+  );
+  const allSourceIds = Array.from(
+    new Set([...sourceIds, ...specialtySourceIds, ...tweetSourceIds]),
+  );
+  const { data: sources } = allSourceIds.length
+    ? await supabaseAdmin
+        .from("sources")
+        .select("id, handle, display_name")
+        .in("id", allSourceIds)
+    : { data: [] as SourceRow[] };
   const sourceById = new Map<string, SourceRow>(
     ((sources ?? []) as SourceRow[]).map((s) => [s.id, s]),
   );

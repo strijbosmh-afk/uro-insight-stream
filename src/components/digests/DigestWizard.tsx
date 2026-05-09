@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowRight, ArrowLeft, X } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
-import { feedService } from "@/services/feedService";
 
 const DAYS = [
   { v: 1, l: "Mon" },
@@ -34,9 +33,10 @@ type Frequency = "daily" | "weekly" | "biweekly" | "monthly";
 interface DigestWizardProps {
   digestId?: string | null;
   onClose: (saved: boolean) => void;
+  initialPreset?: "specialty" | "congress" | "custom" | null;
 }
 
-export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
+export function DigestWizard({ digestId, onClose, initialPreset }: DigestWizardProps) {
   const { user, prefs } = useAuth();
   const qc = useQueryClient();
   const createFn = useServerFn(createDigest);
@@ -53,6 +53,11 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
   const [timezone, setTimezone] = React.useState<string>(prefs?.digest_default_timezone ?? "UTC");
   const [isActive, setIsActive] = React.useState<boolean>(prefs?.digests_active_by_default ?? true);
   const [selectedSourceIds, setSelectedSourceIds] = React.useState<string[]>([]);
+  const [specialtyId, setSpecialtyId] = React.useState<string | null>(null);
+  const [congressId, setCongressId] = React.useState<string | null>(null);
+  const [hashtags, setHashtags] = React.useState<string[]>([]);
+  const [hashtagInput, setHashtagInput] = React.useState("");
+  const [openSection, setOpenSection] = React.useState<"sources" | "specialty" | "congress" | "hashtags" | null>("sources");
   const [recipients, setRecipients] = React.useState<string[]>([]);
   const [recipientInput, setRecipientInput] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -77,6 +82,54 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       }));
     },
   });
+
+  // User specialties — for "My specialty digest" preset and the specialty section.
+  const userSpecialtiesQ = useQuery({
+    queryKey: ["user-specialties-for-digest", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: specs } = await supabase
+        .from("user_specialties")
+        .select("specialty_id, is_primary")
+        .eq("user_id", user!.id);
+      const ids = ((specs ?? []) as Array<{ specialty_id: string; is_primary: boolean }>).map(
+        (r) => r.specialty_id,
+      );
+      if (ids.length === 0) return { items: [] as Array<{ id: string; label: string; is_primary: boolean }>, primaryId: null as string | null };
+      const { data: labels } = await supabase
+        .from("urology_specialties")
+        .select("id, label")
+        .in("id", ids);
+      const labelMap = new Map(((labels ?? []) as Array<{ id: string; label: string }>).map((r) => [r.id, r.label]));
+      const items = ((specs ?? []) as Array<{ specialty_id: string; is_primary: boolean }>).map((r) => ({
+        id: r.specialty_id,
+        label: labelMap.get(r.specialty_id) ?? r.specialty_id,
+        is_primary: r.is_primary,
+      }));
+      const primary = items.find((i) => i.is_primary) ?? items[0] ?? null;
+      return { items, primaryId: primary?.id ?? null };
+    },
+  });
+
+  // Congresses for picker + "Active congress digest" preset.
+  const congressesQ = useQuery({
+    queryKey: ["digests-congresses-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("congresses")
+        .select("id, name, short_code, status, start_date, end_date")
+        .order("start_date", { ascending: false });
+      return (data ?? []) as Array<{
+        id: string; name: string; short_code: string; status: string;
+        start_date: string | null; end_date: string | null;
+      }>;
+    },
+  });
+
+  const liveCongresses = React.useMemo(
+    () => (congressesQ.data ?? []).filter((c) => c.status === "live"),
+    [congressesQ.data],
+  );
 
   // Hydrate when editing.
   React.useEffect(() => {
@@ -103,15 +156,53 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       setSendHour(d.send_hour);
       setSelectedSourceIds(d.source_ids);
       setRecipients(d.recipients.map((r) => r.email));
-      // d may include timezone/is_active depending on serverFn shape
-      const dx = d as unknown as { timezone?: string; is_active?: boolean };
+      // d may include timezone/is_active/topic bindings depending on serverFn shape
+      const dx = d as unknown as {
+        timezone?: string;
+        is_active?: boolean;
+        specialty_id?: string | null;
+        congress_id?: string | null;
+        hashtags?: string[];
+      };
       if (dx.timezone) setTimezone(dx.timezone);
       if (typeof dx.is_active === "boolean") setIsActive(dx.is_active);
+      setSpecialtyId(dx.specialty_id ?? null);
+      setCongressId(dx.congress_id ?? null);
+      setHashtags(Array.isArray(dx.hashtags) ? dx.hashtags : []);
     })();
     return () => {
       cancelled = true;
     };
   }, [digestId, getFn, user?.email, recipients.length, prefs]);
+
+  // Apply initial preset on first mount (new digests only).
+  const presetAppliedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (digestId || presetAppliedRef.current) return;
+    if (!initialPreset) return;
+    if (initialPreset === "specialty") {
+      const primaryId = userSpecialtiesQ.data?.primaryId ?? null;
+      if (primaryId) {
+        setSpecialtyId(primaryId);
+        setOpenSection("specialty");
+        if (!name) setName("My specialty digest");
+        presetAppliedRef.current = true;
+      }
+    } else if (initialPreset === "congress") {
+      if (liveCongresses.length === 1) {
+        setCongressId(liveCongresses[0].id);
+        setOpenSection("congress");
+        if (!name) setName(`${liveCongresses[0].short_code || liveCongresses[0].name} digest`);
+        presetAppliedRef.current = true;
+      } else if (liveCongresses.length > 1) {
+        setOpenSection("congress");
+        presetAppliedRef.current = true;
+      }
+    } else if (initialPreset === "custom") {
+      setOpenSection("sources");
+      presetAppliedRef.current = true;
+    }
+  }, [initialPreset, digestId, userSpecialtiesQ.data, liveCongresses, name]);
 
   const filteredSources = React.useMemo(() => {
     const all = subSourcesQ.data ?? [];
@@ -153,9 +244,35 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
     setRecipients(recipients.filter((r) => r !== e));
   };
 
+  const normalizeHashtag = (raw: string) =>
+    raw.trim().replace(/^#/, "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+
+  const addHashtag = () => {
+    const v = normalizeHashtag(hashtagInput);
+    if (!v) return;
+    if (hashtags.includes(v)) {
+      setHashtagInput("");
+      return;
+    }
+    if (hashtags.length >= 50) {
+      toast.error("Max 50 hashtags");
+      return;
+    }
+    setHashtags([...hashtags, v]);
+    setHashtagInput("");
+  };
+
+  const removeHashtag = (h: string) => setHashtags(hashtags.filter((x) => x !== h));
+
+  const hasAnyBinding =
+    selectedSourceIds.length > 0 ||
+    !!specialtyId ||
+    !!congressId ||
+    hashtags.length > 0;
+
   const canContinue = () => {
     if (step === 1) return name.trim().length > 0;
-    if (step === 2) return selectedSourceIds.length > 0;
+    if (step === 2) return hasAnyBinding;
     if (step === 3) return true; // schedule always valid (defaults set)
     if (step === 4) return recipients.length > 0;
     return true;
@@ -174,6 +291,9 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
         timezone,
         is_active: isActive,
         source_ids: selectedSourceIds,
+        specialty_id: specialtyId,
+        congress_id: congressId,
+        hashtags,
         recipients: recipients.map((email, idx) => ({
           email,
           is_default: idx === 0,
@@ -218,7 +338,7 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
             </div>
             <h2 className="text-xl font-semibold text-text-primary">
               {step === 1 && "Name your digest"}
-              {step === 2 && "Pick your sources"}
+              {step === 2 && "What goes in this digest?"}
               {step === 3 && "Set the schedule"}
               {step === 4 && "Where should it go?"}
             </h2>
@@ -246,47 +366,52 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
           )}
 
           {step === 2 && (
-            <div className="space-y-3">
-              <Input
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                placeholder="filter sources…"
-                className="h-8 text-[12px]"
-              />
-              <div className="border border-border rounded-[3px] max-h-[320px] overflow-y-auto">
-                {(subSourcesQ.data ?? []).length === 0 && !subSourcesQ.isLoading && (
-                  <div className="p-4 text-[12px] text-text-muted">
-                    You don't have any subscribed sources yet. Add some from the
-                    Sources page first.
-                  </div>
-                )}
-                {filteredSources.map((s) => {
-                  const checked = selectedSourceIds.includes(s.id);
-                  return (
-                    <label
-                      key={s.id}
-                      className="flex items-center gap-3 px-3 py-2 border-b border-border cursor-pointer hover:bg-panel-elevated/60"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggleSource(s.id)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] text-text-primary truncate">
-                          {s.display_name}
-                        </div>
-                        <div className="text-[11px] font-mono text-text-muted">
-                          @{s.handle}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-text-muted">
-                {selectedSourceIds.length} selected
-              </p>
-            </div>
+            <Step2Bindings
+              userPrimarySpecialtyId={userSpecialtiesQ.data?.primaryId ?? null}
+              userSpecialties={userSpecialtiesQ.data?.items ?? []}
+              liveCongresses={liveCongresses}
+              allCongresses={congressesQ.data ?? []}
+              subSources={subSourcesQ.data ?? []}
+              subSourcesLoading={subSourcesQ.isLoading}
+              filteredSources={filteredSources}
+              sourceFilter={sourceFilter}
+              setSourceFilter={setSourceFilter}
+              selectedSourceIds={selectedSourceIds}
+              toggleSource={toggleSource}
+              specialtyId={specialtyId}
+              setSpecialtyId={setSpecialtyId}
+              congressId={congressId}
+              setCongressId={setCongressId}
+              hashtags={hashtags}
+              hashtagInput={hashtagInput}
+              setHashtagInput={setHashtagInput}
+              addHashtag={addHashtag}
+              removeHashtag={removeHashtag}
+              openSection={openSection}
+              setOpenSection={setOpenSection}
+              applyPreset={(p) => {
+                if (p === "specialty") {
+                  const id = userSpecialtiesQ.data?.primaryId ?? null;
+                  if (!id) {
+                    toast.error("Set a primary specialty in Settings → Profile first");
+                    return;
+                  }
+                  setSpecialtyId(id);
+                  setOpenSection("specialty");
+                  if (!name) setName("My specialty digest");
+                } else if (p === "congress") {
+                  if (liveCongresses.length === 1) {
+                    setCongressId(liveCongresses[0].id);
+                    setOpenSection("congress");
+                    if (!name) setName(`${liveCongresses[0].short_code || liveCongresses[0].name} digest`);
+                  } else {
+                    setOpenSection("congress");
+                  }
+                } else {
+                  setOpenSection("sources");
+                }
+              }}
+            />
           )}
 
           {step === 3 && (
@@ -444,3 +569,257 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
 }
 
 export default DigestWizard;
+
+type PresetKind = "specialty" | "congress" | "custom";
+
+interface Step2Props {
+  userPrimarySpecialtyId: string | null;
+  userSpecialties: Array<{ id: string; label: string; is_primary: boolean }>;
+  liveCongresses: Array<{ id: string; name: string; short_code: string }>;
+  allCongresses: Array<{ id: string; name: string; short_code: string; status: string }>;
+  subSources: Array<{ id: string; handle: string; display_name: string }>;
+  subSourcesLoading: boolean;
+  filteredSources: Array<{ id: string; handle: string; display_name: string }>;
+  sourceFilter: string;
+  setSourceFilter: (v: string) => void;
+  selectedSourceIds: string[];
+  toggleSource: (id: string) => void;
+  specialtyId: string | null;
+  setSpecialtyId: (id: string | null) => void;
+  congressId: string | null;
+  setCongressId: (id: string | null) => void;
+  hashtags: string[];
+  hashtagInput: string;
+  setHashtagInput: (v: string) => void;
+  addHashtag: () => void;
+  removeHashtag: (h: string) => void;
+  openSection: "sources" | "specialty" | "congress" | "hashtags" | null;
+  setOpenSection: (s: "sources" | "specialty" | "congress" | "hashtags" | null) => void;
+  applyPreset: (p: PresetKind) => void;
+}
+
+function Step2Bindings(p: Step2Props) {
+  const noLive = p.liveCongresses.length === 0;
+  const Section = ({
+    id,
+    label,
+    summary,
+    children,
+  }: {
+    id: "sources" | "specialty" | "congress" | "hashtags";
+    label: string;
+    summary: string;
+    children: React.ReactNode;
+  }) => {
+    const open = p.openSection === id;
+    return (
+      <div className="border border-border rounded-[3px]">
+        <button
+          type="button"
+          onClick={() => p.setOpenSection(open ? null : id)}
+          className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-panel-elevated/40"
+        >
+          <div className="flex items-center gap-2">
+            {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            <span className="text-[13px] font-medium text-text-primary">{label}</span>
+          </div>
+          <span className="text-[11px] font-mono text-text-muted">{summary}</span>
+        </button>
+        {open && <div className="border-t border-border p-3">{children}</div>}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Preset starters */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => p.applyPreset("specialty")}
+          disabled={!p.userPrimarySpecialtyId}
+          className="flex items-start gap-2 p-3 border border-border rounded-[3px] text-left hover:border-accent/60 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Sparkles className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-text-primary">My specialty digest</div>
+            <div className="text-[10px] text-text-muted mt-0.5">
+              {p.userPrimarySpecialtyId ? "Auto-fill primary specialty" : "Set a primary specialty first"}
+            </div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => p.applyPreset("congress")}
+          disabled={noLive}
+          className="flex items-start gap-2 p-3 border border-border rounded-[3px] text-left hover:border-accent/60 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Calendar className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-text-primary">Active congress digest</div>
+            <div className="text-[10px] text-text-muted mt-0.5">
+              {noLive
+                ? "no live congresses right now"
+                : p.liveCongresses.length === 1
+                  ? `Auto-fill ${p.liveCongresses[0].short_code || p.liveCongresses[0].name}`
+                  : `Pick from ${p.liveCongresses.length} live`}
+            </div>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => p.applyPreset("custom")}
+          className="flex items-start gap-2 p-3 border border-border rounded-[3px] text-left hover:border-accent/60"
+        >
+          <Settings2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-medium text-text-primary">Custom</div>
+            <div className="text-[10px] text-text-muted mt-0.5">Mix sources, specialty, congress, hashtags</div>
+          </div>
+        </button>
+      </div>
+
+      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-text-muted">
+        Bindings — at least one is required
+      </div>
+
+      <Section
+        id="sources"
+        label="Sources"
+        summary={`${p.selectedSourceIds.length} selected`}
+      >
+        <Input
+          value={p.sourceFilter}
+          onChange={(e) => p.setSourceFilter(e.target.value)}
+          placeholder="filter sources…"
+          className="h-8 text-[12px] mb-2"
+        />
+        <div className="border border-border rounded-[3px] max-h-[260px] overflow-y-auto">
+          {p.subSources.length === 0 && !p.subSourcesLoading && (
+            <div className="p-3 text-[12px] text-text-muted">
+              You don't have any subscribed sources yet. Add some from Discover or Sources first.
+            </div>
+          )}
+          {p.filteredSources.map((s) => {
+            const checked = p.selectedSourceIds.includes(s.id);
+            return (
+              <label
+                key={s.id}
+                className="flex items-center gap-3 px-3 py-2 border-b border-border cursor-pointer hover:bg-panel-elevated/60"
+              >
+                <Checkbox checked={checked} onCheckedChange={() => p.toggleSource(s.id)} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-text-primary truncate">{s.display_name}</div>
+                  <div className="text-[11px] font-mono text-text-muted">@{s.handle}</div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section
+        id="specialty"
+        label="Specialty"
+        summary={
+          p.specialtyId
+            ? p.userSpecialties.find((s) => s.id === p.specialtyId)?.label ?? p.specialtyId
+            : "none"
+        }
+      >
+        {p.userSpecialties.length === 0 ? (
+          <div className="text-[12px] text-text-muted">
+            You haven't selected any specialties yet. Add some from Settings → Profile.
+          </div>
+        ) : (
+          <Select
+            value={p.specialtyId ?? "__none__"}
+            onValueChange={(v) => p.setSpecialtyId(v === "__none__" ? null : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pick a specialty" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— None —</SelectItem>
+              {p.userSpecialties.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.label}{s.is_primary ? " · primary" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Section>
+
+      <Section
+        id="congress"
+        label="Congress"
+        summary={
+          p.congressId
+            ? p.allCongresses.find((c) => c.id === p.congressId)?.short_code ??
+              p.allCongresses.find((c) => c.id === p.congressId)?.name ??
+              p.congressId
+            : "none"
+        }
+      >
+        <Select
+          value={p.congressId ?? "__none__"}
+          onValueChange={(v) => p.setCongressId(v === "__none__" ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pick a congress" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {p.allCongresses.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {(c.short_code || c.name)}{c.status === "live" ? " · live" : c.status === "upcoming" ? " · upcoming" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Section>
+
+      <Section
+        id="hashtags"
+        label="Hashtags"
+        summary={p.hashtags.length === 0 ? "none" : `${p.hashtags.length} added`}
+      >
+        <div className="flex gap-2 mb-2">
+          <Input
+            value={p.hashtagInput}
+            onChange={(e) => p.setHashtagInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                p.addHashtag();
+              }
+            }}
+            placeholder="#urology"
+            className="h-8 text-[12px]"
+          />
+          <Button type="button" variant="outline" size="sm" onClick={p.addHashtag}>
+            Add
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {p.hashtags.map((h) => (
+            <span
+              key={h}
+              className="inline-flex items-center gap-1 px-2 py-1 border border-border rounded-[3px] text-[11px] font-mono"
+            >
+              #{h}
+              <button
+                type="button"
+                onClick={() => p.removeHashtag(h)}
+                className="text-text-muted hover:text-danger"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}

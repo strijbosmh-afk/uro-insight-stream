@@ -563,48 +563,72 @@ export type Database = {
       }
       digest_subscriptions: {
         Row: {
+          congress_id: string | null
           created_at: string
           day_of_week: number | null
           frequency: string
+          hashtags: string[]
           id: string
           is_active: boolean
           last_sent_at: string | null
           name: string
           next_send_at: string
           send_hour: number
+          specialty_id: string | null
           timezone: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          congress_id?: string | null
           created_at?: string
           day_of_week?: number | null
           frequency: string
+          hashtags?: string[]
           id?: string
           is_active?: boolean
           last_sent_at?: string | null
           name: string
           next_send_at: string
           send_hour?: number
+          specialty_id?: string | null
           timezone?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          congress_id?: string | null
           created_at?: string
           day_of_week?: number | null
           frequency?: string
+          hashtags?: string[]
           id?: string
           is_active?: boolean
           last_sent_at?: string | null
           name?: string
           next_send_at?: string
           send_hour?: number
+          specialty_id?: string | null
           timezone?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "digest_subscriptions_congress_id_fkey"
+            columns: ["congress_id"]
+            isOneToOne: false
+            referencedRelation: "congresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digest_subscriptions_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "urology_specialties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
