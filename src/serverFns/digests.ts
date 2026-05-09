@@ -6,7 +6,7 @@ import { computeNextSendAt } from "@/server/digest.server";
 
 const FrequencyEnum = z.enum(["daily", "weekly", "biweekly", "monthly"]);
 
-const CreateSchema = z.object({
+const BaseSchema = z.object({
   name: z.string().min(1).max(120),
   frequency: FrequencyEnum,
   day_of_week: z.number().int().min(0).max(6).nullable().optional(),
@@ -26,18 +26,21 @@ const CreateSchema = z.object({
     )
     .min(1)
     .max(20),
-}).refine(
-  (d) =>
-    (d.source_ids && d.source_ids.length > 0) ||
-    !!d.specialty_id ||
-    !!d.congress_id ||
-    (d.hashtags && d.hashtags.length > 0),
-  { message: "At least one binding is required (sources, specialty, congress, or hashtags)" },
-);
+});
 
-const UpdateSchema = z.intersection(
-  CreateSchema,
-  z.object({ id: z.string().uuid() }),
+const hasBinding = (d: z.infer<typeof BaseSchema>) =>
+  (d.source_ids && d.source_ids.length > 0) ||
+  !!d.specialty_id ||
+  !!d.congress_id ||
+  (d.hashtags && d.hashtags.length > 0);
+
+const CreateSchema = BaseSchema.refine(hasBinding, {
+  message: "At least one binding is required (sources, specialty, congress, or hashtags)",
+});
+
+const UpdateSchema = BaseSchema.extend({ id: z.string().uuid() }).refine(
+  hasBinding,
+  { message: "At least one binding is required (sources, specialty, congress, or hashtags)" },
 );
 
 const IdSchema = z.object({ id: z.string().uuid() });
@@ -140,6 +143,9 @@ export const createDigest = createServerFn({ method: "POST" })
         timezone: data.timezone,
         is_active: data.is_active ?? true,
         next_send_at: nextSend.toISOString(),
+        specialty_id: data.specialty_id ?? null,
+        congress_id: data.congress_id ?? null,
+        hashtags: data.hashtags ?? [],
       })
       .select("id")
       .single();
@@ -182,6 +188,9 @@ export const updateDigest = createServerFn({ method: "POST" })
         timezone: data.timezone,
         is_active: data.is_active ?? true,
         next_send_at: nextSend.toISOString(),
+        specialty_id: data.specialty_id ?? null,
+        congress_id: data.congress_id ?? null,
+        hashtags: data.hashtags ?? [],
       })
       .eq("id", data.id)
       .eq("user_id", userId);
