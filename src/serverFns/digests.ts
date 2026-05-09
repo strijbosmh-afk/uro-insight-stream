@@ -13,7 +13,10 @@ const CreateSchema = z.object({
   send_hour: z.number().int().min(0).max(23),
   timezone: z.string().min(1).max(64).default("UTC"),
   is_active: z.boolean().optional(),
-  source_ids: z.array(z.string().min(1).max(80)).min(1).max(200),
+  source_ids: z.array(z.string().min(1).max(80)).max(200).default([]),
+  specialty_id: z.string().min(1).max(80).nullable().optional(),
+  congress_id: z.string().min(1).max(80).nullable().optional(),
+  hashtags: z.array(z.string().min(1).max(80)).max(50).default([]),
   recipients: z
     .array(
       z.object({
@@ -23,7 +26,14 @@ const CreateSchema = z.object({
     )
     .min(1)
     .max(20),
-});
+}).refine(
+  (d) =>
+    (d.source_ids && d.source_ids.length > 0) ||
+    !!d.specialty_id ||
+    !!d.congress_id ||
+    (d.hashtags && d.hashtags.length > 0),
+  { message: "At least one binding is required (sources, specialty, congress, or hashtags)" },
+);
 
 const UpdateSchema = CreateSchema.extend({
   id: z.string().uuid(),
@@ -39,7 +49,7 @@ export const listUserDigests = createServerFn({ method: "GET" })
     const { data: digests, error } = await supabaseAdmin
       .from("digest_subscriptions")
       .select(
-        "id, name, frequency, day_of_week, send_hour, timezone, is_active, last_sent_at, next_send_at, created_at",
+        "id, name, frequency, day_of_week, send_hour, timezone, is_active, last_sent_at, next_send_at, created_at, specialty_id, congress_id, hashtags",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
