@@ -122,7 +122,7 @@ export function HandleChip({ handle, className, variant = "default", children }:
     closeMenu();
     try {
       await unfollowMut.mutateAsync({ handle: cleanHandle });
-      toast.success(`Unfollowed @${cleanHandle} · existing tweets remain in your feed history`);
+      toast.success(`Unfollowed @${cleanHandle} · existing posts remain in your feed history`);
     } catch {
       toast.error(`Couldn't unfollow @${cleanHandle}`);
     }
@@ -266,7 +266,7 @@ function HandleMenu({
       <MenuRow onClick={onOpenX}>
         Open @{handle} on X <span className="text-text-muted">↗</span>
       </MenuRow>
-      <MenuRow onClick={onViewTweets}>View all tweets from @{handle}</MenuRow>
+      <MenuRow onClick={onViewTweets}>View all posts from @{handle}</MenuRow>
       <Sep />
       <MenuRow onClick={onCopy}>Copy @{handle}</MenuRow>
     </div>

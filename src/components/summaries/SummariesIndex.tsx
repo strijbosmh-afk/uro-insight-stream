@@ -290,7 +290,7 @@ export function SummariesIndex() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="recent">Most recent</SelectItem>
-              <SelectItem value="tweets">Most tweets</SelectItem>
+              <SelectItem value="tweets">Most posts</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -301,7 +301,7 @@ export function SummariesIndex() {
               <TableHead className="w-24 text-[10px]">Target</TableHead>
               <TableHead className="text-[10px]">Title</TableHead>
               <TableHead className="w-28 text-[10px]">Sentiment</TableHead>
-              <TableHead className="w-20 text-[10px] text-right">Tweets</TableHead>
+              <TableHead className="w-20 text-[10px] text-right">Posts</TableHead>
               <TableHead className="w-40 text-[10px]">Generated</TableHead>
               <TableHead className="w-40 text-[10px]">Model</TableHead>
               <TableHead className="w-24 text-[10px] text-right">Export</TableHead>

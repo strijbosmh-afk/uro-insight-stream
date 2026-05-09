@@ -180,7 +180,7 @@ export function NotificationsSettings() {
         </div>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label className="text-[13px] text-text-primary">New tweet from a followed source</Label>
+            <Label className="text-[13px] text-text-primary">New post from a followed source</Label>
             <p className="text-[12px] text-text-muted mt-0.5">
               Real-time email when a source you follow posts (high volume — off by default).
             </p>

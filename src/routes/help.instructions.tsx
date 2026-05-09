@@ -28,7 +28,7 @@ const SECTIONS: Section[] = [
       "Your home base. Shows live KPIs, recent activity, and quick links into the rest of the app.",
     steps: [
       { title: "Open the Dashboard", body: "Click 'Dashboard' in the sidebar to land on the overview page." },
-      { title: "Review recent activity", body: "Scroll the activity feed; click any tweet to open it in the Live Feed." },
+      { title: "Review recent activity", body: "Scroll the activity feed; click any post to open it in the Live Feed." },
       { title: "Jump to a section", body: "Use the KPI cards as shortcuts into Congresses, Live Feed, or Summaries." },
     ],
     screenshot: "Dashboard overview",
@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
     steps: [
       { title: "Browse congresses", body: "Open 'Congresses' in the sidebar to see all tracked events." },
       { title: "Add a new congress", body: "Click 'New Congress' and follow the wizard to configure dates, hashtags, and sources." },
-      { title: "Open a congress", body: "Click any card to view its sessions, scheduled program, and matched tweets.", tip: "Sessions can be summarized individually from the session detail page." },
+      { title: "Open a congress", body: "Click any card to view its sessions, scheduled program, and matched posts.", tip: "Sessions can be summarized individually from the session detail page." },
     ],
     screenshot: "Congress grid",
   },
@@ -49,11 +49,11 @@ const SECTIONS: Section[] = [
     id: "feed",
     number: "3",
     title: "Live Feed",
-    overview: "Real-time stream of tweets matching your interests, sources, and hashtags.",
+    overview: "Real-time stream of posts matching your interests, sources, and hashtags.",
     steps: [
       { title: "Apply filters", body: "Use the filter bar to scope the feed by hashtag, handle, or specialty." },
-      { title: "Open a thread", body: "Click any tweet to open the full thread in a side dialog. Opened tweets are highlighted." },
-      { title: "Reply or compose", body: "If your X account is connected, use the reply button or compose a new tweet directly." },
+      { title: "Open a thread", body: "Click any post to open the full thread in a side dialog. Opened posts are highlighted." },
+      { title: "Reply or compose", body: "If your X account is connected, use the reply button or share a new post directly." },
     ],
     screenshot: "Live Feed with thread open",
   },
@@ -164,7 +164,7 @@ const SECTIONS: Section[] = [
     id: "ingestion",
     number: "13",
     title: "Settings — Ingestion (Admin)",
-    overview: "Inspect and tune how tweets are ingested into the platform.",
+    overview: "Inspect and tune how posts are ingested into the platform.",
     steps: [
       { title: "Open Ingestion", body: "Settings → Ingestion (admin only) shows queue stats and recent runs." },
     ],

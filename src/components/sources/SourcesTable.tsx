@@ -145,8 +145,8 @@ export function SourcesTable() {
     mutationFn: (id: string) => feedService.testSource(id),
     onSuccess: (tweets, id) => {
       const handle = sources.find((s) => s.id === id)?.handle ?? id;
-      toast.success(`@${handle}: fetched ${tweets.length} recent tweets`, {
-        description: tweets[0]?.text?.slice(0, 90) ?? "No recent tweets.",
+      toast.success(`@${handle}: fetched ${tweets.length} recent posts`, {
+        description: tweets[0]?.text?.slice(0, 90) ?? "No recent posts.",
       });
     },
     onError: () => toast.error("Source test failed"),
@@ -267,7 +267,7 @@ export function SourcesTable() {
                 <th className="px-3 py-2 font-medium text-center">Verified</th>
                 <th className="px-3 py-2 font-medium text-center">Active</th>
                 <th className="px-3 py-2 font-medium text-right">Last seen</th>
-                <th className="px-3 py-2 font-medium text-right">Tweets</th>
+                <th className="px-3 py-2 font-medium text-right">Posts</th>
                 <th className="px-3 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -551,11 +551,11 @@ function DeleteSourceDialog({
           action: "source.delete",
           target_type: "source",
           target_id: source.id,
-          summary: `Hard-deleted @${handle} and ${tweetCount ?? 0} ingested tweets`,
+          summary: `Hard-deleted @${handle} and ${tweetCount ?? 0} ingested posts`,
           before: { handle, active: source.active, tweetCount },
           after: { deleted: true, hard: true },
         });
-        toast.success(`Deleted @${handle} and ${tweetCount ?? 0} tweets`);
+        toast.success(`Deleted @${handle} and ${tweetCount ?? 0} posts`);
       } else {
         const { error } = await supabase
           .from("sources")
@@ -586,7 +586,7 @@ function DeleteSourceDialog({
         <DialogHeader>
           <DialogTitle>Delete @{handle}?</DialogTitle>
           <DialogDescription>
-            By default this deactivates the source (soft delete). Tweets are kept,
+            By default this deactivates the source (soft delete). Posts are kept,
             ingestion stops. Type the handle to confirm.
           </DialogDescription>
         </DialogHeader>
