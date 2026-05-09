@@ -139,7 +139,7 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
       <DialogContent className="max-w-xl bg-panel border-border">
         <DialogHeader>
           <DialogTitle className="text-[12px] font-mono uppercase tracking-wider text-text-muted">
-            {reply ? "Reply on X" : "Post to X"}
+            {reply ? "Reply on X" : "Share to X"}
           </DialogTitle>
         </DialogHeader>
 
