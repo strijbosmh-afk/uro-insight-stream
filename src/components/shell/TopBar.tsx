@@ -1,10 +1,10 @@
 import * as React from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, ChevronRight, Menu, PenSquare, ChevronDown, Check, Plus } from "lucide-react";
+import { Search, ChevronRight, Menu, ChevronDown, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { feedService } from "@/services/feedService";
-import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
+import { ShareToXButton } from "@/components/x/ShareToXButton";
 import {
   getXConnectionStatus,
   listXAccounts,
@@ -176,7 +176,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
 
       {/* Avatar */}
       <XHandleBadge />
-      <ComposeButton />
+      <ShareToXButton />
       <button
         type="button"
         className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
@@ -185,25 +185,6 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
         UR
       </button>
     </header>
-  );
-}
-
-function ComposeButton() {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title="Compose a tweet"
-        aria-label="Compose tweet"
-        className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
-      >
-        <PenSquare className="w-3.5 h-3.5" />
-        <span className="hidden md:inline">Compose</span>
-      </button>
-      <ComposeTweetDialog open={open} onOpenChange={setOpen} />
-    </>
   );
 }
 

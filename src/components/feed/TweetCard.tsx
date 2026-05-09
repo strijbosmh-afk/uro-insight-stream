@@ -10,6 +10,7 @@ import { HandleChip } from "@/components/handles/HandleChip";
 import { TweetMedia } from "./TweetMedia";
 import { ParentPreview } from "./ParentPreview";
 import { ReplyButton } from "@/components/x/ReplyButton";
+import { QuoteButton } from "@/components/x/QuoteButton";
 import { engageWithTweet } from "@/serverFns/x-engagement";
 
 function relativeTime(iso: string): string {
@@ -121,12 +122,12 @@ export const TweetCard = React.memo(function TweetCard({
     onMutate: (next: boolean) => {
       setRetweeted(next);
     },
-    onSuccess: (res, next) => {
+      onSuccess: (res, next) => {
       if (!res.ok) {
         setRetweeted(!next);
         toast.error(res.message);
       } else {
-        toast.success(next ? "Retweeted on X" : "Removed retweet");
+          toast.success(next ? "Reposted on X" : "Removed repost");
       }
     },
     onError: (e, next) => {
@@ -268,7 +269,7 @@ export const TweetCard = React.memo(function TweetCard({
                 retweetMutation.mutate(!retweeted);
               }}
               disabled={retweetMutation.isPending}
-              title={retweeted ? "Undo retweet" : "Retweet on X"}
+              title={retweeted ? "Undo repost" : "Repost on X"}
               className={cn(
                 "flex items-center gap-1 transition-colors hover:text-emerald-400",
                 retweeted && "text-emerald-400",
@@ -290,12 +291,13 @@ export const TweetCard = React.memo(function TweetCard({
               rel="noreferrer noopener"
               className="flex items-center gap-1 text-text-muted hover:text-accent"
             >
-              View thread
+              View on X
               <ExternalLink className="w-3 h-3" />
             </a>
             <ReplyButton
               reply={{ tweetId: tweet.id, authorHandle: handle, text: tweet.text }}
             />
+            <QuoteButton tweetUrl={tweetUrl} />
           </div>
         </div>
       </div>

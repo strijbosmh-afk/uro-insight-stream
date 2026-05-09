@@ -5,6 +5,7 @@ import { TweetStream } from "@/components/feed/TweetStream";
 import { LiveSignals } from "@/components/feed/LiveSignals";
 import { TimelineScrubber } from "@/components/feed/TimelineScrubber";
 import { useFilteredTweets } from "@/components/feed/useFilteredTweets";
+import { InlineComposer } from "@/components/x/InlineComposer";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Live Feed — UroFeed" }] }),
@@ -30,8 +31,11 @@ function FeedLayout() {
         <FilterBar />
       </div>
       <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-        <div className="col-span-12 xl:col-span-9 min-h-0">
-          <TweetStream data={data} />
+        <div className="col-span-12 xl:col-span-9 min-h-0 flex flex-col gap-3">
+          <InlineComposer />
+          <div className="flex-1 min-h-0">
+            <TweetStream data={data} />
+          </div>
         </div>
         <div className="col-span-12 xl:col-span-3 min-h-0">
           <LiveSignals tweets={data.tweets} sourcesById={data.sourcesById} />
