@@ -49,7 +49,7 @@ export function ThreadDialog({ tweetId, sourcesById, onClose }: Props) {
     if (!shareUrl) return;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "Tweet thread", url: shareUrl });
+        await navigator.share({ title: "Post thread", url: shareUrl });
         return;
       } catch {
         // user cancelled or share failed — fall back to copy

@@ -283,7 +283,7 @@ export function CongressDetail({ congressId }: { congressId: string }) {
                             <TableHead className="w-32 text-[10px]">Room</TableHead>
                             <TableHead className="text-[10px]">Chairs</TableHead>
                             <TableHead className="w-16 text-[10px] text-right">Abs</TableHead>
-                            <TableHead className="w-20 text-[10px] text-right">Tweets</TableHead>
+                            <TableHead className="w-20 text-[10px] text-right">Posts</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -346,7 +346,7 @@ export function CongressDetail({ congressId }: { congressId: string }) {
                     <TableHead className="text-[10px]">Handle</TableHead>
                     <TableHead className="text-[10px]">Display name</TableHead>
                     <TableHead className="text-[10px]">Role</TableHead>
-                    <TableHead className="text-[10px] text-right">Tweets</TableHead>
+                    <TableHead className="text-[10px] text-right">Posts</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

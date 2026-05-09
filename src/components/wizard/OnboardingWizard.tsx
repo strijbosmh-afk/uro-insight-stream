@@ -850,7 +850,7 @@ function ReviewStep({
       <div>
         <h2 className="text-xl font-semibold text-text-primary">Review your setup</h2>
         <p className="mt-1 text-sm text-text-secondary">
-          Confirm and we'll start pulling tweets from the last 72 hours immediately.
+          Confirm and we'll start pulling posts from the last 72 hours immediately.
         </p>
       </div>
 

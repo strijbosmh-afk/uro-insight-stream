@@ -179,7 +179,7 @@ export function SessionDetail({ sessionId }: Props) {
       setFlashTweetId(tweetId);
       window.setTimeout(() => setFlashTweetId(null), 1600);
     } else {
-      toast.message("Tweet not in current filter — clearing filters", {
+      toast.message("Post not in current filter — clearing filters", {
         description: "Try again after the list updates.",
       });
       setTweetFilter({});
@@ -220,7 +220,7 @@ export function SessionDetail({ sessionId }: Props) {
           <Panel title="AI summary" className="col-span-12 lg:col-span-5 min-h-0" loading>
             <SummarySkeleton />
           </Panel>
-          <Panel title="Source tweets" className="col-span-12 lg:col-span-4 min-h-0" loading>
+          <Panel title="Source posts" className="col-span-12 lg:col-span-4 min-h-0" loading>
             <div className="space-y-2">
               <TweetCardSkeleton />
               <TweetCardSkeleton />
@@ -360,7 +360,7 @@ export function SessionDetail({ sessionId }: Props) {
               caption={
                 <>
                   No summary generated yet · Click <span className="text-accent">Generate</span>{" "}
-                  to synthesise key takeaways from the source tweets.
+                  to synthesise key takeaways from the source posts.
                 </>
               }
               action={{
@@ -459,7 +459,7 @@ export function SessionDetail({ sessionId }: Props) {
               <div className="pt-2 mt-2 border-t border-border flex items-center gap-3 text-[10px] font-mono text-text-muted">
                 <span>generated {fmtClock(summary.generatedAt)}</span>
                 <span>·</span>
-                <span>{summary.tweetCount} tweets</span>
+                <span>{summary.tweetCount} posts</span>
                 <span>·</span>
                 <span>model: {summary.modelUsed}</span>
                 <button
@@ -477,7 +477,7 @@ export function SessionDetail({ sessionId }: Props) {
 
         {/* RIGHT — source tweets */}
         <Panel
-          title={`Source tweets · ${scopedTweets.length}`}
+          title={`Source posts · ${scopedTweets.length}`}
           actions={
             (tweetFilter.sourceId || tweetFilter.hashtag) && (
               <button
@@ -505,8 +505,8 @@ export function SessionDetail({ sessionId }: Props) {
                 compact
                 caption={
                   tweetFilter.sourceId || tweetFilter.hashtag
-                    ? "No tweets match the current source/hashtag filter."
-                    : "No tweets attached to this session yet · live ingestion targets handles + hashtags, classifier not active."
+                    ? "No posts match the current source/hashtag filter."
+                    : "No posts attached to this session yet · live ingestion targets handles + hashtags, classifier not active."
                 }
                 secondary={
                   tweetFilter.sourceId || tweetFilter.hashtag
@@ -787,7 +787,7 @@ function EmptySummary({ onGenerate }: { onGenerate: () => void }) {
 
 function synthesizeBullets(tweets: Tweet[], max: number, tone: string): string[] {
   if (tweets.length === 0) {
-    return ["No tweets available yet for this scope."];
+    return ["No posts available yet for this scope."];
   }
   const out: string[] = [];
   const sample = tweets.slice(0, Math.min(tweets.length, max));

@@ -187,7 +187,7 @@ export function HashtagsTable() {
                 <th className="px-3 py-2 font-medium">Tag</th>
                 <th className="px-3 py-2 font-medium">Congress</th>
                 <th className="px-3 py-2 font-medium text-center">Active</th>
-                <th className="px-3 py-2 font-medium text-right">Tweets / 24h</th>
+                <th className="px-3 py-2 font-medium text-right">Posts / 24h</th>
                 <th className="px-3 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -249,7 +249,7 @@ export function HashtagsTable() {
                       icon={Hash}
                       caption={
                         hashtags.length === 0
-                          ? "No hashtags yet · Add a congress tag to start collecting tweets."
+                          ? "No hashtags yet · Add a congress tag to start collecting posts."
                           : "No hashtags match your filters."
                       }
                       action={

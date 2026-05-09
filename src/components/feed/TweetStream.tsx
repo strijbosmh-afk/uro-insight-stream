@@ -152,7 +152,7 @@ export function TweetStream({ data }: { data: FeedDataset }) {
             ) : (
               <EmptyState
                 icon={Radio}
-                caption="No tweets yet · Sources/hashtags configured but nothing ingested in this window."
+                caption="No posts yet · Sources/hashtags configured but nothing ingested in this window."
                 action={{
                   label: "Refresh",
                   icon: RefreshCw,

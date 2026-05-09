@@ -90,7 +90,7 @@ export function StatusBar() {
       </Cell>
       <span className="text-border">│</span>
       <Cell>
-        <K>tweets/min:</K>
+        <K>posts/min:</K>
         <V tone={kpis && kpis.tweetsPerMin > 0 ? "success" : "primary"}>
           {kpis ? kpis.tweetsPerMin.toFixed(1) : "—"}
         </V>

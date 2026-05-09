@@ -259,7 +259,7 @@ export function Dashboard() {
         />
         <Kpi
           icon={<Radio className="w-4 h-4" />}
-          label="Tweets / min"
+          label="Posts / min"
           value={liveKpis?.tweetsPerMin ?? 0}
           sub={`${liveKpis?.tweetsLastHour ?? 0} in last hour · live`}
           accent
@@ -494,7 +494,7 @@ function NowHappeningCard({
         </span>
         <span className="flex items-center gap-1 text-accent">
           <Radio className="w-3 h-3" />
-          {tweetCount} tweets
+          {tweetCount} posts
         </span>
       </div>
     </Link>
