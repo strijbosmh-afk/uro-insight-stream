@@ -21,7 +21,6 @@ import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DiscoverIndexRouteImport } from './routes/discover.index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as HelpInstructionsRouteImport } from './routes/help.instructions'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
@@ -112,11 +111,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverIndexRoute = DiscoverIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DiscoverRoute,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
@@ -308,7 +302,6 @@ export interface FileRoutesByFullPath {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
-  '/discover/': typeof DiscoverIndexRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -333,6 +326,7 @@ export interface FileRoutesByTo {
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/digests': typeof DigestsRoute
+  '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
@@ -352,7 +346,6 @@ export interface FileRoutesByTo {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
-  '/discover': typeof DiscoverIndexRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -398,7 +391,6 @@ export interface FileRoutesById {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
-  '/discover/': typeof DiscoverIndexRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -445,7 +437,6 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/sessions/$sessionId'
-    | '/discover/'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -470,6 +461,7 @@ export interface FileRouteTypes {
     | '/congresses'
     | '/dashboard'
     | '/digests'
+    | '/discover'
     | '/feed'
     | '/settings'
     | '/sources'
@@ -489,7 +481,6 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/sessions/$sessionId'
-    | '/discover'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -534,7 +525,6 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/sessions/$sessionId'
-    | '/discover/'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -681,13 +671,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/discover/': {
-      id: '/discover/'
-      path: '/'
-      fullPath: '/discover/'
-      preLoaderRoute: typeof DiscoverIndexRouteImport
-      parentRoute: typeof DiscoverRoute
     }
     '/sessions/$sessionId': {
       id: '/sessions/$sessionId'
@@ -916,12 +899,10 @@ const CongressesRouteWithChildren = CongressesRoute._addFileChildren(
 
 interface DiscoverRouteChildren {
   DiscoverGroupsRoute: typeof DiscoverGroupsRoute
-  DiscoverIndexRoute: typeof DiscoverIndexRoute
 }
 
 const DiscoverRouteChildren: DiscoverRouteChildren = {
   DiscoverGroupsRoute: DiscoverGroupsRoute,
-  DiscoverIndexRoute: DiscoverIndexRoute,
 }
 
 const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
@@ -977,3 +958,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
