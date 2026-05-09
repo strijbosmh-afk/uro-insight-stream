@@ -35,9 +35,10 @@ const CreateSchema = z.object({
   { message: "At least one binding is required (sources, specialty, congress, or hashtags)" },
 );
 
-const UpdateSchema = CreateSchema.extend({
-  id: z.string().uuid(),
-});
+const UpdateSchema = z.intersection(
+  CreateSchema,
+  z.object({ id: z.string().uuid() }),
+);
 
 const IdSchema = z.object({ id: z.string().uuid() });
 const ToggleSchema = z.object({ id: z.string().uuid(), is_active: z.boolean() });
