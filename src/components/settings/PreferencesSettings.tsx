@@ -29,6 +29,7 @@ const DEFAULTS: UserPreferences = {
   notify_new_summary: true,
   notify_new_tweet_followed_source: false,
   notify_weekly_recap: true,
+  quick_start_dismissed: false,
 };
 
 type Density = UserPreferences["theme_density"];

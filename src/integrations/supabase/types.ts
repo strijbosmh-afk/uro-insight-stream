@@ -1940,6 +1940,7 @@ export type Database = {
           notify_new_tweet_followed_source: boolean
           notify_weekly_recap: boolean
           polling_interval_seconds: number
+          quick_start_dismissed: boolean
           summary_language: string
           summary_tone: string
           theme_density: string
@@ -1959,6 +1960,7 @@ export type Database = {
           notify_new_tweet_followed_source?: boolean
           notify_weekly_recap?: boolean
           polling_interval_seconds?: number
+          quick_start_dismissed?: boolean
           summary_language?: string
           summary_tone?: string
           theme_density?: string
@@ -1978,6 +1980,7 @@ export type Database = {
           notify_new_tweet_followed_source?: boolean
           notify_weekly_recap?: boolean
           polling_interval_seconds?: number
+          quick_start_dismissed?: boolean
           summary_language?: string
           summary_tone?: string
           theme_density?: string
