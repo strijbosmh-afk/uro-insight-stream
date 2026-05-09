@@ -13,6 +13,14 @@ export interface UserPreferences {
   summary_language: string;
   theme_density: "compact" | "comfortable" | "spacious";
   polling_interval_seconds: number;
+  digest_default_frequency: "daily" | "weekly" | "biweekly" | "monthly";
+  digest_default_send_hour: number;
+  digest_default_timezone: string;
+  digests_active_by_default: boolean;
+  digests_master_enabled: boolean;
+  notify_new_summary: boolean;
+  notify_new_tweet_followed_source: boolean;
+  notify_weekly_recap: boolean;
 }
 
 export interface ProfileRow {
@@ -45,6 +53,14 @@ const DEFAULT_PREFS: UserPreferences = {
   summary_language: "English",
   theme_density: "comfortable",
   polling_interval_seconds: 30,
+  digest_default_frequency: "weekly",
+  digest_default_send_hour: 9,
+  digest_default_timezone: "UTC",
+  digests_active_by_default: true,
+  digests_master_enabled: true,
+  notify_new_summary: true,
+  notify_new_tweet_followed_source: false,
+  notify_weekly_recap: true,
 };
 
 // Claim a pending invitation if the freshly-signed-in user carries an

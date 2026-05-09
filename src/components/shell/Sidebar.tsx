@@ -19,6 +19,7 @@ import {
   BookOpen,
   AtSign,
   Lightbulb,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -47,19 +48,12 @@ const BASE_SECTIONS: NavSection[] = [
     label: "Workspace",
     items: [
       { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-      { label: "Congresses", to: "/congresses", icon: CalendarRange },
       { label: "Live Feed", to: "/feed", icon: Radio },
       { label: "Summaries", to: "/summaries", icon: FileText },
+      { label: "Congresses", to: "/congresses", icon: CalendarRange },
       { label: "Digests", to: "/digests", icon: Mail },
       { label: "Discover", to: "/discover", icon: Compass },
-      { label: "Discover Groups", to: "/discover/groups", icon: Compass },
-    ],
-  },
-  {
-    label: "Configuration",
-    items: [
-      { label: "Sources", to: "/sources", icon: Database },
-      { label: "Settings", to: "/settings", icon: Settings },
+      { label: "My Following", to: "/sources", icon: Database },
     ],
   },
 ];
@@ -77,8 +71,21 @@ const ADMIN_SECTION: NavSection = {
     { label: "Groups", to: "/admin/groups", icon: Users2 },
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
     { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
+    BRAINSTORM_ITEM,
+    { label: "Email diagnostics", to: "/admin/email-diagnostics", icon: ShieldAlert },
   ],
 };
+
+// Reorder Workspace per spec: Dashboard, Live Feed, Summaries, Congresses, Discover, My Following, Digests
+const WORKSPACE_ORDERED: NavItem[] = [
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Live Feed", to: "/feed", icon: Radio },
+  { label: "Summaries", to: "/summaries", icon: FileText },
+  { label: "Congresses", to: "/congresses", icon: CalendarRange },
+  { label: "Discover", to: "/discover", icon: Compass },
+  { label: "My Following", to: "/sources", icon: Database },
+  { label: "Digests", to: "/digests", icon: Mail },
+];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -91,15 +98,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { unread, markRead } = useBrainstormUnread();
   const sections = React.useMemo(
     () => {
-      if (!isAdmin) return BASE_SECTIONS;
-      return [
-        BASE_SECTIONS[0],
-        {
-          ...BASE_SECTIONS[1],
-          items: [...BASE_SECTIONS[1].items, BRAINSTORM_ITEM],
-        },
-        ADMIN_SECTION,
-      ];
+      const workspace: NavSection = { label: "Workspace", items: WORKSPACE_ORDERED };
+      if (!isAdmin) return [workspace];
+      return [workspace, ADMIN_SECTION];
     },
     [isAdmin],
   );
@@ -198,49 +199,62 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </ul>
           </div>
         ))}
-
-        {/* Help section */}
-        <div className="mb-4">
-          {!collapsed && (
-            <div className="px-4 mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-              Help
-            </div>
-          )}
-          <ul>
-            <li>
-              <Link
-                to="/help/instructions"
-                className={cn(
-                  "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
-                  collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
-                  pathname === "/help/instructions"
-                    ? "text-text-primary bg-panel-elevated"
-                    : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
-                )}
-              >
-                {pathname === "/help/instructions" && (
-                  <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
-                )}
-                <BookOpen className="w-4 h-4 shrink-0" />
-                {!collapsed && <span className="truncate">Instructions</span>}
-              </Link>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => setContactOpen(true)}
-                className={cn(
-                  "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
-                  collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
-                )}
-              >
-                <AtSign className="w-4 h-4 shrink-0" />
-                {!collapsed && <span className="truncate">Contact</span>}
-              </button>
-            </li>
-          </ul>
-        </div>
       </nav>
+
+      {/* Bottom utility nav (above collapse toggle) */}
+      <div className="border-t border-border py-2">
+        <ul>
+          <li>
+            <Link
+              to="/help/instructions"
+              className={cn(
+                "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+                pathname === "/help/instructions"
+                  ? "text-text-primary bg-panel-elevated"
+                  : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+              )}
+            >
+              {pathname === "/help/instructions" && (
+                <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
+              )}
+              <BookOpen className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="truncate">Help</span>}
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/settings"
+              className={cn(
+                "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+                pathname === "/settings" || pathname.startsWith("/settings/")
+                  ? "text-text-primary bg-panel-elevated"
+                  : "text-text-muted hover:text-text-primary hover:bg-panel-elevated/60",
+              )}
+            >
+              {(pathname === "/settings" || pathname.startsWith("/settings/")) && (
+                <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
+              )}
+              <Settings className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="truncate">Settings</span>}
+            </Link>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={() => setContactOpen(true)}
+              className={cn(
+                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
+                collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+              )}
+            >
+              <AtSign className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="truncate">Contact</span>}
+            </button>
+          </li>
+        </ul>
+      </div>
 
       {/* Collapse toggle */}
       <button
