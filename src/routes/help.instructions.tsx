@@ -17,6 +17,7 @@ type Section = {
   overview: string;
   steps: Step[];
   screenshot: string;
+  image?: string;
 };
 
 const SECTIONS: Section[] = [
@@ -25,161 +26,192 @@ const SECTIONS: Section[] = [
     number: "1",
     title: "Dashboard",
     overview:
-      "Your home base. Shows live KPIs, recent activity, and quick links into the rest of the app.",
+      "Your home base. New users see a Quick Start panel with four onboarding actions; everyone gets KPI tiles, ingestion health, the live-now strip, and a Recent Activity stream.",
     steps: [
-      { title: "Open the Dashboard", body: "Click 'Dashboard' in the sidebar to land on the overview page." },
-      { title: "Review recent activity", body: "Scroll the activity feed; click any post to open it in the Live Feed." },
-      { title: "Jump to a section", body: "Use the KPI cards as shortcuts into Congresses, Live Feed, or Summaries." },
+      { title: "Open the Dashboard", body: "Click 'Dashboard' in the sidebar to land on the overview." },
+      { title: "Use Quick Start (first 7 days)", body: "Pick any of the four cards — Follow KOLs, Set up a digest, Share a post, Read the guide. Acting on a card or hitting the panel-level X dismisses it for good." },
+      { title: "Scan the KPI tiles", body: "Active congresses, posts/min, sources tracked, and summaries today. They double as shortcuts into the matching section." },
+      { title: "Watch ingestion health", body: "The Ingestion panel shows the four cron jobs (matcher, queue, summarizer, ingest) and how recently each succeeded.", tip: "If a row turns red ('never'), that pipeline is stale — check the Ingestion admin page." },
+      { title: "Browse Recent Activity", body: "Newest posts from your followed sources stream in on the right. Click any item to open it in the Live Feed." },
     ],
-    screenshot: "Dashboard overview",
-  },
-  {
-    id: "congresses",
-    number: "2",
-    title: "Congresses",
-    overview: "Track conferences and their associated sessions, hashtags, and abstracts.",
-    steps: [
-      { title: "Browse congresses", body: "Open 'Congresses' in the sidebar to see all tracked events." },
-      { title: "Add a new congress", body: "Click 'New Congress' and follow the wizard to configure dates, hashtags, and sources." },
-      { title: "Open a congress", body: "Click any card to view its sessions, scheduled program, and matched posts.", tip: "Sessions can be summarized individually from the session detail page." },
-    ],
-    screenshot: "Congress grid",
+    screenshot: "Dashboard with Quick Start, KPIs, ingestion and recent activity",
+    image: "/help-screenshots/dashboard.png",
   },
   {
     id: "feed",
-    number: "3",
+    number: "2",
     title: "Live Feed",
-    overview: "Real-time stream of posts matching your interests, sources, and hashtags.",
+    overview:
+      "Real-time stream of posts matching your followed sources, hashtags, congresses, and sessions. Includes an inline composer, live signals sidebar, and a 24-hour timeline.",
     steps: [
-      { title: "Apply filters", body: "Use the filter bar to scope the feed by hashtag, handle, or specialty." },
-      { title: "Open a thread", body: "Click any post to open the full thread in a side dialog. Opened posts are highlighted." },
-      { title: "Reply or compose", body: "If your X account is connected, use the reply button or share a new post directly." },
+      { title: "Apply filters", body: "Top filter bar scopes by congress, session, source list, hashtag, date range, and language." },
+      { title: "Use the inline composer", body: "The 'Share something with the urology community…' bar above the stream opens the Share to X dialog with one click — no need to leave the feed." },
+      { title: "Open a thread", body: "Click any post to open the full thread in a side dialog. Opened posts stay highlighted so you can track what you've read." },
+      { title: "Quote with comment", body: "Each post has a Quote button — it opens the composer with the post URL pre-filled, ready for your take." },
+      { title: "Watch live signals", body: "The right sidebar tracks top hashtags, top sources, sentiment, and trending sessions in the last hour." },
     ],
-    screenshot: "Live Feed with thread open",
+    screenshot: "Live Feed with inline composer and live signals",
+    image: "/help-screenshots/feed.png",
   },
   {
     id: "summaries",
-    number: "4",
+    number: "3",
     title: "Summaries",
-    overview: "AI-generated summaries of sessions and topic clusters.",
+    overview:
+      "AI-generated summaries of sessions, abstracts, and topic clusters. Filterable by target type, sentiment, and recency.",
     steps: [
-      { title: "Browse summaries", body: "Open 'Summaries' to see all generated summaries." },
-      { title: "Customize a summary", body: "Open a summary, then click 'Customize' to adjust tone, length, and audience." },
-      { title: "Export", body: "Use the export menu to download as Markdown, PDF, or copy to clipboard." },
+      { title: "Browse summaries", body: "Open 'Summaries' for the full table. Each row links to the source session or abstract." },
+      { title: "Filter and search", body: "Use the search box plus the target/sentiment/sort dropdowns to narrow down quickly." },
+      { title: "Open a summary", body: "Click a row to read the full takeaway, source posts, and citations." },
+      { title: "Customise tone & audience", body: "From the detail page, regenerate with a different tone, length, or audience to fit your use case." },
     ],
-    screenshot: "Summary detail",
+    screenshot: "Summaries table",
+    image: "/help-screenshots/summaries.png",
   },
   {
-    id: "digests",
-    number: "5",
-    title: "Digests",
-    overview: "Scheduled email digests of curated content for you or your team.",
+    id: "congresses",
+    number: "4",
+    title: "Congresses",
+    overview:
+      "Track conferences with their dates, locations, hashtags, and sessions. Cards show status (Upcoming / Live / Archived) and per-congress KPIs.",
     steps: [
-      { title: "Open Digests", body: "Click 'Digests' in the sidebar." },
-      { title: "Create a digest", body: "Use the wizard to pick a cadence, audience, and content sources." },
-      { title: "Preview before sending", body: "Each digest can be previewed and sent on demand or on schedule." },
+      { title: "Browse congresses", body: "Open 'Congresses' for the card grid. Filter by cancer area or status." },
+      { title: "Open a congress", body: "Click any card to view its sessions, abstracts, scheduled program, and matched posts." },
+      { title: "Add a new congress", body: "Click 'New congress' and follow the wizard to configure dates, location, hashtags, and the source list to track.", tip: "Sessions become matchable as soon as you give the congress a primary hashtag." },
     ],
-    screenshot: "Digest wizard",
+    screenshot: "Congress grid",
+    image: "/help-screenshots/congresses.png",
   },
   {
     id: "discover",
-    number: "6",
-    title: "Discover & Discover Groups",
-    overview: "Find new sources, hashtags, and curated groups relevant to your interests.",
+    number: "5",
+    title: "Discover",
+    overview:
+      "Find new sources to follow. Three tabs: For you (personalised), By group (curated lists), and By specialty (top sources per cancer area). The active tab persists across sessions.",
     steps: [
-      { title: "Discover", body: "See suggested handles and hashtags based on your activity." },
-      { title: "Discover Groups", body: "Browse curated groups and join the ones that match your specialty." },
+      { title: "For you", body: "Personalised candidates ranked by reach and relevance to your specialties. Use the checkboxes to bulk-follow, or the X to dismiss a suggestion." },
+      { title: "By group", body: "Curated, admin-maintained lists (e.g. 'Prostate cancer KOLs'). Subscribe to a whole group in one click." },
+      { title: "By specialty", body: "Top recommended sources per cancer area, ordered by weight. The 'All caught up' state means you already follow everything we'd suggest." },
+      { title: "Use the filter bar", body: "Search, toggle Verified-only, and pin a single specialty chip to focus the recommendations." },
     ],
-    screenshot: "Discover page",
+    screenshot: "Discover with three tabs and filter bar",
+    image: "/help-screenshots/discover.png",
   },
   {
     id: "sources",
-    number: "7",
-    title: "Sources",
-    overview: "Manage the X handles, lists, and hashtags ingested into your feed.",
+    number: "6",
+    title: "My Following",
+    overview:
+      "The full list of X handles and hashtags currently driving your feed. Two side-by-side tables: Sources and Hashtags.",
     steps: [
-      { title: "Add a handle", body: "Click 'Add Source' and paste an X handle or URL." },
-      { title: "Manage lists", body: "Use 'Manage Lists' to organize sources into lists for filtering." },
-      { title: "Add hashtags", body: "Switch to the Hashtags tab and click 'Add Hashtag'.", tip: "Use lowercase hashtags without the # symbol." },
+      { title: "Follow / unfollow", body: "Click the toggle button on any row to add or drop a source from your feed." },
+      { title: "Add a source", body: "Click 'Add source' and paste an X handle or URL. New handles enter ingestion within minutes." },
+      { title: "Organise into lists", body: "Use 'Lists' to group sources (e.g. 'Industry', 'KOLs') for fine-grained feed filtering." },
+      { title: "Manage hashtags", body: "On the right, add or pause hashtags. Active hashtags drive the live-feed match.", tip: "Hashtags are stored lowercase, without the leading #." },
     ],
-    screenshot: "Sources table",
+    screenshot: "Sources and hashtags tables",
+    image: "/help-screenshots/sources.png",
   },
   {
-    id: "preferences",
-    number: "8",
-    title: "Settings — Preferences",
-    overview: "Personal display preferences (theme, density, locale).",
+    id: "digests",
+    number: "7",
+    title: "Digests",
+    overview:
+      "Recurring email digests bound to any combination of sources, your specialty, an active congress, and/or hashtags. Three preset starters get you running fast.",
     steps: [
-      { title: "Open Settings", body: "Click 'Settings' in the sidebar, then the 'Preferences' tab." },
-      { title: "Adjust density", body: "Switch between comfortable and compact for tighter layouts." },
+      { title: "Create a digest", body: "Click 'New digest' (or the empty-state CTA). Step 1 names it; step 2 picks bindings; step 3 sets cadence; step 4 confirms recipients." },
+      { title: "Pick a preset", body: "Step 2 shows three starters: My specialty digest (auto-binds to your primary specialty), Active congress digest (auto-binds to a live congress), or Custom (mix any bindings)." },
+      { title: "Combine bindings", body: "Open any of the four collapsible sections — Sources, Specialty, Congress, Hashtags — and combine them. The send job ORs them together." },
+      { title: "Preview & send now", body: "From the digest detail you can run an on-demand preview send before the schedule fires.", tip: "Toggle 'Master enabled' off in Settings → Notifications to pause every digest at once without deleting them." },
+    ],
+    screenshot: "Digest wizard step 2 with presets and bindings",
+    image: "/help-screenshots/digest-wizard.png",
+  },
+  {
+    id: "settings-profile",
+    number: "8",
+    title: "Settings — Profile",
+    overview:
+      "Display name, email, and the multi-select for your urology specialties. Specialty selection drives 'For you' recommendations and the 'My specialty digest' preset.",
+    steps: [
+      { title: "Edit your profile", body: "Settings → Profile lets you change display name and review your email." },
+      { title: "Pick specialties", body: "Use the chips to add or remove specialties. Mark one as primary — it's used by Quick Start and the digest presets." },
+    ],
+    screenshot: "Profile settings with specialty multi-select",
+  },
+  {
+    id: "settings-preferences",
+    number: "9",
+    title: "Settings — Preferences",
+    overview: "Personal display preferences (theme, density, default landing tab).",
+    steps: [
+      { title: "Open Preferences", body: "Settings → Preferences." },
+      { title: "Adjust density", body: "Switch between comfortable and compact for tighter table rows." },
     ],
     screenshot: "Preferences tab",
   },
   {
-    id: "interests",
-    number: "9",
-    title: "Settings — Interests",
-    overview: "Specialties, congresses, sources, and hashtags that drive your personalized feed.",
+    id: "settings-notifications",
+    number: "10",
+    title: "Settings — Notifications",
+    overview:
+      "Per-event email toggles plus a master switch for all digests. Defaults here are applied to every new digest you create.",
     steps: [
-      { title: "Edit interests", body: "Go to Settings → Interests and add or remove items in each category." },
-      { title: "Re-run onboarding", body: "Use the resume banner on the Dashboard to walk through the wizard again." },
+      { title: "Toggle event emails", body: "Pick which events trigger an email — new post from a followed source, mentions, weekly summary, etc." },
+      { title: "Master digest switch", body: "Turn 'Digests master enabled' off to pause every scheduled digest at once. The send-job skips you until you re-enable it." },
     ],
-    screenshot: "Interests editor",
+    screenshot: "Notifications tab",
   },
   {
-    id: "ai",
-    number: "10",
+    id: "settings-ai",
+    number: "11",
     title: "Settings — AI",
-    overview: "Choose the AI model and tune defaults used for summaries.",
+    overview: "Pick the model and defaults used to generate summaries.",
     steps: [
-      { title: "Pick a model", body: "Settings → AI lets you select between supported summarization models." },
-      { title: "Set defaults", body: "Tone, length, and audience defaults apply to all new summaries." },
+      { title: "Choose a model", body: "Pick from the supported Lovable AI Gateway models — Gemini 2.5 Flash for speed, GPT-5 for hardest reasoning, etc." },
+      { title: "Set defaults", body: "Tone, length, and audience defaults are applied to every new summary unless you override them at generation time." },
     ],
     screenshot: "AI settings",
   },
   {
-    id: "team",
-    number: "11",
-    title: "Settings — Team",
-    overview: "Manage teammates and invitations.",
-    steps: [
-      { title: "Invite a teammate", body: "Settings → Team → 'Invite' and enter their email." },
-      { title: "Assign a role", body: "Pick Admin, Editor, or Viewer when sending the invite.", tip: "Roles are enforced server-side via Lovable Cloud RLS." },
-    ],
-    screenshot: "Team management",
-  },
-  {
-    id: "x",
+    id: "settings-x",
     number: "12",
-    title: "Settings — X (Twitter)",
-    overview: "Connect one or more X accounts for posting and replying. Switch between them from the top bar.",
+    title: "Settings — X account",
+    overview: "Connect one or more X (Twitter) accounts for posting and quoting. Switch between them from the top bar account chip.",
     steps: [
-      { title: "Add an account", body: "Settings → X (Twitter) and follow the four-step credential guide." },
-      { title: "Switch accounts", body: "Use the account switcher in the top bar to choose which connected account to act as." },
-      { title: "Disconnect", body: "Remove an account from the X settings list at any time.", tip: "UroFeed uses OAuth 1.0a — you need Consumer Key/Secret AND Access Token/Secret." },
+      { title: "Add an account", body: "Settings → X account and follow the four-step OAuth 1.0a credential guide." },
+      { title: "Switch accounts", body: "Use the account chip in the top bar to choose which connected account to post as." },
+      { title: "Disconnect", body: "Remove any account from the list at any time.", tip: "UroFeed uses OAuth 1.0a — you need Consumer Key/Secret AND Access Token/Secret." },
     ],
     screenshot: "X account settings",
   },
   {
-    id: "ingestion",
+    id: "compose",
     number: "13",
-    title: "Settings — Ingestion (Admin)",
-    overview: "Inspect and tune how posts are ingested into the platform.",
+    title: "Sharing to X",
+    overview:
+      "Three ways to compose a post: the prominent Share to X button in the top bar, the inline composer above the Live Feed, and per-post Quote buttons. On mobile, a floating + button opens the same composer.",
     steps: [
-      { title: "Open Ingestion", body: "Settings → Ingestion (admin only) shows queue stats and recent runs." },
+      { title: "Top-bar Share to X", body: "Always visible in the top bar — opens the compose dialog from anywhere in the app." },
+      { title: "Inline 'What did you take away?'", body: "Above the Live Feed stream — one click opens the dialog already focused, ready to type." },
+      { title: "Quote a post", body: "Every post card has a Quote button. It opens the composer with the source URL appended so the embed shows up on X." },
+      { title: "Mobile FAB", body: "On screens narrower than 768px, a floating + button anchors to the bottom-right and opens the same composer." },
     ],
-    screenshot: "Ingestion settings",
+    screenshot: "Compose dialog",
   },
   {
     id: "admin",
     number: "14",
-    title: "Admin",
-    overview: "Admin-only tools for managing users, groups, recommendations, and ingestion jobs.",
+    title: "Admin (admins only)",
+    overview:
+      "The Admin sidebar section appears only for users with the admin role and exposes platform-wide tools.",
     steps: [
-      { title: "Users", body: "Invite, promote, or deactivate users." },
-      { title: "Groups", body: "Create and manage curated groups visible under Discover Groups." },
-      { title: "Recommendations", body: "Tune the recommendation engine and review nominated handles." },
-      { title: "Ingestion", body: "Trigger or inspect ingestion jobs and webhooks." },
+      { title: "Users", body: "Invite, promote, or deactivate users; assign roles." },
+      { title: "Groups", body: "Create and curate the source groups that show up under Discover → By group." },
+      { title: "Recommendations", body: "Tune the recommendation engine, review nominated handles, and approve them into the catalogue." },
+      { title: "Ingestion", body: "Trigger or inspect ingestion jobs, the queue, and webhook health." },
+      { title: "Brainstorm", body: "Internal team brainstorm space. The sidebar badge shows unread messages." },
+      { title: "Email diagnostics", body: "Inspect the email queue, recent sends, bounces, and DLQ entries." },
     ],
     screenshot: "Admin panel",
   },
@@ -324,9 +356,20 @@ function InstructionsPage() {
               <p className="mt-2 text-text-primary/90 leading-relaxed max-w-[75ch]">
                 {section.overview}
               </p>
-              <div className="mt-4 rounded-md border border-dashed border-border bg-panel-elevated/40 aspect-[16/9] flex items-center justify-center text-text-muted text-sm">
-                Screenshot: {section.screenshot}
-              </div>
+              {section.image ? (
+                <div className="mt-4 rounded-md border border-border overflow-hidden bg-panel-elevated/40">
+                  <img
+                    src={section.image}
+                    alt={section.screenshot}
+                    loading="lazy"
+                    className="w-full h-auto block"
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 rounded-md border border-dashed border-border bg-panel-elevated/40 aspect-[16/9] flex items-center justify-center text-text-muted text-sm">
+                  Screenshot: {section.screenshot}
+                </div>
+              )}
               <ol className="mt-6 space-y-4 list-decimal pl-5">
                 {section.steps.map((step, i) => (
                   <li key={i} className="text-text-primary/90 leading-relaxed max-w-[75ch]">
