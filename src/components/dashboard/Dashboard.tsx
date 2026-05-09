@@ -282,7 +282,7 @@ export function Dashboard() {
 
       {/* Main 2-column area */}
       <div className="flex-1 min-h-0 grid grid-cols-12 gap-3">
-        <div className="col-span-12 xl:col-span-8 flex flex-col gap-3 min-h-0">
+        <div className="col-span-12 xl:col-span-6 flex flex-col gap-3 min-h-0">
           <Panel
             title={
               <span className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export function Dashboard() {
         {/* Right rail — activity */}
         <Panel
           title="Recent activity"
-          className="col-span-12 xl:col-span-4 min-h-0"
+          className="col-span-12 xl:col-span-6 min-h-0"
           bodyClassName="overflow-y-auto"
         >
           <div className="space-y-2">
