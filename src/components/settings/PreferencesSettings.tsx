@@ -13,6 +13,9 @@ import { feedService } from "@/services/feedService";
 import { AI_TONES, AI_LANGUAGES } from "@/hooks/useAiSettings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+
+const BRAINSTORM_DISABLE_KEY = "brainstorm:disableUnreadDialog";
 
 const DEFAULTS: UserPreferences = {
   default_congress_id: null,
@@ -61,6 +64,20 @@ export function PreferencesSettings() {
   const { user, prefs, reload } = useAuth();
   const [draft, setDraft] = React.useState<UserPreferences>(prefs ?? DEFAULTS);
   const [saving, setSaving] = React.useState(false);
+  const [brainstormPopup, setBrainstormPopup] = React.useState(true);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setBrainstormPopup(localStorage.getItem(BRAINSTORM_DISABLE_KEY) !== "1");
+  }, []);
+
+  const toggleBrainstormPopup = (enabled: boolean) => {
+    setBrainstormPopup(enabled);
+    if (typeof window === "undefined") return;
+    if (enabled) localStorage.removeItem(BRAINSTORM_DISABLE_KEY);
+    else localStorage.setItem(BRAINSTORM_DISABLE_KEY, "1");
+    toast.success(enabled ? "Brainstorm popup enabled" : "Brainstorm popup disabled");
+  };
 
   React.useEffect(() => {
     if (prefs) setDraft(prefs);
@@ -272,6 +289,26 @@ export function PreferencesSettings() {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <section className="border border-border rounded-[3px] bg-panel p-4 space-y-3">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+          Notifications
+        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <Label className="text-[13px] text-text-primary">
+              Brainstorm unread popup
+            </Label>
+            <p className="text-[12px] text-text-muted mt-0.5">
+              Show a popup on login when there are unread Brainstorm messages.
+            </p>
+          </div>
+          <Switch
+            checked={brainstormPopup}
+            onCheckedChange={toggleBrainstormPopup}
+          />
         </div>
       </section>
 
