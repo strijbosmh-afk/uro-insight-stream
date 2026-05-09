@@ -46,6 +46,7 @@ import { RoleBadge } from "./RoleBadge";
 import { SourceDrawer } from "./SourceDrawer";
 import { AddSourceDialog } from "./AddSourceDialog";
 import { ManageListsDialog } from "./ManageListsDialog";
+import { HandleChip } from "@/components/handles/HandleChip";
 import type { Source, SourceList } from "@/types";
 import { useCanEdit, useCanAdmin } from "@/auth/permissions";
 import { recordAudit } from "@/services/auditService";
@@ -295,8 +296,11 @@ export function SourcesTable() {
                       onClick={() => onToggleFollow(s)}
                     />
                   </td>
-                  <td className="px-3 py-1.5 font-mono text-accent whitespace-nowrap">
-                    @{s.handle}
+                  <td
+                    className="px-3 py-1.5 font-mono text-accent whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <HandleChip handle={s.handle} />
                   </td>
                   <td className="px-3 py-1.5 whitespace-nowrap">{s.displayName}</td>
                   <td className="px-3 py-1.5">
