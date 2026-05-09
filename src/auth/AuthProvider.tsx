@@ -21,6 +21,7 @@ export interface UserPreferences {
   notify_new_summary: boolean;
   notify_new_tweet_followed_source: boolean;
   notify_weekly_recap: boolean;
+  quick_start_dismissed: boolean;
 }
 
 export interface ProfileRow {
@@ -61,6 +62,7 @@ const DEFAULT_PREFS: UserPreferences = {
   notify_new_summary: true,
   notify_new_tweet_followed_source: false,
   notify_weekly_recap: true,
+  quick_start_dismissed: false,
 };
 
 // Claim a pending invitation if the freshly-signed-in user carries an
