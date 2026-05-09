@@ -338,7 +338,7 @@ export function DigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
             </div>
             <h2 className="text-xl font-semibold text-text-primary">
               {step === 1 && "Name your digest"}
-              {step === 2 && "Pick your sources"}
+              {step === 2 && "What goes in this digest?"}
               {step === 3 && "Set the schedule"}
               {step === 4 && "Where should it go?"}
             </h2>
@@ -366,47 +366,52 @@ export function DigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
           )}
 
           {step === 2 && (
-            <div className="space-y-3">
-              <Input
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                placeholder="filter sources…"
-                className="h-8 text-[12px]"
-              />
-              <div className="border border-border rounded-[3px] max-h-[320px] overflow-y-auto">
-                {(subSourcesQ.data ?? []).length === 0 && !subSourcesQ.isLoading && (
-                  <div className="p-4 text-[12px] text-text-muted">
-                    You don't have any subscribed sources yet. Add some from the
-                    Sources page first.
-                  </div>
-                )}
-                {filteredSources.map((s) => {
-                  const checked = selectedSourceIds.includes(s.id);
-                  return (
-                    <label
-                      key={s.id}
-                      className="flex items-center gap-3 px-3 py-2 border-b border-border cursor-pointer hover:bg-panel-elevated/60"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggleSource(s.id)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] text-text-primary truncate">
-                          {s.display_name}
-                        </div>
-                        <div className="text-[11px] font-mono text-text-muted">
-                          @{s.handle}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-text-muted">
-                {selectedSourceIds.length} selected
-              </p>
-            </div>
+            <Step2Bindings
+              userPrimarySpecialtyId={userSpecialtiesQ.data?.primaryId ?? null}
+              userSpecialties={userSpecialtiesQ.data?.items ?? []}
+              liveCongresses={liveCongresses}
+              allCongresses={congressesQ.data ?? []}
+              subSources={subSourcesQ.data ?? []}
+              subSourcesLoading={subSourcesQ.isLoading}
+              filteredSources={filteredSources}
+              sourceFilter={sourceFilter}
+              setSourceFilter={setSourceFilter}
+              selectedSourceIds={selectedSourceIds}
+              toggleSource={toggleSource}
+              specialtyId={specialtyId}
+              setSpecialtyId={setSpecialtyId}
+              congressId={congressId}
+              setCongressId={setCongressId}
+              hashtags={hashtags}
+              hashtagInput={hashtagInput}
+              setHashtagInput={setHashtagInput}
+              addHashtag={addHashtag}
+              removeHashtag={removeHashtag}
+              openSection={openSection}
+              setOpenSection={setOpenSection}
+              applyPreset={(p) => {
+                if (p === "specialty") {
+                  const id = userSpecialtiesQ.data?.primaryId ?? null;
+                  if (!id) {
+                    toast.error("Set a primary specialty in Settings → Profile first");
+                    return;
+                  }
+                  setSpecialtyId(id);
+                  setOpenSection("specialty");
+                  if (!name) setName("My specialty digest");
+                } else if (p === "congress") {
+                  if (liveCongresses.length === 1) {
+                    setCongressId(liveCongresses[0].id);
+                    setOpenSection("congress");
+                    if (!name) setName(`${liveCongresses[0].short_code || liveCongresses[0].name} digest`);
+                  } else {
+                    setOpenSection("congress");
+                  }
+                } else {
+                  setOpenSection("sources");
+                }
+              }}
+            />
           )}
 
           {step === 3 && (
