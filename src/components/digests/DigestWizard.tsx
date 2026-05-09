@@ -37,7 +37,7 @@ interface DigestWizardProps {
 }
 
 export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
-  const { user } = useAuth();
+  const { user, prefs } = useAuth();
   const qc = useQueryClient();
   const createFn = useServerFn(createDigest);
   const updateFn = useServerFn(updateDigest);
@@ -45,9 +45,13 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
 
   const [step, setStep] = React.useState(1);
   const [name, setName] = React.useState("");
-  const [frequency, setFrequency] = React.useState<Frequency>("weekly");
+  const [frequency, setFrequency] = React.useState<Frequency>(
+    (prefs?.digest_default_frequency as Frequency | undefined) ?? "weekly",
+  );
   const [dayOfWeek, setDayOfWeek] = React.useState<number>(1);
-  const [sendHour, setSendHour] = React.useState<number>(9);
+  const [sendHour, setSendHour] = React.useState<number>(prefs?.digest_default_send_hour ?? 9);
+  const [timezone, setTimezone] = React.useState<string>(prefs?.digest_default_timezone ?? "UTC");
+  const [isActive, setIsActive] = React.useState<boolean>(prefs?.digests_active_by_default ?? true);
   const [selectedSourceIds, setSelectedSourceIds] = React.useState<string[]>([]);
   const [recipients, setRecipients] = React.useState<string[]>([]);
   const [recipientInput, setRecipientInput] = React.useState("");
@@ -81,6 +85,12 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       if (user?.email && recipients.length === 0) {
         setRecipients([user.email]);
       }
+      if (prefs) {
+        setFrequency(prefs.digest_default_frequency as Frequency);
+        setSendHour(prefs.digest_default_send_hour);
+        setTimezone(prefs.digest_default_timezone);
+        setIsActive(prefs.digests_active_by_default);
+      }
       return;
     }
     let cancelled = false;
@@ -93,11 +103,15 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       setSendHour(d.send_hour);
       setSelectedSourceIds(d.source_ids);
       setRecipients(d.recipients.map((r) => r.email));
+      // d may include timezone/is_active depending on serverFn shape
+      const dx = d as unknown as { timezone?: string; is_active?: boolean };
+      if (dx.timezone) setTimezone(dx.timezone);
+      if (typeof dx.is_active === "boolean") setIsActive(dx.is_active);
     })();
     return () => {
       cancelled = true;
     };
-  }, [digestId, getFn, user?.email, recipients.length]);
+  }, [digestId, getFn, user?.email, recipients.length, prefs]);
 
   const filteredSources = React.useMemo(() => {
     const all = subSourcesQ.data ?? [];
@@ -157,7 +171,8 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
         day_of_week:
           frequency === "weekly" || frequency === "biweekly" ? dayOfWeek : null,
         send_hour: sendHour,
-        timezone: "UTC",
+        timezone,
+        is_active: isActive,
         source_ids: selectedSourceIds,
         recipients: recipients.map((email, idx) => ({
           email,

@@ -23,16 +23,39 @@ export const Route = createFileRoute("/api/public/hooks/send-digests")({
           const nowISO = new Date().toISOString();
           const { data: due, error } = await supabaseAdmin
             .from("digest_subscriptions")
-            .select("id")
+            .select("id, user_id")
             .eq("is_active", true)
             .lte("next_send_at", nowISO)
             .order("next_send_at", { ascending: true })
             .limit(MAX_PER_TICK);
           if (error) throw new Error(error.message);
 
-          const ids = (due ?? []).map((d: { id: string }) => d.id);
+          const dueRows = (due ?? []) as Array<{ id: string; user_id: string }>;
+          let skippedMaster = 0;
+          let ids: string[] = dueRows.map((d) => d.id);
+
+          // Filter out users whose master digest switch is OFF.
+          const userIds = Array.from(new Set(dueRows.map((d) => d.user_id)));
+          if (userIds.length > 0) {
+            const { data: prefs, error: prefsErr } = await supabaseAdmin
+              .from("user_preferences")
+              .select("user_id, digests_master_enabled")
+              .in("user_id", userIds);
+            if (prefsErr) throw new Error(prefsErr.message);
+            const disabled = new Set(
+              ((prefs ?? []) as Array<{ user_id: string; digests_master_enabled: boolean }>)
+                .filter((p) => p.digests_master_enabled === false)
+                .map((p) => p.user_id),
+            );
+            if (disabled.size > 0) {
+              const before = ids.length;
+              ids = dueRows.filter((d) => !disabled.has(d.user_id)).map((d) => d.id);
+              skippedMaster = before - ids.length;
+            }
+          }
+
           if (ids.length === 0) {
-            return jsonResponse({ ok: true, processed: 0 });
+            return jsonResponse({ ok: true, processed: 0, skipped_master: skippedMaster });
           }
 
           let enqueuedTotal = 0;
@@ -56,6 +79,7 @@ export const Route = createFileRoute("/api/public/hooks/send-digests")({
             processed: ids.length,
             enqueued: enqueuedTotal,
             skipped: skippedTotal,
+            skipped_master: skippedMaster,
             failed,
           });
         } catch (err) {

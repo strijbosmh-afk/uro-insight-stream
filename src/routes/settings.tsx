@@ -1,51 +1,63 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettings } from "@/components/settings/AiSettings";
-import { TeamSettings } from "@/components/settings/TeamSettings";
 import { PreferencesSettings } from "@/components/settings/PreferencesSettings";
-import { IngestionSettings } from "@/components/settings/IngestionSettings";
-import { InterestsSettings } from "@/components/settings/InterestsSettings";
+import { ProfileSettings } from "@/components/settings/ProfileSettings";
+import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 import { XSettings } from "@/components/settings/XSettings";
-import { useAuth } from "@/auth/AuthProvider";
+import * as React from "react";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — UroFeed" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { isAdmin } = useAuth();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const valid = ["profile", "preferences", "notifications", "ai", "x"] as const;
+  const initial = (valid as readonly string[]).includes(search.tab ?? "")
+    ? (search.tab as string)
+    : "profile";
+  const [tab, setTab] = React.useState<string>(initial);
+  React.useEffect(() => {
+    if (search.tab && search.tab !== tab) setTab(search.tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.tab]);
   return (
     <div className="p-6">
-      <Tabs defaultValue="preferences">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v);
+          navigate({ search: { tab: v }, replace: true });
+        }}
+      >
         <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="interests">Interests</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="ai">AI</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="x">X (Twitter)</TabsTrigger>
-          {isAdmin && <TabsTrigger value="ingestion">Ingestion</TabsTrigger>}
+          <TabsTrigger value="x">X account</TabsTrigger>
         </TabsList>
+        <TabsContent value="profile" className="mt-6">
+          <ProfileSettings />
+        </TabsContent>
         <TabsContent value="preferences" className="mt-6">
           <PreferencesSettings />
         </TabsContent>
-        <TabsContent value="interests" className="mt-6">
-          <InterestsSettings />
+        <TabsContent value="notifications" className="mt-6">
+          <NotificationsSettings />
         </TabsContent>
         <TabsContent value="ai" className="mt-6">
           <AiSettings />
         </TabsContent>
-        <TabsContent value="team" className="mt-6">
-          <TeamSettings />
-        </TabsContent>
         <TabsContent value="x" className="mt-6">
           <XSettings />
         </TabsContent>
-        {isAdmin && (
-          <TabsContent value="ingestion" className="mt-6">
-            <IngestionSettings />
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

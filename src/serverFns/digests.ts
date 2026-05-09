@@ -12,6 +12,7 @@ const CreateSchema = z.object({
   day_of_week: z.number().int().min(0).max(6).nullable().optional(),
   send_hour: z.number().int().min(0).max(23),
   timezone: z.string().min(1).max(64).default("UTC"),
+  is_active: z.boolean().optional(),
   source_ids: z.array(z.string().min(1).max(80)).min(1).max(200),
   recipients: z
     .array(
@@ -26,7 +27,6 @@ const CreateSchema = z.object({
 
 const UpdateSchema = CreateSchema.extend({
   id: z.string().uuid(),
-  is_active: z.boolean().optional(),
 });
 
 const IdSchema = z.object({ id: z.string().uuid() });
@@ -127,7 +127,7 @@ export const createDigest = createServerFn({ method: "POST" })
         day_of_week: data.day_of_week ?? null,
         send_hour: data.send_hour,
         timezone: data.timezone,
-        is_active: true,
+        is_active: data.is_active ?? true,
         next_send_at: nextSend.toISOString(),
       })
       .select("id")
