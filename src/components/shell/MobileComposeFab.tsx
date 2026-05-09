@@ -30,7 +30,6 @@ export function MobileComposeFab() {
           shadow-lg shadow-black/30
           flex items-center justify-center
           active:scale-95 transition-transform
-          safe-pb-fab
         "
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
       >
