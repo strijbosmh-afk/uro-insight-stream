@@ -1907,6 +1907,14 @@ export type Database = {
           created_at: string
           default_congress_id: string | null
           default_source_list_id: string | null
+          digest_default_frequency: string
+          digest_default_send_hour: number
+          digest_default_timezone: string
+          digests_active_by_default: boolean
+          digests_master_enabled: boolean
+          notify_new_summary: boolean
+          notify_new_tweet_followed_source: boolean
+          notify_weekly_recap: boolean
           polling_interval_seconds: number
           summary_language: string
           summary_tone: string
@@ -1918,6 +1926,14 @@ export type Database = {
           created_at?: string
           default_congress_id?: string | null
           default_source_list_id?: string | null
+          digest_default_frequency?: string
+          digest_default_send_hour?: number
+          digest_default_timezone?: string
+          digests_active_by_default?: boolean
+          digests_master_enabled?: boolean
+          notify_new_summary?: boolean
+          notify_new_tweet_followed_source?: boolean
+          notify_weekly_recap?: boolean
           polling_interval_seconds?: number
           summary_language?: string
           summary_tone?: string
@@ -1929,6 +1945,14 @@ export type Database = {
           created_at?: string
           default_congress_id?: string | null
           default_source_list_id?: string | null
+          digest_default_frequency?: string
+          digest_default_send_hour?: number
+          digest_default_timezone?: string
+          digests_active_by_default?: boolean
+          digests_master_enabled?: boolean
+          notify_new_summary?: boolean
+          notify_new_tweet_followed_source?: boolean
+          notify_weekly_recap?: boolean
           polling_interval_seconds?: number
           summary_language?: string
           summary_tone?: string

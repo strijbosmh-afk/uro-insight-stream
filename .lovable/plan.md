@@ -1,82 +1,99 @@
-## Add BYOK X (Twitter) posting + replying
+## Scope
 
-A new opt-in feature letting each user paste their own X Developer App OAuth 1.0a credentials, then post original tweets and replies from inside UroFeed. The platform's existing read-only `X_BEARER_TOKEN` and all ingestion code stay untouched.
-
-### What the user will see
-
-1. **Settings → new "X (Twitter)" tab**
-   - Disconnected state: explainer + 4 password inputs (Consumer Key/Secret, Access Token/Secret) + step-by-step "How to get these" disclosure + Connect button.
-   - Connected state: `@username` card, verified-since, scope badge, today's post count vs 50/day cap, "Send a test tweet", "Disconnect", "Replace credentials", and a recent-posts log (last 20).
-
-2. **New Compose dialog** (`ComposeTweetDialog`)
-   - Compose mode: opened from a new "Compose" button in the AppShell top bar.
-   - Reply mode: opened from a new reply icon button on every `TweetCard` (Feed, Dashboard, ThreadDialog). Shows the parent tweet quoted at top.
-   - 280-grapheme counter (via `Intl.Segmenter`), Send disabled while empty/over/in-flight.
-   - If not connected → gated CTA to Settings → X tab.
-   - Toasts for sent (with "View on X" link), rate-limit, error.
-
-### Database (one migration)
-
-- `user_x_credentials` — owner row, `auth_mode` enum (currently only `oauth1_byok`), `consumer_key`, **`consumer_secret_encrypted bytea`**, `access_token`, **`access_token_secret_encrypted bytea`**, `x_user_id`, `x_username`, `scope_write`, `last_verified_at`, `last_post_at`, `post_count_today`, `post_count_window_start`, `revoked_at`, timestamps.
-- `user_x_post_log` — `posted_tweet_id`, `in_reply_to_tweet_id`, `quoted_tweet_id` (reserved), `text`, `status` ∈ `sent|failed|rate_limited`, `error_code`, `error_message`, `posted_at`.
-- `user_x_connection_status` view — exposes only safe columns (no encrypted bytea, no plaintext secrets).
-- **Encryption**: `pgsodium` extension; key id stored in env var `PGSODIUM_KEY_ID`. All encrypt/decrypt happens server-side in `src/server/x-credentials.server.ts`.
-- **RLS**: owner can SELECT the safe view. ALL writes (insert/update/delete) on the credentials table are blocked at RLS — only `supabaseAdmin` from server functions writes. `user_x_post_log`: owner SELECT, admin SELECT all, no client INSERT.
-
-### Server-only modules
-
-`src/server/x-credentials.server.ts`
-- `encryptSecret` / `decryptSecret` — pgsodium wrappers.
-- `loadCredentials(userId)` — returns plaintext for in-process use; throws if revoked.
-- `verifyAndStore(...)` — calls `GET /2/users/me` with the supplied keys to validate & populate username, encrypts secrets, upserts row.
-- `revoke(userId)` — wipes encrypted columns to NULL, sets `revoked_at`, best-effort `POST /1.1/oauth/invalidate_token`.
-
-`src/server/x-posting.server.ts`
-- Header comment: "Per-user credentials only. Never uses platform `X_BEARER_TOKEN`."
-- `postTweet({ userId, text, inReplyToTweetId? })` — loads creds, OAuth 1.0a-signs `POST /2/tweets` (uses `oauth-1.0a` npm package + node `crypto`), enforces per-user 50/24h app-side rate limit via `post_count_today` / `post_count_window_start`, writes `user_x_post_log`, returns `{ id, url }`.
-
-### RPC bridges (`src/serverFns/x-credentials.ts`)
-
-All `requireSupabaseAuth`, all Zod-validated, none admin-only:
-- `getXConnectionStatus()` — reads the safe view.
-- `connectX({ consumerKey, consumerSecret, accessToken, accessTokenSecret })` — trims, length-checks, calls `verifyAndStore`, returns structured error code (`invalid_credentials` / `read_only_token` / `network_error`) on failure.
-- `disconnectX()` — calls `revoke`.
-- `postTweet({ text, inReplyToTweetId? })` — server-truth length + rate-limit checks, calls server posting fn.
-- `listMyPosts({ limit?, cursor? })` — paginated read of own log.
-
-### UI files
-
-- `src/components/settings/XSettings.tsx` — the new tab body.
-- `src/routes/settings.tsx` — add `<TabsTrigger value="x">X (Twitter)</TabsTrigger>` between Team and Ingestion (visible to all auth users).
-- `src/components/x/ComposeTweetDialog.tsx` — both modes; consumes `connectX` status.
-- `src/components/x/ReplyButton.tsx` — small icon button, mounted on `TweetCard`. If not connected, brief toast + nav to Settings → X.
-- `src/components/shell/TopBar.tsx` — add a "Compose" button on the right.
-- `src/components/feed/TweetCard.tsx` — mount `<ReplyButton>` in the action row (does NOT change the existing card-click → thread behavior; reply button stops propagation).
-
-### Dependencies
-
-- `bun add oauth-1.0a` (signing). Native `crypto` covers HMAC-SHA1.
-
-### Safety / abuse rails
-
-- 280 chars enforced server-side (graphemes via `Intl.Segmenter`).
-- 50 posts / 24h rolling per-user cap enforced server-side; over-cap writes a `rate_limited` log row and never hits X.
-- Every post outcome (sent/failed/rate_limited) is logged.
-- Plaintext secrets never leave the server; client form is empty on revisit; "Replace credentials" re-shows inputs.
-- `X_BEARER_TOKEN` and `xApiV2.ts` left untouched.
-
-### Out of scope (deferred, explicitly noted in code comments where relevant)
-
-- OAuth 2.0 PKCE platform-app flow (schema already supports a 2nd `auth_mode`).
-- LLM "Suggest replies" — flagged as a follow-up; not shipped this turn to keep scope tight.
-- Quote tweets, threads, media, polls, scheduled tweets, team accounts, webhooks.
-
-### Done means
-
-A user pastes 4 valid keys → sees `@handle` reflected → clicks Reply on any tweet → tweet appears on X within seconds → log row `sent`. The 51st post in 24h is blocked with a clear in-app message and a `rate_limited` log row. Disconnect wipes encrypted columns. Existing ingestion is unchanged.
+Surface-level restructure across navigation, Discover, Compose entry points, and Settings. One small migration adds digest preference columns; no other schema changes.
 
 ---
 
-**Heads up before I start:** this is large (one migration, two server modules, one RPC bridge, three new UI files, two edits to existing UI). I'll ship the core — schema, server functions, Settings tab, Compose+Reply dialog, reply button on `TweetCard`, top-bar Compose button — and skip the LLM "Suggest replies" sugar (deferred). I'll also need you to set the `PGSODIUM_KEY_ID` secret after the migration creates the key.
+### 1. Sidebar (`src/components/shell/Sidebar.tsx`)
 
-Approve and I'll implement.
+Restructure into two visible sections + a bottom utility area separated by a divider.
+
+- Workspace (non-admin): Dashboard, Live Feed, Summaries, Congresses, Discover, **My Following** (was Sources), Digests
+- Admin section (admin only): Users, Groups, Recommendations, Ingestion, **Brainstorm** (moved here), **Email diagnostics** (new entry → `/admin/email-diagnostics`)
+- Bottom (above collapse toggle, divider above): Help, Settings
+- Remove "Configuration" group entirely; remove second Discover entry; remove the Help group container (Help becomes a bottom item; Contact stays as a bottom item too).
+- Re-route `/admin/email-diagnostics` to render `EmailDiagnosticsView` (currently it redirects to `/admin/users` — replace).
+
+### 2. Discover unification
+
+- Rewrite `src/routes/discover.tsx` (currently `<Outlet />`) into a real page with a header and three tabs (`for-you`, `by-group`, `by-specialty`).
+- Tab persistence: `localStorage["urofeed:discover:tab"]`, default `by-specialty` for new users; reads `?tab=` search param to allow direct linking.
+- Header filter bar above tabs: search input, specialty chip filter, verified-only toggle. Filters apply to all three tabs (passed down as props).
+- Reuse existing logic from `discover.index.tsx` and `discover.groups.tsx` by importing their main components.
+- New "By specialty" tab component:
+  - Reads `user_specialties` for current user → queries `recommended_sources_by_specialty` joined to `sources` filtered by those specialty IDs.
+  - Excludes sources already followed (left-join `user_subscribed_sources` filter).
+  - Groups by specialty with section headers ("Specialty · N recommendations"), primary specialty first, weight desc.
+  - Empty state when user has no specialties: prompt + button dispatches `urofeed:open-wizard-step` event with `Specialties` step.
+  - Follow uses existing `useFollowSource` hook.
+- Old routes:
+  - `discover.index.tsx` → redirect to `/discover?tab=for-you`
+  - `discover.groups.tsx` → redirect to `/discover?tab=by-group`
+
+### 3. Compose promotion
+
+- `TopBar.tsx`: replace ComposeButton with primary CTA (`bg-accent text-accent-foreground`, h-9, ~110px wide, "Share to X" + Send icon) on `sm+`, 40px accent icon-only on mobile. Same dialog.
+- `TweetStream.tsx` (top of feed): inline composer Panel with avatar + muted prompt "What did you take away from this?". Click opens `ComposeTweetDialog` with initialText pre-filled with the active congress's first primary hashtag if `feedFilters.congressId` is set.
+- `TweetCard.tsx`: add Quote icon between reply and external-link. Opens compose dialog with initialText `https://x.com/<handle>/status/<id>\n\n` and cursor at the end.
+- Mobile FAB: new `<MobileComposeFab />` rendered inside `AppShell.tsx`. Uses a `useShouldShowComposeFab(pathname)` hook with allowlist (`/`, `/dashboard`, `/feed`, `/summaries`, `/congresses`, `/congresses/$`, `/sessions/$`, `/discover`, `/sources`, `/digests`); hidden on `/auth`, `/settings`, `/admin/*`, `/help/*`, `/configuration/*`, `/unsubscribe`. 56px circle, `fixed bottom-6 right-4 z-30`, accent bg, Plus icon, `active:scale-95`, `shadow-lg`, only shows on viewport `< md`. Hidden when dialog is open and when keyboard visible (visualViewport heuristic).
+
+### 4. Settings consolidation
+
+- Tabs: **Profile** · Preferences · **Notifications** · AI · X account
+- Drop Team and Ingestion tabs (and their imports).
+- New `ProfileSettings.tsx`: read-only email, editable display_name + avatar_url (writes to `profiles`), specialty multi-select moved from Interests (writes to `user_specialties`), Sign out button. Remove the Interests tab entirely.
+- Rename "X (Twitter)" tab label to "X account".
+- New `NotificationsSettings.tsx`: top mono caption with link to `/digests`. Then form bound to new `user_preferences` columns:
+  - `digest_default_frequency` (daily | weekly | biweekly | monthly, default weekly)
+  - `digest_default_send_hour` (0–23, default 9)
+  - `digest_default_timezone` (text, default 'UTC')
+  - `digests_active_by_default` (bool, default true)
+  - `digests_master_enabled` (bool, default true) — when false, `send-digests` route skips the user
+  - In-app toggles: `notify_new_summary` (bool), `notify_new_tweet_followed_source` (bool), `notify_weekly_recap` (bool)
+- DigestWizard reads defaults from `user_preferences` (replaces hardcoded `weekly` / `9`).
+- `send-digests` cron handler: skip subscriptions where the owning user has `digests_master_enabled = false`.
+- `/digests` stays as-is, sidebar entry stays. No redirect.
+
+### 5. Migration
+
+Add columns to `user_preferences` with defaults so existing rows stay valid:
+
+```sql
+ALTER TABLE public.user_preferences
+  ADD COLUMN IF NOT EXISTS digest_default_frequency text NOT NULL DEFAULT 'weekly',
+  ADD COLUMN IF NOT EXISTS digest_default_send_hour smallint NOT NULL DEFAULT 9,
+  ADD COLUMN IF NOT EXISTS digest_default_timezone text NOT NULL DEFAULT 'UTC',
+  ADD COLUMN IF NOT EXISTS digests_active_by_default boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS digests_master_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_new_summary boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_new_tweet_followed_source boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS notify_weekly_recap boolean NOT NULL DEFAULT true;
+
+ALTER TABLE public.user_preferences
+  ADD CONSTRAINT user_preferences_digest_frequency_check
+  CHECK (digest_default_frequency IN ('daily','weekly','biweekly','monthly'));
+
+ALTER TABLE public.user_preferences
+  ADD CONSTRAINT user_preferences_digest_send_hour_check
+  CHECK (digest_default_send_hour BETWEEN 0 AND 23);
+```
+
+No RLS changes needed (existing per-user policies on `user_preferences` cover the new columns).
+
+---
+
+### Implementation order
+
+1. Run the migration (await approval).
+2. Sidebar restructure + email-diagnostics route swap.
+3. Discover unification + redirects.
+4. Settings tabs (Profile, Notifications, drop Team/Interests/Ingestion).
+5. DigestWizard + send-digests honor new prefs.
+6. Compose promotion (TopBar, inline composer, TweetCard quote, mobile FAB).
+7. Sanity check build, navigate the affected routes in preview.
+
+### Out of scope
+
+- No changes to `BrainstormUnreadDialog` or its preference (already done in prior turn).
+- No new bottom-tab-bar (POLISH_TODO item, not built).
+- No copy/visual changes outside the surfaces named above.
