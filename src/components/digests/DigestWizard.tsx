@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowRight, ArrowLeft, X } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
-import { feedService } from "@/services/feedService";
 
 const DAYS = [
   { v: 1, l: "Mon" },
@@ -34,9 +33,10 @@ type Frequency = "daily" | "weekly" | "biweekly" | "monthly";
 interface DigestWizardProps {
   digestId?: string | null;
   onClose: (saved: boolean) => void;
+  initialPreset?: "specialty" | "congress" | "custom" | null;
 }
 
-export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
+export function DigestWizard({ digestId, onClose, initialPreset }: DigestWizardProps) {
   const { user, prefs } = useAuth();
   const qc = useQueryClient();
   const createFn = useServerFn(createDigest);
@@ -53,6 +53,11 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
   const [timezone, setTimezone] = React.useState<string>(prefs?.digest_default_timezone ?? "UTC");
   const [isActive, setIsActive] = React.useState<boolean>(prefs?.digests_active_by_default ?? true);
   const [selectedSourceIds, setSelectedSourceIds] = React.useState<string[]>([]);
+  const [specialtyId, setSpecialtyId] = React.useState<string | null>(null);
+  const [congressId, setCongressId] = React.useState<string | null>(null);
+  const [hashtags, setHashtags] = React.useState<string[]>([]);
+  const [hashtagInput, setHashtagInput] = React.useState("");
+  const [openSection, setOpenSection] = React.useState<"sources" | "specialty" | "congress" | "hashtags" | null>("sources");
   const [recipients, setRecipients] = React.useState<string[]>([]);
   const [recipientInput, setRecipientInput] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -77,6 +82,54 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       }));
     },
   });
+
+  // User specialties — for "My specialty digest" preset and the specialty section.
+  const userSpecialtiesQ = useQuery({
+    queryKey: ["user-specialties-for-digest", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: specs } = await supabase
+        .from("user_specialties")
+        .select("specialty_id, is_primary")
+        .eq("user_id", user!.id);
+      const ids = ((specs ?? []) as Array<{ specialty_id: string; is_primary: boolean }>).map(
+        (r) => r.specialty_id,
+      );
+      if (ids.length === 0) return { items: [] as Array<{ id: string; label: string; is_primary: boolean }>, primaryId: null as string | null };
+      const { data: labels } = await supabase
+        .from("urology_specialties")
+        .select("id, label")
+        .in("id", ids);
+      const labelMap = new Map(((labels ?? []) as Array<{ id: string; label: string }>).map((r) => [r.id, r.label]));
+      const items = ((specs ?? []) as Array<{ specialty_id: string; is_primary: boolean }>).map((r) => ({
+        id: r.specialty_id,
+        label: labelMap.get(r.specialty_id) ?? r.specialty_id,
+        is_primary: r.is_primary,
+      }));
+      const primary = items.find((i) => i.is_primary) ?? items[0] ?? null;
+      return { items, primaryId: primary?.id ?? null };
+    },
+  });
+
+  // Congresses for picker + "Active congress digest" preset.
+  const congressesQ = useQuery({
+    queryKey: ["digests-congresses-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("congresses")
+        .select("id, name, short_code, status, start_date, end_date")
+        .order("start_date", { ascending: false });
+      return (data ?? []) as Array<{
+        id: string; name: string; short_code: string; status: string;
+        start_date: string | null; end_date: string | null;
+      }>;
+    },
+  });
+
+  const liveCongresses = React.useMemo(
+    () => (congressesQ.data ?? []).filter((c) => c.status === "live"),
+    [congressesQ.data],
+  );
 
   // Hydrate when editing.
   React.useEffect(() => {
@@ -103,15 +156,53 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
       setSendHour(d.send_hour);
       setSelectedSourceIds(d.source_ids);
       setRecipients(d.recipients.map((r) => r.email));
-      // d may include timezone/is_active depending on serverFn shape
-      const dx = d as unknown as { timezone?: string; is_active?: boolean };
+      // d may include timezone/is_active/topic bindings depending on serverFn shape
+      const dx = d as unknown as {
+        timezone?: string;
+        is_active?: boolean;
+        specialty_id?: string | null;
+        congress_id?: string | null;
+        hashtags?: string[];
+      };
       if (dx.timezone) setTimezone(dx.timezone);
       if (typeof dx.is_active === "boolean") setIsActive(dx.is_active);
+      setSpecialtyId(dx.specialty_id ?? null);
+      setCongressId(dx.congress_id ?? null);
+      setHashtags(Array.isArray(dx.hashtags) ? dx.hashtags : []);
     })();
     return () => {
       cancelled = true;
     };
   }, [digestId, getFn, user?.email, recipients.length, prefs]);
+
+  // Apply initial preset on first mount (new digests only).
+  const presetAppliedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (digestId || presetAppliedRef.current) return;
+    if (!initialPreset) return;
+    if (initialPreset === "specialty") {
+      const primaryId = userSpecialtiesQ.data?.primaryId ?? null;
+      if (primaryId) {
+        setSpecialtyId(primaryId);
+        setOpenSection("specialty");
+        if (!name) setName("My specialty digest");
+        presetAppliedRef.current = true;
+      }
+    } else if (initialPreset === "congress") {
+      if (liveCongresses.length === 1) {
+        setCongressId(liveCongresses[0].id);
+        setOpenSection("congress");
+        if (!name) setName(`${liveCongresses[0].short_code || liveCongresses[0].name} digest`);
+        presetAppliedRef.current = true;
+      } else if (liveCongresses.length > 1) {
+        setOpenSection("congress");
+        presetAppliedRef.current = true;
+      }
+    } else if (initialPreset === "custom") {
+      setOpenSection("sources");
+      presetAppliedRef.current = true;
+    }
+  }, [initialPreset, digestId, userSpecialtiesQ.data, liveCongresses, name]);
 
   const filteredSources = React.useMemo(() => {
     const all = subSourcesQ.data ?? [];
@@ -153,9 +244,35 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
     setRecipients(recipients.filter((r) => r !== e));
   };
 
+  const normalizeHashtag = (raw: string) =>
+    raw.trim().replace(/^#/, "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+
+  const addHashtag = () => {
+    const v = normalizeHashtag(hashtagInput);
+    if (!v) return;
+    if (hashtags.includes(v)) {
+      setHashtagInput("");
+      return;
+    }
+    if (hashtags.length >= 50) {
+      toast.error("Max 50 hashtags");
+      return;
+    }
+    setHashtags([...hashtags, v]);
+    setHashtagInput("");
+  };
+
+  const removeHashtag = (h: string) => setHashtags(hashtags.filter((x) => x !== h));
+
+  const hasAnyBinding =
+    selectedSourceIds.length > 0 ||
+    !!specialtyId ||
+    !!congressId ||
+    hashtags.length > 0;
+
   const canContinue = () => {
     if (step === 1) return name.trim().length > 0;
-    if (step === 2) return selectedSourceIds.length > 0;
+    if (step === 2) return hasAnyBinding;
     if (step === 3) return true; // schedule always valid (defaults set)
     if (step === 4) return recipients.length > 0;
     return true;
@@ -174,6 +291,9 @@ export function DigestWizard({ digestId, onClose }: DigestWizardProps) {
         timezone,
         is_active: isActive,
         source_ids: selectedSourceIds,
+        specialty_id: specialtyId,
+        congress_id: congressId,
+        hashtags,
         recipients: recipients.map((email, idx) => ({
           email,
           is_default: idx === 0,
