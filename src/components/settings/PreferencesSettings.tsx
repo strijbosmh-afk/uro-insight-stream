@@ -24,6 +24,14 @@ const DEFAULTS: UserPreferences = {
   summary_language: "English",
   theme_density: "comfortable",
   polling_interval_seconds: 30,
+  digest_default_frequency: "weekly",
+  digest_default_send_hour: 9,
+  digest_default_timezone: "UTC",
+  digests_active_by_default: true,
+  digests_master_enabled: true,
+  notify_new_summary: true,
+  notify_new_tweet_followed_source: false,
+  notify_weekly_recap: true,
 };
 
 type Density = UserPreferences["theme_density"];
