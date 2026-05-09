@@ -12,8 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const SESSION_KEY_PREFIX = "brainstorm:unreadDialogShown:";
+const DISABLE_KEY = "brainstorm:disableUnreadDialog";
 
 /**
  * Shows a one-time popup per browser session to admins who have unread
@@ -25,6 +27,7 @@ export function BrainstormUnreadDialog() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = React.useState(false);
+  const [dontShow, setDontShow] = React.useState(false);
   const evaluatedRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -32,6 +35,7 @@ export function BrainstormUnreadDialog() {
     if (evaluatedRef.current) return;
     if (pathname.startsWith("/configuration/brainstorm")) return;
     if (typeof window === "undefined") return;
+    if (localStorage.getItem(DISABLE_KEY) === "1") return;
     // Skip entirely if we don't have a user id — better than showing the
     // dialog under a shared/static key to potentially the wrong account.
     const userId = user.id;
@@ -45,11 +49,17 @@ export function BrainstormUnreadDialog() {
   }, [loading, isAdmin, user, unread, pathname]);
 
   const goToBrainstorm = () => {
+    if (dontShow && typeof window !== "undefined") {
+      localStorage.setItem(DISABLE_KEY, "1");
+    }
     setOpen(false);
     void navigate({ to: "/configuration/brainstorm" });
   };
 
   const dismiss = () => {
+    if (dontShow && typeof window !== "undefined") {
+      localStorage.setItem(DISABLE_KEY, "1");
+    }
     setOpen(false);
   };
 
@@ -71,6 +81,13 @@ export function BrainstormUnreadDialog() {
             </div>
           </div>
         </DialogHeader>
+        <label className="flex items-center gap-2 text-[13px] text-text-muted cursor-pointer select-none">
+          <Checkbox
+            checked={dontShow}
+            onCheckedChange={(v) => setDontShow(v === true)}
+          />
+          Don't show this popup again
+        </label>
         <DialogFooter className="sm:justify-end gap-2">
           <Button
             variant="ghost"
