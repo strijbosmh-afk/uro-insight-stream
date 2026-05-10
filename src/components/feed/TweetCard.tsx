@@ -245,7 +245,7 @@ export const TweetCard = React.memo(function TweetCard({
             />
           )}
 
-          <div className="mt-2 flex items-center gap-4 text-[11px] font-mono text-text-muted">
+          <div className="mt-2 flex items-center gap-2 md:gap-4 text-[11px] font-mono text-text-muted">
             <button
               type="button"
               onClick={(e) => {
@@ -255,12 +255,12 @@ export const TweetCard = React.memo(function TweetCard({
               disabled={likeMutation.isPending}
               title={liked ? "Unlike on X" : "Like on X"}
               className={cn(
-                "flex items-center gap-1 transition-colors hover:text-rose-400",
+                "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-rose-400",
                 liked && "text-rose-400",
               )}
             >
               <Heart className={cn("w-3 h-3", liked && "fill-current")} />
-              {compact(tweet.likeCount + (liked ? 1 : 0))}
+              <span className="hidden xs:inline md:inline">{compact(tweet.likeCount + (liked ? 1 : 0))}</span>
             </button>
             <button
               type="button"
@@ -271,27 +271,27 @@ export const TweetCard = React.memo(function TweetCard({
               disabled={retweetMutation.isPending}
               title={retweeted ? "Undo repost" : "Repost on X"}
               className={cn(
-                "flex items-center gap-1 transition-colors hover:text-emerald-400",
+                "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-emerald-400",
                 retweeted && "text-emerald-400",
               )}
             >
               <Repeat2 className="w-3 h-3" />
-              {compact(tweet.retweetCount + (retweeted ? 1 : 0))}
+              <span className="hidden xs:inline md:inline">{compact(tweet.retweetCount + (retweeted ? 1 : 0))}</span>
             </button>
-            <span className="flex items-center gap-1">
+            <span className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0">
               <MessageCircle className="w-3 h-3" />
-              {compact(tweet.replyCount)}
+              <span className="hidden xs:inline md:inline">{compact(tweet.replyCount)}</span>
             </span>
-            <span className="ml-auto uppercase tracking-wider text-text-muted/70">
+            <span className="ml-auto uppercase tracking-wider text-text-muted/70 hidden md:inline">
               {tweet.lang}
             </span>
             <a
               href={tweetUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="flex items-center gap-1 text-text-muted hover:text-accent"
+              className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 text-text-muted hover:text-accent"
             >
-              View on X
+              <span className="hidden md:inline">View on X</span>
               <ExternalLink className="w-3 h-3" />
             </a>
             <ReplyButton
