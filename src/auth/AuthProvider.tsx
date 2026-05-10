@@ -30,6 +30,7 @@ export interface ProfileRow {
   display_name: string | null;
   avatar_url: string | null;
   active: boolean;
+  is_demo?: boolean;
 }
 
 export interface AuthCtx {
