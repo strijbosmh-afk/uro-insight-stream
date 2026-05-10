@@ -260,7 +260,7 @@ export const TweetCard = React.memo(function TweetCard({
               )}
             >
               <Heart className={cn("w-3 h-3", liked && "fill-current")} />
-              <span className="hidden xs:inline md:inline">{compact(tweet.likeCount + (liked ? 1 : 0))}</span>
+              <span className="inline">{compact(tweet.likeCount + (liked ? 1 : 0))}</span>
             </button>
             <button
               type="button"
@@ -276,11 +276,11 @@ export const TweetCard = React.memo(function TweetCard({
               )}
             >
               <Repeat2 className="w-3 h-3" />
-              <span className="hidden xs:inline md:inline">{compact(tweet.retweetCount + (retweeted ? 1 : 0))}</span>
+              <span className="inline">{compact(tweet.retweetCount + (retweeted ? 1 : 0))}</span>
             </button>
             <span className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0">
               <MessageCircle className="w-3 h-3" />
-              <span className="hidden xs:inline md:inline">{compact(tweet.replyCount)}</span>
+              <span className="inline">{compact(tweet.replyCount)}</span>
             </span>
             <span className="ml-auto uppercase tracking-wider text-text-muted/70 hidden md:inline">
               {tweet.lang}
