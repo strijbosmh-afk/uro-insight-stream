@@ -9,10 +9,11 @@ import { OnboardingWizard } from "@/components/wizard/OnboardingWizard";
 import { ResumeBanner } from "@/components/wizard/ResumeBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrainstormUnreadDialog } from "@/components/brainstorm/BrainstormUnreadDialog";
-import { MobileComposeFab } from "./MobileComposeFab";
+import { ComposeFAB } from "@/components/x/ComposeFAB";
 import { BottomTabBar } from "./BottomTabBar";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -29,6 +30,7 @@ export function AppShell() {
   const navigate = useNavigate();
   // <768px → phone. 768–1023 already shows the full sidebar (useIsMobile=false).
   const isPhone = isMobile;
+  const showFab = useShouldShowComposeFab(pathname, { wizardOpen });
 
   // Mobile redirect: admin routes are desktop-only.
   React.useEffect(() => {
@@ -100,7 +102,7 @@ export function AppShell() {
       </div>
       {!isMobile && <StatusBar />}
       <BrainstormUnreadDialog />
-      {isMobile && <MobileComposeFab />}
+      {isPhone && showFab && <ComposeFAB />}
       {isPhone && <BottomTabBar />}
       {wizardOpen && (
         <OnboardingWizard
