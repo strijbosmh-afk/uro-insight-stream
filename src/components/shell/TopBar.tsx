@@ -178,7 +178,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
 
       {/* Avatar */}
       {!isMobile && <XHandleBadge />}
-      <ShareToXButton />
+      {!isMobile && <ShareToXButton />}
       {!isMobile && (
         <button
           type="button"
