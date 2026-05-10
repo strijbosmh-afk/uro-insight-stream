@@ -16,7 +16,6 @@ import { toast } from "sonner";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const isMobile = useIsMobile();
   const { prefs } = useAuth();
   const density = prefs?.theme_density ?? "comfortable";
@@ -40,11 +39,6 @@ export function AppShell() {
       navigate({ to: "/me", replace: true });
     }
   }, [isPhone, pathname, navigate]);
-
-  // Close the mobile drawer on route change.
-  React.useEffect(() => {
-    setMobileNavOpen(false);
-  }, [pathname]);
 
   React.useEffect(() => {
     const handler = (
