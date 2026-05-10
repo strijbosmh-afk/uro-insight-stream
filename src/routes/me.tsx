@@ -74,8 +74,11 @@ function MeHub() {
 
   return (
     <div className="max-w-xl mx-auto pb-6">
-      {/* User card */}
-      <div className="bg-panel border border-border rounded-[3px] p-4 flex items-center gap-3">
+      {/* User card — whole card tappable, navigates to /me/profile */}
+      <Link
+        to="/me/profile"
+        className="block bg-panel border border-border rounded-[3px] p-4 flex items-center gap-3 active:bg-panel-elevated/60 hover:bg-panel-elevated/40 transition-colors"
+      >
         <div className="w-16 h-16 rounded-full bg-panel-elevated border border-border flex items-center justify-center overflow-hidden shrink-0">
           {profile?.avatar_url ? (
             <img
@@ -103,14 +106,9 @@ function MeHub() {
               <span className="text-warning">X account not connected</span>
             )}
           </div>
-          <Link
-            to="/me/profile"
-            className="text-[12px] text-accent hover:underline"
-          >
-            Edit profile
-          </Link>
         </div>
-      </div>
+        <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
+      </Link>
 
       <Section label="Content">
         <Row to="/me/following" label={`People I follow (${followingCount})`} />
