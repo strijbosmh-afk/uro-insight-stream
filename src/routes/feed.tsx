@@ -4,8 +4,10 @@ import { FilterBar } from "@/components/feed/FilterBar";
 import { TweetStream } from "@/components/feed/TweetStream";
 import { LiveSignals } from "@/components/feed/LiveSignals";
 import { TimelineScrubber } from "@/components/feed/TimelineScrubber";
-import { useFilteredTweets } from "@/components/feed/useFilteredTweets";
+import { useFilteredTweets, type FeedDataset } from "@/components/feed/useFilteredTweets";
 import { InlineComposer } from "@/components/x/InlineComposer";
+import { MobileFeedLayout } from "@/components/feed/MobileFeedLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Live Feed — UroFeed" }] }),
@@ -24,7 +26,13 @@ function FeedPage() {
 }
 
 function FeedLayout() {
+  const isMobile = useIsMobile();
   const data = useFilteredTweets(30_000);
+  if (isMobile) return <MobileFeedLayout data={data} />;
+  return <DesktopFeedLayout data={data} />;
+}
+
+function DesktopFeedLayout({ data }: { data: FeedDataset }) {
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
       <div className="border border-border rounded-[4px] bg-panel overflow-hidden">

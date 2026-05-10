@@ -164,6 +164,8 @@ export function HandleChip({ handle, className, variant = "default", children }:
         onTouchCancel={cancelLongPress}
         className={cn(
           "relative inline-flex items-center font-mono cursor-pointer select-none rounded-[2px] -mx-0.5 px-0.5 transition-colors",
+          // Expand the touch area on mobile without altering inline layout.
+          "[touch-action:manipulation] before:content-[''] before:absolute before:inset-x-[-6px] before:inset-y-[-12px] md:before:hidden",
           "hover:bg-panel-elevated focus:outline-none focus:bg-panel-elevated",
           variant === "inline" ? "text-accent/80" : "text-accent",
           className,
