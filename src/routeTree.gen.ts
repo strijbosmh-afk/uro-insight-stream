@@ -13,6 +13,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DigestsRouteImport } from './routes/digests'
@@ -70,6 +71,11 @@ const SourcesRoute = SourcesRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedRoute = FeedRouteImport.update({
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
+  '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
+  '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -373,6 +381,7 @@ export interface FileRoutesById {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
+  '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/discover'
     | '/feed'
+    | '/me'
     | '/settings'
     | '/sources'
     | '/summaries'
@@ -463,6 +473,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/discover'
     | '/feed'
+    | '/me'
     | '/settings'
     | '/sources'
     | '/summaries'
@@ -507,6 +518,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/discover'
     | '/feed'
+    | '/me'
     | '/settings'
     | '/sources'
     | '/summaries'
@@ -552,6 +564,7 @@ export interface RootRouteChildren {
   DigestsRoute: typeof DigestsRoute
   DiscoverRoute: typeof DiscoverRouteWithChildren
   FeedRoute: typeof FeedRoute
+  MeRoute: typeof MeRoute
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
@@ -614,6 +627,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed': {
@@ -918,6 +938,7 @@ const rootRouteChildren: RootRouteChildren = {
   DigestsRoute: DigestsRoute,
   DiscoverRoute: DiscoverRouteWithChildren,
   FeedRoute: FeedRoute,
+  MeRoute: MeRoute,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
