@@ -1,23 +1,31 @@
 import * as React from "react";
 
 /**
- * Routes that should NEVER show the mobile compose FAB.
- * Compose makes no sense in auth flows, settings, admin tooling, help,
- * configuration, or unsubscribe surfaces.
+ * Allow-listed routes where the mobile compose FAB should appear.
+ * Anything else (auth, settings, admin, help, configuration, unsubscribe,
+ * /me/*, etc.) hides the FAB.
  */
-const DENY_PREFIXES = [
-  "/auth",
-  "/settings",
-  "/admin",
-  "/help",
-  "/configuration",
-  "/unsubscribe",
+const ALLOW_EXACT = new Set<string>([
+  "/",
+  "/feed",
+  "/discover",
+  "/digests",
+  "/dashboard",
+  "/summaries",
+  "/congresses",
+  "/sources",
+]);
+const ALLOW_PREFIXES = [
+  "/feed/",
+  "/discover/",
+  "/digests/",
+  "/congresses/",
+  "/sessions/",
 ];
 
-function isDeniedRoute(pathname: string): boolean {
-  return DENY_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+function isAllowedRoute(pathname: string): boolean {
+  if (ALLOW_EXACT.has(pathname)) return true;
+  return ALLOW_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 /**
@@ -72,10 +80,14 @@ function useDialogOpen(): boolean {
   return open;
 }
 
-export function useShouldShowComposeFab(pathname: string): boolean {
+export function useShouldShowComposeFab(
+  pathname: string,
+  opts?: { wizardOpen?: boolean },
+): boolean {
   const keyboardVisible = useKeyboardVisible();
   const dialogOpen = useDialogOpen();
-  if (isDeniedRoute(pathname)) return false;
+  if (!isAllowedRoute(pathname)) return false;
+  if (opts?.wizardOpen) return false;
   if (keyboardVisible) return false;
   if (dialogOpen) return false;
   return true;

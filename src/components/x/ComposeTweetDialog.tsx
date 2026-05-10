@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, ExternalLink, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, Send, ExternalLink, AlertCircle, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ import {
   getXConnectionStatus,
   postTweet,
 } from "@/serverFns/x-credentials";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function graphemeLen(s: string) {
   try {
@@ -56,16 +58,38 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   initialText?: string;
   reply?: ReplyContext;
+  /** When true, fire the AI suggest action automatically after the dialog opens. */
+  triggerAiSuggest?: boolean;
 }
 
-export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply }: Props) {
+export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply, triggerAiSuggest }: Props) {
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   const [text, setText] = React.useState(initialText);
   const [suggestions, setSuggestions] = React.useState<
     { text: string; angle: string }[]
   >([]);
   const [suggestLoading, setSuggestLoading] = React.useState(false);
   const [tone, setTone] = React.useState<ToneValue>("professional");
+  const [keyboardInset, setKeyboardInset] = React.useState(0);
+
+  // Track on-screen keyboard height (iOS Safari) so the AI-assist row stays visible.
+  React.useEffect(() => {
+    if (!open || !isMobile || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const diff = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardInset(diff > 80 ? diff : 0);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open, isMobile]);
 
   React.useEffect(() => {
     if (open) {
@@ -134,16 +158,23 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-panel border-border">
-        <DialogHeader>
-          <DialogTitle className="text-[12px] font-mono uppercase tracking-wider text-text-muted">
-            {reply ? "Reply on X" : "Share to X"}
-          </DialogTitle>
-        </DialogHeader>
+  // Auto-fire AI suggest once when triggerAiSuggest is set.
+  const firedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!open) {
+      firedRef.current = false;
+      return;
+    }
+    if (triggerAiSuggest && !firedRef.current && !notConnected) {
+      firedRef.current = true;
+      void handleSuggest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, triggerAiSuggest, notConnected]);
 
-        {notConnected ? (
+  const body = (
+    <>
+      {notConnected ? (
           <div className="space-y-3 py-2">
             <div className="flex items-start gap-2 p-3 rounded-[3px] border border-border bg-panel-elevated">
               <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
@@ -179,8 +210,8 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={reply ? "Write your reply…" : "What's happening?"}
-              rows={5}
-              className="resize-none"
+              rows={isMobile ? 4 : 5}
+              className="resize-none max-h-[200px] overflow-auto"
               autoFocus
             />
             <div className="flex items-center justify-between text-[11px] font-mono">
@@ -200,7 +231,10 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 {len}/280
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2">
+            <div
+              className="flex items-center justify-between gap-2 sticky bg-panel py-2"
+              style={isMobile ? { bottom: keyboardInset } : undefined}
+            >
               <Button
                 type="button"
                 variant="outline"
@@ -256,31 +290,33 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 ))}
               </div>
             )}
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={mutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => mutation.mutate()}
-                disabled={empty || overLimit || mutation.isPending}
-              >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    Posting…
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
-                    {reply ? "Reply" : "Post"}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
+            {!isMobile && (
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={mutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => mutation.mutate()}
+                  disabled={empty || overLimit || mutation.isPending}
+                >
+                  {mutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Posting…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      {reply ? "Reply" : "Post"}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            )}
             {mutation.data && !mutation.data.ok && (
               <div className="text-[11px] text-destructive flex items-center gap-1">
                 <ExternalLink className="w-3 h-3" />
@@ -288,7 +324,59 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
               </div>
             )}
           </div>
-        )}
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className="h-[100dvh] w-screen max-w-none p-0 bg-panel border-border flex flex-col gap-0"
+        >
+          {/* Header */}
+          <div className="h-11 shrink-0 flex items-center justify-between px-2 border-b border-border safe-pt">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              aria-label="Close"
+              className="w-11 h-11 flex items-center justify-center text-text-muted hover:text-text-primary"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-[12px] font-mono uppercase tracking-wider text-text-muted">
+              {reply ? "Reply on X" : "Share to X"}
+            </div>
+            <button
+              type="button"
+              onClick={() => mutation.mutate()}
+              disabled={empty || overLimit || mutation.isPending || notConnected}
+              className="h-9 px-3 rounded-[3px] bg-accent text-accent-foreground text-[12px] font-medium disabled:opacity-40"
+            >
+              {mutation.isPending ? "…" : reply ? "Reply" : "Post"}
+            </button>
+          </div>
+          <div
+            className="flex-1 min-h-0 overflow-auto p-3"
+            style={{ paddingBottom: keyboardInset + 16 }}
+          >
+            {body}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl bg-panel border-border">
+        <DialogHeader>
+          <DialogTitle className="text-[12px] font-mono uppercase tracking-wider text-text-muted">
+            {reply ? "Reply on X" : "Share to X"}
+          </DialogTitle>
+        </DialogHeader>
+        {body}
       </DialogContent>
     </Dialog>
   );
