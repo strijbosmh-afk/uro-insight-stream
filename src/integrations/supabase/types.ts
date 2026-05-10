@@ -503,6 +503,33 @@ export type Database = {
         }
         Relationships: []
       }
+      demo_posts: {
+        Row: {
+          id: string
+          in_reply_to_tweet_id: string | null
+          posted_at: string
+          simulated_tweet_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          posted_at?: string
+          simulated_tweet_id: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          posted_at?: string
+          simulated_tweet_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       digest_subscription_recipients: {
         Row: {
           created_at: string
@@ -928,6 +955,7 @@ export type Database = {
           display_name: string | null
           email: string
           id: string
+          is_demo: boolean
           updated_at: string
         }
         Insert: {
@@ -937,6 +965,7 @@ export type Database = {
           display_name?: string | null
           email: string
           id: string
+          is_demo?: boolean
           updated_at?: string
         }
         Update: {
@@ -946,6 +975,7 @@ export type Database = {
           display_name?: string | null
           email?: string
           id?: string
+          is_demo?: boolean
           updated_at?: string
         }
         Relationships: []

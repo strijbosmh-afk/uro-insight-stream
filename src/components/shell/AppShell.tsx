@@ -11,6 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BrainstormUnreadDialog } from "@/components/brainstorm/BrainstormUnreadDialog";
 import { ComposeFAB } from "@/components/x/ComposeFAB";
 import { BottomTabBar } from "./BottomTabBar";
+import { DemoBanner } from "./DemoBanner";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
@@ -81,6 +82,7 @@ export function AppShell() {
           <div className="safe-pt">
             <TopBar onOpenMobileNav={undefined} />
           </div>
+          <DemoBanner />
           {!wizardOpen &&
             gate.needsResumeBanner &&
             !bannerDismissed &&

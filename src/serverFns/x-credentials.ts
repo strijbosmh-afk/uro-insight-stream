@@ -184,7 +184,49 @@ export const listMyPosts = createServerFn({ method: "GET" })
       .order("posted_at", { ascending: false })
       .limit(data.limit ?? 20);
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const log = rows ?? [];
+
+    // For demo accounts, also surface the seeded demo_posts that have
+    // no matching user_x_post_log entry (the seed inserts only into
+    // demo_posts to make the canonical history easy to reset).
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("is_demo")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!prof?.is_demo) return log;
+
+    const seen = new Set(
+      log
+        .map((r) => (r as { posted_tweet_id: string | null }).posted_tweet_id)
+        .filter(Boolean) as string[]
+    );
+    const { data: demoRows } = await supabaseAdmin
+      .from("demo_posts")
+      .select("id, text, simulated_tweet_id, posted_at, in_reply_to_tweet_id")
+      .eq("user_id", userId)
+      .order("posted_at", { ascending: false })
+      .limit(data.limit ?? 20);
+    const extras = (demoRows ?? [])
+      .filter((d) => !seen.has(d.simulated_tweet_id))
+      .map((d) => ({
+        id: d.id,
+        user_id: userId,
+        text: d.text,
+        in_reply_to_tweet_id: d.in_reply_to_tweet_id,
+        status: "sent",
+        posted_tweet_id: d.simulated_tweet_id,
+        error_code: null,
+        error_message: null,
+        posted_at: d.posted_at,
+      }));
+    return [...log, ...extras]
+      .sort(
+        (a, b) =>
+          new Date(b.posted_at as string).getTime() -
+          new Date(a.posted_at as string).getTime()
+      )
+      .slice(0, data.limit ?? 20);
   });
 
 // Touch supabaseAdmin to keep import-protection happy if needed elsewhere.

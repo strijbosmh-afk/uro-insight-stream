@@ -27,6 +27,23 @@ export async function sendDigestById(digestId: string): Promise<{
   skipped: number;
   reason?: string;
 }> {
+  // Skip demo-owned digests entirely — never deliver email for them.
+  const { data: owner } = await supabaseAdmin
+    .from("digest_subscriptions")
+    .select("user_id")
+    .eq("id", digestId)
+    .maybeSingle();
+  if (owner?.user_id) {
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("is_demo")
+      .eq("id", owner.user_id)
+      .maybeSingle();
+    if (prof?.is_demo) {
+      return { ok: true, enqueued: 0, skipped: 0, reason: "demo_account_skipped" };
+    }
+  }
+
   const payload = await buildDigestPayload(digestId);
   if (!payload) return { ok: false, enqueued: 0, skipped: 0, reason: "no_recipients_or_sources" };
 
