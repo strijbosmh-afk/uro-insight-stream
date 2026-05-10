@@ -9,6 +9,8 @@ import { useAuth } from "@/auth/AuthProvider";
 import { ForYouTab, type DiscoverFilterState } from "@/components/discover/ForYouTab";
 import { GroupsTab } from "@/components/discover/GroupsTab";
 import { BySpecialtyTab } from "@/components/discover/BySpecialtyTab";
+import { MobileDiscover } from "@/components/discover/MobileDiscover";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const TAB_VALUES = ["for-you", "by-group", "by-specialty"] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -49,6 +51,7 @@ function DiscoverPage() {
   const navigate = useNavigate({ from: "/discover" });
   const search = useSearch({ from: "/discover" });
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: hasSpecialties } = useQuery({
     queryKey: ["user-specialties-has", user?.id],
@@ -107,6 +110,17 @@ function DiscoverPage() {
   });
 
   const filters: DiscoverFilterState = { query, verifiedOnly, specialtyId };
+
+  if (isMobile) {
+    return (
+      <div className="px-4 pt-2">
+        <MobileDiscover
+          tab={tab}
+          onTabChange={(t) => navigate({ search: { tab: t }, replace: true })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4 max-w-6xl">
