@@ -97,6 +97,37 @@ async function reserveRateLimitSlot(userId: string): Promise<boolean> {
 }
 
 export async function postTweet(input: PostTweetInput): Promise<PostTweetResult> {
+  // Sandboxed demo accounts: never hit the real X API. Insert into
+  // demo_posts and also log a "sent" entry in user_x_post_log so the
+  // existing /me/posts UI shows the new entry without changes.
+  const { data: demoProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("is_demo")
+    .eq("id", input.userId)
+    .maybeSingle();
+  if (demoProfile?.is_demo) {
+    const simulatedId = `demo_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    await supabaseAdmin.from("demo_posts").insert({
+      user_id: input.userId,
+      text: input.text,
+      in_reply_to_tweet_id: input.inReplyToTweetId ?? null,
+      simulated_tweet_id: simulatedId,
+    });
+    await logPost({
+      userId: input.userId,
+      text: input.text,
+      inReplyTo: input.inReplyToTweetId,
+      status: "sent",
+      postedTweetId: simulatedId,
+    });
+    return {
+      id: simulatedId,
+      url: `https://x.com/i/web/status/${simulatedId}`,
+    };
+  }
+
   const creds = await loadCredentials(input.userId);
   if (!creds) {
     throw new PostTweetError(
