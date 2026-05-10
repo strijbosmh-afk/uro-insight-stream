@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Panel } from "@/components/shell/Panel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MobileSaveBar } from "./MobileSaveBar";
 
 type Specialty = { id: string; label: string; description: string; sort_order: number };
 type UserSpec = { specialty_id: string; is_primary: boolean };
@@ -153,7 +154,13 @@ export function ProfileSettings() {
           </div>
         </div>
         <div>
-          <Button onClick={saveProfile} disabled={!dirty || saving} size="sm">
+          {/* Desktop inline Save — hidden on mobile (sticky bar handles it). */}
+          <Button
+            onClick={saveProfile}
+            disabled={!dirty || saving}
+            size="sm"
+            className="hidden md:inline-flex"
+          >
             {saving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
             ) : (
@@ -229,6 +236,15 @@ export function ProfileSettings() {
           </div>
         )}
       </Panel>
+      <MobileSaveBar
+        visible={dirty}
+        saving={saving}
+        onSave={saveProfile}
+        onCancel={() => {
+          setDisplayName(profile?.display_name ?? "");
+          setAvatarUrl(profile?.avatar_url ?? "");
+        }}
+      />
     </div>
   );
 }

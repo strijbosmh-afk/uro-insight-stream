@@ -13,6 +13,7 @@ import { feedService } from "@/services/feedService";
 import { AI_TONES, AI_LANGUAGES } from "@/hooks/useAiSettings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MobileSaveBar } from "./MobileSaveBar";
 
 const DEFAULTS: UserPreferences = {
   default_congress_id: null,
@@ -284,7 +285,7 @@ export function PreferencesSettings() {
         </div>
       </section>
 
-      <div className="flex gap-2">
+      <div className="hidden md:flex gap-2">
         <Button onClick={save} disabled={!dirty || saving}>
           {saving ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -301,6 +302,12 @@ export function PreferencesSettings() {
           Discard
         </Button>
       </div>
+      <MobileSaveBar
+        visible={dirty}
+        saving={saving}
+        onSave={save}
+        onCancel={() => setDraft(prefs ?? DEFAULTS)}
+      />
     </div>
   );
 }

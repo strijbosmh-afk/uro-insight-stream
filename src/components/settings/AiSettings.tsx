@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,6 +27,8 @@ import {
 } from "@/hooks/useAiSettings";
 import { mockAiService, lovableGatewayService } from "@/services/aiService";
 import { toast } from "sonner";
+import { SwitchRow } from "./SwitchRow";
+import { MobileSaveBar } from "./MobileSaveBar";
 
 export function AiSettings() {
   const { settings, save, reset } = useAiSettings();
@@ -86,19 +87,12 @@ export function AiSettings() {
 
       {/* Backend toggle */}
       <section className="border border-border rounded-[3px] bg-panel p-4 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">Use live AI</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              When off, summaries come from local canned mock data — fast,
-              deterministic, zero cost.
-            </p>
-          </div>
-          <Switch
-            checked={draft.useLive}
-            onCheckedChange={(v) => update("useLive", v)}
-          />
-        </div>
+        <SwitchRow
+          label="Use live AI"
+          description="When off, summaries come from local canned mock data — fast, deterministic, zero cost."
+          checked={draft.useLive}
+          onCheckedChange={(v) => update("useLive", v)}
+        />
 
         <div className="space-y-2">
           <Label className="text-[13px] text-text-primary">Model</Label>
@@ -205,7 +199,7 @@ export function AiSettings() {
       </section>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2">
         <Button
           size="sm"
           disabled={!dirty}
@@ -275,6 +269,15 @@ export function AiSettings() {
           </div>
         )}
       </section>
+      <MobileSaveBar
+        visible={dirty}
+        saving={false}
+        onSave={() => {
+          save(draft);
+          toast.success("AI settings saved");
+        }}
+        onCancel={() => setDraft(settings)}
+      />
     </div>
   );
 }
