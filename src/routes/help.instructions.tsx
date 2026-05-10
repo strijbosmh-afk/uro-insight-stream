@@ -138,6 +138,7 @@ const SECTIONS: Section[] = [
       { title: "Pick specialties", body: "Use the chips to add or remove specialties. Mark one as primary — it's used by Quick Start and the digest presets." },
     ],
     screenshot: "Profile settings with specialty multi-select",
+    image: "/help-screenshots/settings-profile.png",
   },
   {
     id: "settings-preferences",
@@ -149,6 +150,7 @@ const SECTIONS: Section[] = [
       { title: "Adjust density", body: "Switch between comfortable and compact for tighter table rows." },
     ],
     screenshot: "Preferences tab",
+    image: "/help-screenshots/settings-preferences.png",
   },
   {
     id: "settings-notifications",
@@ -161,6 +163,7 @@ const SECTIONS: Section[] = [
       { title: "Master digest switch", body: "Turn 'Digests master enabled' off to pause every scheduled digest at once. The send-job skips you until you re-enable it." },
     ],
     screenshot: "Notifications tab",
+    image: "/help-screenshots/settings-notifications.png",
   },
   {
     id: "settings-ai",
@@ -172,6 +175,7 @@ const SECTIONS: Section[] = [
       { title: "Set defaults", body: "Tone, length, and audience defaults are applied to every new summary unless you override them at generation time." },
     ],
     screenshot: "AI settings",
+    image: "/help-screenshots/settings-ai.png",
   },
   {
     id: "settings-x",
@@ -184,6 +188,7 @@ const SECTIONS: Section[] = [
       { title: "Disconnect", body: "Remove any account from the list at any time.", tip: "UroFeed uses OAuth 1.0a — you need Consumer Key/Secret AND Access Token/Secret." },
     ],
     screenshot: "X account settings",
+    image: "/help-screenshots/settings-x.png",
   },
   {
     id: "compose",
@@ -198,6 +203,7 @@ const SECTIONS: Section[] = [
       { title: "Mobile FAB", body: "On screens narrower than 768px, a floating + button anchors to the bottom-right and opens the same composer." },
     ],
     screenshot: "Compose dialog",
+    image: "/help-screenshots/compose.png",
   },
   {
     id: "admin",
@@ -214,6 +220,7 @@ const SECTIONS: Section[] = [
       { title: "Email diagnostics", body: "Inspect the email queue, recent sends, bounces, and DLQ entries." },
     ],
     screenshot: "Admin panel",
+    image: "/help-screenshots/admin.png",
   },
 ];
 
