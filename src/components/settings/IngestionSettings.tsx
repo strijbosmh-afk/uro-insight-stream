@@ -63,6 +63,7 @@ export function IngestionSettings() {
 
   const [manualType, setManualType] = React.useState<"handle" | "hashtag">("handle");
   const [manualTarget, setManualTarget] = React.useState("");
+  const [runsOpen, setRunsOpen] = React.useState(false);
 
   type CfgPatch = {
     adapter?: "x_api_v2" | "mock" | "socialdata" | "twitterapi_io";
@@ -278,13 +279,29 @@ export function IngestionSettings() {
       {/* Run log */}
       <section className="border border-border bg-panel p-4 relative">
         <div className="absolute top-0 left-0 h-0.5 w-12 bg-cyan-400" />
-        <h3 className="font-mono text-sm uppercase tracking-wide mb-4">
-          Recent runs
-        </h3>
-        {data.runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No runs yet.</p>
-        ) : (
-          <div className="space-y-1 font-mono text-xs">
+        <button
+          type="button"
+          onClick={() => setRunsOpen((v) => !v)}
+          aria-expanded={runsOpen}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <h3 className="font-mono text-sm uppercase tracking-wide">
+            Recent runs
+            <span className="ml-2 text-muted-foreground normal-case tracking-normal">
+              ({data.runs.length})
+            </span>
+          </h3>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform ${
+              runsOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        {runsOpen && (
+          data.runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground mt-4">No runs yet.</p>
+          ) : (
+            <div className="space-y-1 font-mono text-xs mt-4">
             {data.runs.map((r) => (
               <div
                 key={r.id}
@@ -314,7 +331,8 @@ export function IngestionSettings() {
                 </span>
               </div>
             ))}
-          </div>
+            </div>
+          )
         )}
       </section>
 
