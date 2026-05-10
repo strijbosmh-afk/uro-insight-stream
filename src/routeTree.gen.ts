@@ -23,7 +23,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
+import { Route as MeXAccountRouteImport } from './routes/me.x-account'
+import { Route as MeProfileRouteImport } from './routes/me.profile'
+import { Route as MePreferencesRouteImport } from './routes/me.preferences'
 import { Route as MePostsRouteImport } from './routes/me.posts'
+import { Route as MeNotificationsRouteImport } from './routes/me.notifications'
+import { Route as MeFollowingRouteImport } from './routes/me.following'
+import { Route as MeAiRouteImport } from './routes/me.ai'
 import { Route as HelpInstructionsRouteImport } from './routes/help.instructions'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -124,9 +130,39 @@ const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   path: '/sessions/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MeXAccountRoute = MeXAccountRouteImport.update({
+  id: '/x-account',
+  path: '/x-account',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeProfileRoute = MeProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => MeRoute,
+} as any)
+const MePreferencesRoute = MePreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
+  getParentRoute: () => MeRoute,
+} as any)
 const MePostsRoute = MePostsRouteImport.update({
   id: '/posts',
   path: '/posts',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeNotificationsRoute = MeNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeFollowingRoute = MeFollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeAiRoute = MeAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
   getParentRoute: () => MeRoute,
 } as any)
 const HelpInstructionsRoute = HelpInstructionsRouteImport.update({
@@ -314,7 +350,13 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
+  '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
+  '/me/preferences': typeof MePreferencesRoute
+  '/me/profile': typeof MeProfileRoute
+  '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -360,7 +402,13 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
+  '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
+  '/me/preferences': typeof MePreferencesRoute
+  '/me/profile': typeof MeProfileRoute
+  '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -407,7 +455,13 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
+  '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
+  '/me/preferences': typeof MePreferencesRoute
+  '/me/profile': typeof MeProfileRoute
+  '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -455,7 +509,13 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/ai'
+    | '/me/following'
+    | '/me/notifications'
     | '/me/posts'
+    | '/me/preferences'
+    | '/me/profile'
+    | '/me/x-account'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -501,7 +561,13 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/ai'
+    | '/me/following'
+    | '/me/notifications'
     | '/me/posts'
+    | '/me/preferences'
+    | '/me/profile'
+    | '/me/x-account'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -547,7 +613,13 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/ai'
+    | '/me/following'
+    | '/me/notifications'
     | '/me/posts'
+    | '/me/preferences'
+    | '/me/profile'
+    | '/me/x-account'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -711,11 +783,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SessionsSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/me/x-account': {
+      id: '/me/x-account'
+      path: '/x-account'
+      fullPath: '/me/x-account'
+      preLoaderRoute: typeof MeXAccountRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/profile': {
+      id: '/me/profile'
+      path: '/profile'
+      fullPath: '/me/profile'
+      preLoaderRoute: typeof MeProfileRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/preferences': {
+      id: '/me/preferences'
+      path: '/preferences'
+      fullPath: '/me/preferences'
+      preLoaderRoute: typeof MePreferencesRouteImport
+      parentRoute: typeof MeRoute
+    }
     '/me/posts': {
       id: '/me/posts'
       path: '/posts'
       fullPath: '/me/posts'
       preLoaderRoute: typeof MePostsRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/notifications': {
+      id: '/me/notifications'
+      path: '/notifications'
+      fullPath: '/me/notifications'
+      preLoaderRoute: typeof MeNotificationsRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/following': {
+      id: '/me/following'
+      path: '/following'
+      fullPath: '/me/following'
+      preLoaderRoute: typeof MeFollowingRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/ai': {
+      id: '/me/ai'
+      path: '/ai'
+      fullPath: '/me/ai'
+      preLoaderRoute: typeof MeAiRouteImport
       parentRoute: typeof MeRoute
     }
     '/help/instructions': {
@@ -949,11 +1063,23 @@ const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
 )
 
 interface MeRouteChildren {
+  MeAiRoute: typeof MeAiRoute
+  MeFollowingRoute: typeof MeFollowingRoute
+  MeNotificationsRoute: typeof MeNotificationsRoute
   MePostsRoute: typeof MePostsRoute
+  MePreferencesRoute: typeof MePreferencesRoute
+  MeProfileRoute: typeof MeProfileRoute
+  MeXAccountRoute: typeof MeXAccountRoute
 }
 
 const MeRouteChildren: MeRouteChildren = {
+  MeAiRoute: MeAiRoute,
+  MeFollowingRoute: MeFollowingRoute,
+  MeNotificationsRoute: MeNotificationsRoute,
   MePostsRoute: MePostsRoute,
+  MePreferencesRoute: MePreferencesRoute,
+  MeProfileRoute: MeProfileRoute,
+  MeXAccountRoute: MeXAccountRoute,
 }
 
 const MeRouteWithChildren = MeRoute._addFileChildren(MeRouteChildren)

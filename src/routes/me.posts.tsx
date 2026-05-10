@@ -1,8 +1,8 @@
-import * as React from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { listMyPosts } from "@/serverFns/x-credentials";
+import { MobileSubPage } from "@/components/shell/MobileSubPage";
 
 export const Route = createFileRoute("/me/posts")({
   head: () => ({ meta: [{ title: "My posts — UroFeed" }] }),
@@ -16,17 +16,7 @@ function MyPostsPage() {
   });
 
   return (
-    <div className="max-w-xl mx-auto pb-6">
-      <Link
-        to="/me"
-        className="inline-flex items-center gap-1 text-[12px] text-text-muted hover:text-text-primary mb-3"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Back to Me
-      </Link>
-      <h1 className="text-[18px] font-semibold text-text-primary mb-3">
-        My posts
-      </h1>
+    <MobileSubPage title="My posts">
       {isLoading && (
         <div className="text-[12px] font-mono text-text-muted">Loading…</div>
       )}
@@ -58,7 +48,7 @@ function MyPostsPage() {
                 {p.status}
               </span>
             </div>
-            <div className="text-[13px] text-text-primary whitespace-pre-wrap">
+            <div className="text-[13px] text-text-primary whitespace-pre-wrap line-clamp-3">
               {p.text}
             </div>
             {p.posted_tweet_id && (
@@ -79,6 +69,6 @@ function MyPostsPage() {
           </li>
         ))}
       </ul>
-    </div>
+    </MobileSubPage>
   );
 }

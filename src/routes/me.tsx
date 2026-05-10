@@ -104,8 +104,7 @@ function MeHub() {
             )}
           </div>
           <Link
-            to="/settings"
-            search={{ tab: "profile" }}
+            to="/me/profile"
             className="text-[12px] text-accent hover:underline"
           >
             Edit profile
@@ -114,28 +113,16 @@ function MeHub() {
       </div>
 
       <Section label="Content">
-        <Row to="/sources" label={`People I follow (${followingCount})`} />
+        <Row to="/me/following" label={`People I follow (${followingCount})`} />
         <Row to="/me/posts" label={`My posts (${postsCount})`} />
       </Section>
 
       <Section label="Configuration">
-        <Row
-          to="/settings"
-          search={{ tab: "profile" }}
-          label="Specialties & interests"
-        />
-        <Row
-          to="/settings"
-          search={{ tab: "notifications" }}
-          label="Notifications"
-        />
-        <Row to="/settings" search={{ tab: "ai" }} label="AI settings" />
-        <Row to="/settings" search={{ tab: "x" }} label="X account" />
-        <Row
-          to="/settings"
-          search={{ tab: "preferences" }}
-          label="Display preferences"
-        />
+        <Row to="/me/profile" label="Profile" />
+        <Row to="/me/preferences" label="Display preferences" />
+        <Row to="/me/notifications" label="Notifications" />
+        <Row to="/me/ai" label="AI settings" />
+        <Row to="/me/x-account" label="X account" />
       </Section>
 
       <Section label="Help">
@@ -226,17 +213,14 @@ function Section({
 
 function Row({
   to,
-  search,
   label,
 }: {
   to: string;
-  search?: Record<string, string>;
   label: string;
 }) {
   return (
     <Link
       to={to}
-      search={search as never}
       className="w-full h-14 px-4 flex items-center justify-between border-b border-border last:border-b-0 text-[14px] text-text-primary hover:bg-panel-elevated/60 transition-colors"
     >
       <span>{label}</span>

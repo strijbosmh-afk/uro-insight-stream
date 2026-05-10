@@ -6,6 +6,8 @@ import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 import { XSettings } from "@/components/settings/XSettings";
 import * as React from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — UroFeed" }] }),
@@ -18,6 +20,8 @@ export const Route = createFileRoute("/settings")({
 function SettingsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const isMobile = useIsMobile();
+  const rootNav = useNavigate();
   const valid = ["profile", "preferences", "notifications", "ai", "x"] as const;
   const initial = (valid as readonly string[]).includes(search.tab ?? "")
     ? (search.tab as string)
@@ -27,6 +31,18 @@ function SettingsPage() {
     if (search.tab && search.tab !== tab) setTab(search.tab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.tab]);
+  React.useEffect(() => {
+    if (!isMobile) return;
+    const map: Record<string, string> = {
+      profile: "/me/profile",
+      preferences: "/me/preferences",
+      notifications: "/me/notifications",
+      ai: "/me/ai",
+      x: "/me/x-account",
+    };
+    const target = map[tab] ?? "/me";
+    rootNav({ to: target, replace: true });
+  }, [isMobile, tab, rootNav]);
   return (
     <div className="p-6">
       <Tabs
