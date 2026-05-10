@@ -144,6 +144,7 @@ export function TweetStream({ data }: { data: FeedDataset }) {
 
         <div
           ref={parentRef}
+          data-stream-scroll
           className="absolute inset-0 overflow-auto px-3 py-3"
         >
           {tweets.length === 0 ? (
