@@ -23,6 +23,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
+import { Route as MePostsRouteImport } from './routes/me.posts'
 import { Route as HelpInstructionsRouteImport } from './routes/help.instructions'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -122,6 +123,11 @@ const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
   path: '/sessions/$sessionId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MePostsRoute = MePostsRouteImport.update({
+  id: '/posts',
+  path: '/posts',
+  getParentRoute: () => MeRoute,
 } as any)
 const HelpInstructionsRoute = HelpInstructionsRouteImport.update({
   id: '/help/instructions',
@@ -290,7 +296,7 @@ export interface FileRoutesByFullPath {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
-  '/me': typeof MeRoute
+  '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/posts': typeof MePostsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -335,7 +342,7 @@ export interface FileRoutesByTo {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
-  '/me': typeof MeRoute
+  '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -353,6 +360,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/posts': typeof MePostsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -381,7 +389,7 @@ export interface FileRoutesById {
   '/digests': typeof DigestsRoute
   '/discover': typeof DiscoverRouteWithChildren
   '/feed': typeof FeedRoute
-  '/me': typeof MeRoute
+  '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
@@ -399,6 +407,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
+  '/me/posts': typeof MePostsRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -446,6 +455,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/posts'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/posts'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/groups/$slug'
     | '/help/instructions'
+    | '/me/posts'
     | '/sessions/$sessionId'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
@@ -564,7 +576,7 @@ export interface RootRouteChildren {
   DigestsRoute: typeof DigestsRoute
   DiscoverRoute: typeof DiscoverRouteWithChildren
   FeedRoute: typeof FeedRoute
-  MeRoute: typeof MeRoute
+  MeRoute: typeof MeRouteWithChildren
   SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
@@ -698,6 +710,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sessions/$sessionId'
       preLoaderRoute: typeof SessionsSessionIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/me/posts': {
+      id: '/me/posts'
+      path: '/posts'
+      fullPath: '/me/posts'
+      preLoaderRoute: typeof MePostsRouteImport
+      parentRoute: typeof MeRoute
     }
     '/help/instructions': {
       id: '/help/instructions'
@@ -929,6 +948,16 @@ const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
   DiscoverRouteChildren,
 )
 
+interface MeRouteChildren {
+  MePostsRoute: typeof MePostsRoute
+}
+
+const MeRouteChildren: MeRouteChildren = {
+  MePostsRoute: MePostsRoute,
+}
+
+const MeRouteWithChildren = MeRoute._addFileChildren(MeRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
@@ -938,7 +967,7 @@ const rootRouteChildren: RootRouteChildren = {
   DigestsRoute: DigestsRoute,
   DiscoverRoute: DiscoverRouteWithChildren,
   FeedRoute: FeedRoute,
-  MeRoute: MeRoute,
+  MeRoute: MeRouteWithChildren,
   SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
@@ -979,3 +1008,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
