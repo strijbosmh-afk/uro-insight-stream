@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
 import { IngestionSettings } from "@/components/settings/IngestionSettings";
 import { Panel } from "@/components/shell/Panel";
 import { useAuth } from "@/auth/AuthProvider";
+import { Button } from "@/components/ui/button";
+import {
+  provisionDemoAccount,
+  resetDemoAccounts,
+} from "@/serverFns/demo";
 
 export const Route = createFileRoute("/admin/ingestion")({
   head: () => ({ meta: [{ title: "Ingestion — UroFeed admin" }] }),
@@ -42,6 +49,76 @@ function IngestionPage() {
         Admin · Ingestion
       </h1>
       <IngestionSettings />
+      <DemoAccountPanel />
     </div>
+  );
+}
+
+function DemoAccountPanel() {
+  const [busy, setBusy] = React.useState<null | "provision" | "reset">(null);
+
+  const onProvision = async () => {
+    setBusy("provision");
+    try {
+      const r = await provisionDemoAccount();
+      toast.success(
+        `Demo account ${r.created ? "created" : "repaired"} & seeded.`
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onReset = async () => {
+    setBusy("reset");
+    try {
+      const r = await resetDemoAccounts();
+      toast.success(`Reset ${r.users} demo account(s).`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Panel title="Demo account">
+      <div className="flex flex-col gap-3 text-sm">
+        <p className="text-text-muted">
+          Provision (or repair) the <code>demo@urofeed.app</code> account, then
+          wipe + reseed the canonical state. The nightly cron does this
+          automatically at 03:00 UTC; use the buttons below to trigger
+          manually.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onProvision}
+            disabled={busy !== null}
+          >
+            {busy === "provision" ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 mr-2" />
+            )}
+            Provision / repair demo account
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onReset}
+            disabled={busy !== null}
+          >
+            {busy === "reset" ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : null}
+            Reset demo account now
+          </Button>
+        </div>
+      </div>
+    </Panel>
   );
 }
