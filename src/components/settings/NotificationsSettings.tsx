@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type UserPreferences } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { SwitchRow } from "./SwitchRow";
+import { MobileSaveBar } from "./MobileSaveBar";
 
 const BRAINSTORM_DISABLE_KEY = "brainstorm:disableUnreadDialog";
 
@@ -89,31 +90,18 @@ export function NotificationsSettings() {
       <section className="border border-border rounded-[3px] bg-panel p-4 space-y-4">
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-text-muted">Email digests</h2>
 
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">Send email digests</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              Master switch. When off, no digest emails are sent regardless of individual schedules.
-            </p>
-          </div>
-          <Switch
-            checked={draft.digests_master_enabled}
-            onCheckedChange={(v) => update("digests_master_enabled", v)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">New digests start active</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              When you create a new digest, mark it active by default.
-            </p>
-          </div>
-          <Switch
-            checked={draft.digests_active_by_default}
-            onCheckedChange={(v) => update("digests_active_by_default", v)}
-          />
-        </div>
+        <SwitchRow
+          label="Send email digests"
+          description="Master switch. When off, no digest emails are sent regardless of individual schedules."
+          checked={draft.digests_master_enabled}
+          onCheckedChange={(v) => update("digests_master_enabled", v)}
+        />
+        <SwitchRow
+          label="New digests start active"
+          description="When you create a new digest, mark it active by default."
+          checked={draft.digests_active_by_default}
+          onCheckedChange={(v) => update("digests_active_by_default", v)}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
           <div className="space-y-1.5">
@@ -166,58 +154,37 @@ export function NotificationsSettings() {
       <section className="border border-border rounded-[3px] bg-panel p-4 space-y-4">
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-text-muted">Email events</h2>
 
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">New AI summary ready</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              Email me when a new summary is generated for sources I follow.
-            </p>
-          </div>
-          <Switch
-            checked={draft.notify_new_summary}
-            onCheckedChange={(v) => update("notify_new_summary", v)}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">New post from a followed source</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              Real-time email when a source you follow posts (high volume — off by default).
-            </p>
-          </div>
-          <Switch
-            checked={draft.notify_new_tweet_followed_source}
-            onCheckedChange={(v) => update("notify_new_tweet_followed_source", v)}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">Weekly recap</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              A short Monday-morning round-up of last week's highlights.
-            </p>
-          </div>
-          <Switch
-            checked={draft.notify_weekly_recap}
-            onCheckedChange={(v) => update("notify_weekly_recap", v)}
-          />
-        </div>
+        <SwitchRow
+          label="New AI summary ready"
+          description="Email me when a new summary is generated for sources I follow."
+          checked={draft.notify_new_summary}
+          onCheckedChange={(v) => update("notify_new_summary", v)}
+        />
+        <SwitchRow
+          label="New post from a followed source"
+          description="Real-time email when a source you follow posts (high volume — off by default)."
+          checked={draft.notify_new_tweet_followed_source}
+          onCheckedChange={(v) => update("notify_new_tweet_followed_source", v)}
+        />
+        <SwitchRow
+          label="Weekly recap"
+          description="A short Monday-morning round-up of last week's highlights."
+          checked={draft.notify_weekly_recap}
+          onCheckedChange={(v) => update("notify_weekly_recap", v)}
+        />
       </section>
 
       <section className="border border-border rounded-[3px] bg-panel p-4 space-y-3">
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-text-muted">In-app</h2>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <Label className="text-[13px] text-text-primary">Brainstorm unread popup</Label>
-            <p className="text-[12px] text-text-muted mt-0.5">
-              Show a popup on login when there are unread Brainstorm messages.
-            </p>
-          </div>
-          <Switch checked={brainstormPopup} onCheckedChange={toggleBrainstormPopup} />
-        </div>
+        <SwitchRow
+          label="Brainstorm unread popup"
+          description="Show a popup on login when there are unread Brainstorm messages."
+          checked={brainstormPopup}
+          onCheckedChange={toggleBrainstormPopup}
+        />
       </section>
 
-      <div className="flex gap-2">
+      <div className="hidden md:flex gap-2">
         <Button onClick={save} disabled={!dirty || saving} size="sm">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
           Save
@@ -226,6 +193,12 @@ export function NotificationsSettings() {
           Discard
         </Button>
       </div>
+      <MobileSaveBar
+        visible={dirty}
+        saving={saving}
+        onSave={save}
+        onCancel={() => prefs && setDraft(prefs)}
+      />
     </div>
   );
 }
