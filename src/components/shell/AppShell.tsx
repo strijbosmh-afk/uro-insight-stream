@@ -28,12 +28,8 @@ export function AppShell() {
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-
-  // Phones (<768px) get a tab bar; tablets keep the drawer trigger.
+  // <768px → phone. 768–1023 already shows the full sidebar (useIsMobile=false).
   const isPhone = isMobile;
-  const isTablet =
-    typeof window !== "undefined" &&
-    window.matchMedia("(min-width: 768px) and (max-width: 1023px)").matches;
 
   // Mobile redirect: admin routes are desktop-only.
   React.useEffect(() => {
@@ -83,27 +79,11 @@ export function AppShell() {
           <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
         )}
 
-        {/* Tablet drawer (phones use BottomTabBar instead) */}
-        {isMobile && !isPhone && mobileNavOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileNavOpen(false)}
-              aria-hidden
-            />
-            <div className="fixed inset-y-0 left-0 z-50 safe-pt safe-pb flex">
-              <Sidebar collapsed={false} onToggle={() => setMobileNavOpen(false)} />
-            </div>
-          </>
-        )}
+        {/* Phones use BottomTabBar — no hamburger drawer. */}
 
         <div className="flex-1 flex flex-col min-w-0">
           <div className="safe-pt">
-            <TopBar
-              onOpenMobileNav={
-                isMobile && !isPhone ? () => setMobileNavOpen(true) : undefined
-              }
-            />
+            <TopBar onOpenMobileNav={undefined} />
           </div>
           {!wizardOpen &&
             gate.needsResumeBanner &&
@@ -128,8 +108,6 @@ export function AppShell() {
       <BrainstormUnreadDialog />
       {isMobile && <MobileComposeFab />}
       {isPhone && <BottomTabBar />}
-      {/* keep helper to avoid unused-var */}
-      <span className="hidden">{isTablet ? "t" : ""}</span>
       {wizardOpen && (
         <OnboardingWizard
           initialStep={gate.currentStep}
