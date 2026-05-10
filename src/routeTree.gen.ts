@@ -28,6 +28,7 @@ import { Route as MeProfileRouteImport } from './routes/me.profile'
 import { Route as MePreferencesRouteImport } from './routes/me.preferences'
 import { Route as MePostsRouteImport } from './routes/me.posts'
 import { Route as MeNotificationsRouteImport } from './routes/me.notifications'
+import { Route as MeFollowingRouteImport } from './routes/me.following'
 import { Route as MeAiRouteImport } from './routes/me.ai'
 import { Route as HelpInstructionsRouteImport } from './routes/help.instructions'
 import { Route as GroupsSlugRouteImport } from './routes/groups.$slug'
@@ -152,6 +153,11 @@ const MePostsRoute = MePostsRouteImport.update({
 const MeNotificationsRoute = MeNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeFollowingRoute = MeFollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
   getParentRoute: () => MeRoute,
 } as any)
 const MeAiRoute = MeAiRouteImport.update({
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
   '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
@@ -396,6 +403,7 @@ export interface FileRoutesByTo {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
   '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
@@ -448,6 +456,7 @@ export interface FileRoutesById {
   '/groups/$slug': typeof GroupsSlugRoute
   '/help/instructions': typeof HelpInstructionsRoute
   '/me/ai': typeof MeAiRoute
+  '/me/following': typeof MeFollowingRoute
   '/me/notifications': typeof MeNotificationsRoute
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
@@ -501,6 +510,7 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/me/ai'
+    | '/me/following'
     | '/me/notifications'
     | '/me/posts'
     | '/me/preferences'
@@ -552,6 +562,7 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/me/ai'
+    | '/me/following'
     | '/me/notifications'
     | '/me/posts'
     | '/me/preferences'
@@ -603,6 +614,7 @@ export interface FileRouteTypes {
     | '/groups/$slug'
     | '/help/instructions'
     | '/me/ai'
+    | '/me/following'
     | '/me/notifications'
     | '/me/posts'
     | '/me/preferences'
@@ -804,6 +816,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/me/notifications'
       preLoaderRoute: typeof MeNotificationsRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/following': {
+      id: '/me/following'
+      path: '/following'
+      fullPath: '/me/following'
+      preLoaderRoute: typeof MeFollowingRouteImport
       parentRoute: typeof MeRoute
     }
     '/me/ai': {
@@ -1045,6 +1064,7 @@ const DiscoverRouteWithChildren = DiscoverRoute._addFileChildren(
 
 interface MeRouteChildren {
   MeAiRoute: typeof MeAiRoute
+  MeFollowingRoute: typeof MeFollowingRoute
   MeNotificationsRoute: typeof MeNotificationsRoute
   MePostsRoute: typeof MePostsRoute
   MePreferencesRoute: typeof MePreferencesRoute
@@ -1054,6 +1074,7 @@ interface MeRouteChildren {
 
 const MeRouteChildren: MeRouteChildren = {
   MeAiRoute: MeAiRoute,
+  MeFollowingRoute: MeFollowingRoute,
   MeNotificationsRoute: MeNotificationsRoute,
   MePostsRoute: MePostsRoute,
   MePreferencesRoute: MePreferencesRoute,
