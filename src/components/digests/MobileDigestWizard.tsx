@@ -61,6 +61,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
   const [shake, setShake] = React.useState<string | null>(null);
 
   const nameRef = React.useRef<HTMLInputElement>(null);
+  const nameWrapRef = React.useRef<HTMLDivElement>(null);
   const bindingsRef = React.useRef<HTMLDivElement>(null);
   const recipientsRef = React.useRef<HTMLDivElement>(null);
 
@@ -197,7 +198,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
 
   const triggerShake = (which: "name" | "bindings" | "recipients") => {
     setShake(which);
-    const ref = which === "name" ? nameRef : which === "bindings" ? bindingsRef : recipientsRef;
+    const ref = which === "name" ? nameWrapRef : which === "bindings" ? bindingsRef : recipientsRef;
     ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     setTimeout(() => setShake(null), 600);
   };
@@ -351,7 +352,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
           )}
 
           {/* Name */}
-          <div ref={nameRef as never} className={shakeCls("name")}>
+          <div ref={nameWrapRef} className={shakeCls("name")}>
             <SectionLabel>Name</SectionLabel>
             <Input
               ref={nameRef}
