@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Activity,
   Gauge,
+  ChevronDown,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
