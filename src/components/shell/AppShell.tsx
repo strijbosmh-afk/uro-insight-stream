@@ -10,10 +10,12 @@ import { ResumeBanner } from "@/components/wizard/ResumeBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrainstormUnreadDialog } from "@/components/brainstorm/BrainstormUnreadDialog";
 import { MobileComposeFab } from "./MobileComposeFab";
+import { BottomTabBar } from "./BottomTabBar";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const isMobile = useIsMobile();
   const { prefs } = useAuth();
   const density = prefs?.theme_density ?? "comfortable";
@@ -24,11 +26,19 @@ export function AppShell() {
   >(undefined);
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  // <768px → phone. 768–1023 already shows the full sidebar (useIsMobile=false).
+  const isPhone = isMobile;
 
-  // Close the mobile drawer on route change.
+  // Mobile redirect: admin routes are desktop-only.
   React.useEffect(() => {
-    setMobileNavOpen(false);
-  }, [pathname]);
+    if (isPhone && pathname.startsWith("/admin/")) {
+      toast.message("Admin tools are desktop-only.", {
+        description: "Open this URL on your computer.",
+      });
+      navigate({ to: "/me", replace: true });
+    }
+  }, [isPhone, pathname, navigate]);
 
   React.useEffect(() => {
     const handler = (
@@ -63,25 +73,11 @@ export function AppShell() {
           <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
         )}
 
-        {/* Mobile drawer */}
-        {isMobile && mobileNavOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileNavOpen(false)}
-              aria-hidden
-            />
-            <div className="fixed inset-y-0 left-0 z-50 safe-pt safe-pb flex">
-              <Sidebar collapsed={false} onToggle={() => setMobileNavOpen(false)} />
-            </div>
-          </>
-        )}
+        {/* Phones use BottomTabBar — no hamburger drawer. */}
 
         <div className="flex-1 flex flex-col min-w-0">
           <div className="safe-pt">
-            <TopBar
-              onOpenMobileNav={isMobile ? () => setMobileNavOpen(true) : undefined}
-            />
+            <TopBar onOpenMobileNav={undefined} />
           </div>
           {!wizardOpen &&
             gate.needsResumeBanner &&
@@ -92,15 +88,20 @@ export function AppShell() {
                 onDismiss={() => setBannerDismissed(true)}
               />
             )}
-          <main className="flex-1 min-h-0 overflow-auto ios-scroll p-3 sm:p-3">
+          <main
+            className={
+              "flex-1 min-h-0 overflow-auto ios-scroll p-3 sm:p-3 " +
+              (isPhone ? "pb-24" : "")
+            }
+          >
             <Outlet />
           </main>
         </div>
       </div>
       {!isMobile && <StatusBar />}
-      {isMobile && <div className="safe-pb bg-panel" />}
       <BrainstormUnreadDialog />
       {isMobile && <MobileComposeFab />}
+      {isPhone && <BottomTabBar />}
       {wizardOpen && (
         <OnboardingWizard
           initialStep={gate.currentStep}

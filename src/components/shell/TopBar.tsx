@@ -3,6 +3,7 @@ import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, ChevronRight, Menu, ChevronDown, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { feedService } from "@/services/feedService";
 import { ShareToXButton } from "@/components/x/ShareToXButton";
 import {
@@ -104,6 +105,7 @@ interface TopBarProps {
 export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
   const crumbs = useBreadcrumb();
   const now = useClock();
+  const isMobile = useIsMobile();
 
   return (
     <header className="h-12 shrink-0 flex items-center gap-2 sm:gap-4 px-2 sm:px-4 border-b border-border bg-panel">
@@ -175,15 +177,17 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       </div>
 
       {/* Avatar */}
-      <XHandleBadge />
+      {!isMobile && <XHandleBadge />}
       <ShareToXButton />
-      <button
-        type="button"
-        className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
-        aria-label="Account"
-      >
-        UR
-      </button>
+      {!isMobile && (
+        <button
+          type="button"
+          className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
+          aria-label="Account"
+        >
+          UR
+        </button>
+      )}
     </header>
   );
 }
