@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
+import { MobileDigestWizard } from "./MobileDigestWizard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DAYS = [
   { v: 1, l: "Mon" },
@@ -36,7 +38,17 @@ interface DigestWizardProps {
   initialPreset?: "specialty" | "congress" | "custom" | null;
 }
 
-export function DigestWizard({ digestId, onClose, initialPreset }: DigestWizardProps) {
+export function DigestWizard(props: DigestWizardProps) {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <MobileDigestWizard digestId={props.digestId} onClose={props.onClose} />
+    );
+  }
+  return <DesktopDigestWizard {...props} />;
+}
+
+function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardProps) {
   const { user, prefs } = useAuth();
   const qc = useQueryClient();
   const createFn = useServerFn(createDigest);

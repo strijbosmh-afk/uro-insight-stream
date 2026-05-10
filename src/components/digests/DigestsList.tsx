@@ -21,6 +21,8 @@ import {
   sendDigestNow,
 } from "@/serverFns/digests";
 import { DigestWizard } from "./DigestWizard";
+import { MobileDigestsList } from "./MobileDigestsList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function fmt(iso: string | null) {
   if (!iso) return "—";
@@ -33,6 +35,12 @@ function fmt(iso: string | null) {
 }
 
 export function DigestsList() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileDigestsList />;
+  return <DesktopDigestsList />;
+}
+
+function DesktopDigestsList() {
   const qc = useQueryClient();
   const listFn = useServerFn(listUserDigests);
   const toggleFn = useServerFn(toggleDigest);
