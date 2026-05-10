@@ -34,11 +34,11 @@ function MeHub() {
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("user_source_subscriptions")
+        .from("user_subscribed_sources")
         .select("source_id")
         .eq("user_id", user.id);
       if (error) throw error;
-      return data?.map((r) => r.source_id) ?? [];
+      return (data ?? []).map((r) => r.source_id as string);
     },
     enabled: !!user,
   });
