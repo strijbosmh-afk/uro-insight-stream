@@ -60,12 +60,15 @@ function DemoAccountPanel() {
   const onProvision = async () => {
     setBusy("provision");
     try {
-      const r = await provisionDemoAccount();
-      toast.success(
-        `Demo account ${r.created ? "created" : "repaired"} & seeded.`
-      );
-    } catch (e) {
-      toast.error((e as Error).message);
+      const r = await toast.promise(provisionDemoAccount(), {
+        loading: "Provisioning demo account…",
+        success: (res) =>
+          `Demo account ${res.created ? "created" : "repaired"} & seeded.`,
+        error: (e: Error) => e.message ?? "Failed to provision demo account.",
+      }).unwrap();
+      void r;
+    } catch {
+      // toast.promise already surfaced the error
     } finally {
       setBusy(null);
     }
@@ -74,10 +77,13 @@ function DemoAccountPanel() {
   const onReset = async () => {
     setBusy("reset");
     try {
-      const r = await resetDemoAccounts();
-      toast.success(`Reset ${r.users} demo account(s).`);
-    } catch (e) {
-      toast.error((e as Error).message);
+      await toast.promise(resetDemoAccounts(), {
+        loading: "Resetting demo account…",
+        success: (res) => `Reset ${res.users} demo account(s).`,
+        error: (e: Error) => e.message ?? "Failed to reset demo account.",
+      }).unwrap();
+    } catch {
+      // toast.promise already surfaced the error
     } finally {
       setBusy(null);
     }
@@ -104,7 +110,9 @@ function DemoAccountPanel() {
             ) : (
               <Sparkles className="w-3.5 h-3.5 mr-2" />
             )}
-            Provision / repair demo account
+            {busy === "provision"
+              ? "Provisioning…"
+              : "Provision / repair demo account"}
           </Button>
           <Button
             type="button"
@@ -115,7 +123,7 @@ function DemoAccountPanel() {
             {busy === "reset" ? (
               <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
             ) : null}
-            Reset demo account now
+            {busy === "reset" ? "Resetting…" : "Reset demo account now"}
           </Button>
         </div>
       </div>
