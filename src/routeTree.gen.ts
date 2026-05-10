@@ -54,6 +54,7 @@ import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/publ
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
 import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
+import { Route as ApiPublicHooksResetDemoAccountRouteImport } from './routes/api/public/hooks/reset-demo-account'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksNominateGroupMembersRouteImport } from './routes/api/public/hooks/nominate-group-members'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
@@ -292,6 +293,12 @@ const ApiPublicHooksSendDigestsRoute =
     path: '/api/public/hooks/send-digests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksResetDemoAccountRoute =
+  ApiPublicHooksResetDemoAccountRouteImport.update({
+    id: '/api/public/hooks/reset-demo-account',
+    path: '/api/public/hooks/reset-demo-account',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessIngestQueueRoute =
   ApiPublicHooksProcessIngestQueueRouteImport.update({
     id: '/api/public/hooks/process-ingest-queue',
@@ -365,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
@@ -417,6 +425,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
+  '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
@@ -576,6 +587,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
@@ -628,6 +640,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
+    | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
@@ -672,6 +685,7 @@ export interface RootRouteChildren {
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksNominateGroupMembersRoute: typeof ApiPublicHooksNominateGroupMembersRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
+  ApiPublicHooksResetDemoAccountRoute: typeof ApiPublicHooksResetDemoAccountRoute
   ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
@@ -1000,6 +1014,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendDigestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/reset-demo-account': {
+      id: '/api/public/hooks/reset-demo-account'
+      path: '/api/public/hooks/reset-demo-account'
+      fullPath: '/api/public/hooks/reset-demo-account'
+      preLoaderRoute: typeof ApiPublicHooksResetDemoAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-ingest-queue': {
       id: '/api/public/hooks/process-ingest-queue'
       path: '/api/public/hooks/process-ingest-queue'
@@ -1121,6 +1142,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksNominateGroupMembersRoute:
     ApiPublicHooksNominateGroupMembersRoute,
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
+  ApiPublicHooksResetDemoAccountRoute: ApiPublicHooksResetDemoAccountRoute,
   ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
