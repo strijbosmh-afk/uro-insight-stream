@@ -243,7 +243,7 @@ function MobilePeopleList({
       const { data } = await supabase
         .from("recommended_sources_by_specialty")
         .select(
-          "source_id, specialty_id, weight, sources(id, handle, display_name, avatar_url, verified, bio)",
+          "source_id, specialty_id, weight, sources(id, handle, display_name, avatar_url, verified, role)",
         )
         .in("specialty_id", specialtyIds)
         .order("weight", { ascending: false });
@@ -257,7 +257,7 @@ function MobilePeopleList({
           display_name: string | null;
           avatar_url: string | null;
           verified: boolean | null;
-          bio: string | null;
+          role: string | null;
         } | null;
       }>;
     },
@@ -292,8 +292,8 @@ function MobilePeopleList({
           display_name: s.display_name,
           avatar_url: s.avatar_url,
           verified: !!s.verified,
-          bio: s.bio,
-          role: null,
+          bio: null,
+          role: s.role,
           signal: r.weight,
           reason: `Curated for your specialty · weight ${r.weight}`,
           isFollowing: followedSet.has(s.id) || followedSet.has(s.handle),
