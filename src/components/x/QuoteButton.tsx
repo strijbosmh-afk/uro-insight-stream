@@ -23,18 +23,19 @@ export function QuoteButton({ tweetUrl, className }: Props) {
           setOpen(true);
         }}
         title="Quote on X"
+        aria-label="Quote on X"
         className={
-          "flex items-center gap-1 text-text-muted hover:text-accent transition-colors " +
+          "min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center sm:justify-start gap-1 text-text-muted hover:text-accent transition-colors " +
           (className ?? "")
         }
       >
-        <Quote className="w-3 h-3" />
+        <Quote className="w-4 h-4 sm:w-3 sm:h-3" />
         <span className="hidden sm:inline">Quote</span>
       </button>
       <ComposeTweetDialog
         open={open}
         onOpenChange={setOpen}
-        initialText={`\n\n${tweetUrl}`}
+        initialText={`${tweetUrl}\n\n`}
       />
     </>
   );
