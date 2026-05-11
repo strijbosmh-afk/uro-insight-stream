@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TweetCard } from "@/components/feed/TweetCard";
+import { SetUpAlertsButton } from "@/components/watchlists/WatchlistFormDialog";
 import {
   getSourceSpotlightCore,
   getSourceThemes,
@@ -327,17 +328,10 @@ function SourceSpotlightPage() {
                   <MessageSquareQuote className="w-3 h-3" />
                   Reply to recent
                 </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button variant="ghost" size="sm" className="gap-1 text-[11px]" disabled>
-                        <Bell className="w-3 h-3" />
-                        Set up alerts
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>Coming soon</TooltipContent>
-                </Tooltip>
+                <SetUpAlertsButton
+                  target={{ kind: "source", id: src.id, label: `@${src.handle}` }}
+                  className="gap-1 text-[11px]"
+                />
                 <a
                   href={`https://x.com/${src.handle}`}
                   target="_blank"
