@@ -377,3 +377,110 @@ export async function getCachedFollows(
   const c = await readCache(userId);
   return c?.items ?? null;
 }
+
+// ---------- Discoverability nudge eligibility ----------
+
+/**
+ * Timestamp the user_x_follows_cache migration landed (= when the import
+ * feature shipped). Stored as a constant so the legacy-user check doesn't
+ * drift if the migration filename changes.
+ */
+export const FOLLOWS_FEATURE_LAUNCH_DATE = "2026-05-11T12:51:39Z";
+
+const RE_NUDGE_SPACING_MS = 7 * 24 * 60 * 60 * 1000;
+const SECOND_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_DISMISSALS = 3;
+
+/**
+ * True when the user qualifies for the recurring dashboard nudge:
+ * - X connected (active, not revoked, scope_read)
+ * - never imported follows
+ * - dismissed < 3 times
+ * - dismissed at least 7 days ago (if ever)
+ * - account is at least 24h old (proxy for "second session")
+ */
+export async function isEligibleForFollowsImportNudge(
+  userId: string,
+): Promise<boolean> {
+  const [{ data: cred }, { data: prof }] = await Promise.all([
+    supabaseAdmin
+      .from("user_x_credentials")
+      .select("follows_imported_at, scope_read, revoked_at, is_active")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .is("revoked_at", null)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("profiles")
+      .select(
+        "created_at, follows_import_nudge_dismissed_count, follows_import_nudge_last_dismissed_at",
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+  ]);
+
+  if (!cred) return false;
+  const c = cred as {
+    follows_imported_at: string | null;
+    scope_read: boolean;
+  };
+  if (!c.scope_read) return false;
+  if (c.follows_imported_at) return false;
+
+  const p = (prof ?? {}) as {
+    created_at?: string;
+    follows_import_nudge_dismissed_count?: number;
+    follows_import_nudge_last_dismissed_at?: string | null;
+  };
+  if ((p.follows_import_nudge_dismissed_count ?? 0) >= MAX_DISMISSALS)
+    return false;
+
+  // "Second session" proxy: account at least 24h old
+  const created = p.created_at ? new Date(p.created_at).getTime() : Date.now();
+  if (Date.now() - created < SECOND_SESSION_AGE_MS) return false;
+
+  // 7-day spacing after the most recent dismiss
+  if (p.follows_import_nudge_last_dismissed_at) {
+    const last = new Date(p.follows_import_nudge_last_dismissed_at).getTime();
+    if (Date.now() - last < RE_NUDGE_SPACING_MS) return false;
+  }
+
+  return true;
+}
+
+/**
+ * True when the user predates the feature launch and hasn't seen the legacy
+ * one-time prompt yet (and is otherwise eligible).
+ */
+export async function isEligibleForLegacyFollowsImportPrompt(
+  userId: string,
+): Promise<boolean> {
+  const [{ data: cred }, { data: prof }] = await Promise.all([
+    supabaseAdmin
+      .from("user_x_credentials")
+      .select("follows_imported_at, scope_read, revoked_at, is_active")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .is("revoked_at", null)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("profiles")
+      .select("created_at, legacy_user_import_prompt_seen_at")
+      .eq("id", userId)
+      .maybeSingle(),
+  ]);
+  if (!cred) return false;
+  const c = cred as { follows_imported_at: string | null; scope_read: boolean };
+  if (!c.scope_read || c.follows_imported_at) return false;
+
+  const p = (prof ?? {}) as {
+    created_at?: string;
+    legacy_user_import_prompt_seen_at?: string | null;
+  };
+  if (p.legacy_user_import_prompt_seen_at) return false;
+  if (!p.created_at) return false;
+  return (
+    new Date(p.created_at).getTime() <
+    new Date(FOLLOWS_FEATURE_LAUNCH_DATE).getTime()
+  );
+}
