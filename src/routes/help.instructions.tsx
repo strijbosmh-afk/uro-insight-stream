@@ -237,6 +237,7 @@ const SECTIONS: Section[] = [
       { title: "Recent tweets", body: "Tabs for Recent and Top (re-ranked by engagement). Open any tweet in the standard thread dialog." },
     ],
     screenshot: "Source Spotlight with header, themes, rhythm, inner circle",
+    image: "/help-screenshots/spotlight.png",
   },
   {
     id: "briefings",
@@ -252,6 +253,7 @@ const SECTIONS: Section[] = [
       { title: "Print", body: "Optimised print stylesheet hides the dialog chrome, switches to a serif body, and breaks the page so Recommended Angles starts at the top of page 2.", tip: "Briefings are cached per source for 7 days. Admins see a refresh icon to force regeneration." },
     ],
     screenshot: "Source briefing dialog with all sections expanded",
+    image: "/help-screenshots/briefings.png",
   },
   {
     id: "alerts",
@@ -268,6 +270,7 @@ const SECTIONS: Section[] = [
       { title: "Mute / Pause / Delete", body: "Per-watchlist kebab menu: Mute 24h (in-app stays, email stops), Pause (no new matches at all), or Delete. The mute link in every email also works as a single-use 24h mute.", tip: "Use Pause when you're on holiday; use Mute when you just want a quiet day." },
     ],
     screenshot: "Alerts inbox with realtime match cards",
+    image: "/help-screenshots/alerts.png",
   },
   {
     id: "reply-drafts",
@@ -282,6 +285,7 @@ const SECTIONS: Section[] = [
       { title: "Send", body: "Posts using your active connected X account. Success toast includes a 'View on X' link.", tip: "Daily post limit is 50/account/day. If you hit it, you'll get a friendly error and the attempt is logged but never sent to X." },
     ],
     screenshot: "Compose dialog with three suggested reply drafts",
+    image: "/help-screenshots/reply-drafts.png",
   },
   {
     id: "onboarding",
@@ -325,6 +329,7 @@ const SECTIONS: Section[] = [
       { title: "Catch up after time away", body: "The 'Unread since you were last here' dialog summarises what you missed when you reopen the channel." },
     ],
     screenshot: "Brainstorm message list with presence and reactions",
+    image: "/help-screenshots/brainstorm.png",
   },
   {
     id: "groups",
@@ -339,6 +344,7 @@ const SECTIONS: Section[] = [
       { title: "Unsubscribe", body: "Unsubscribe at any time from the same toggle. Individually-followed members stay followed.", tip: "Group membership changes propagate automatically — no need to re-subscribe when admins add new handles." },
     ],
     screenshot: "Group detail page with member list and subscribe toggle",
+    image: "/help-screenshots/groups.png",
   },
 ];
 
