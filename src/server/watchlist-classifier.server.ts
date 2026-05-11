@@ -311,9 +311,14 @@ export async function classifyNewTweets(tweetIds: string[]): Promise<void> {
 
     if (inserted && inserted.length > 0) {
       // Fire-and-forget delivery (email path).
-      void deliverWatchlistMatches(inserted as Array<{ id: string; watchlist_id: string; tweet_id: string; matched_topic: string }>).catch(
-        (e) => console.error("[watchlist-classifier] delivery failed", e),
-      );
+      void deliverWatchlistMatches(
+        inserted as Array<{
+          id: string;
+          watchlist_id: string;
+          tweet_id: string;
+          matched_topic: string;
+        }>,
+      ).catch((e: unknown) => console.error("[watchlist-classifier] delivery failed", e));
     }
   } catch (err) {
     console.error("[watchlist-classifier] failed", err);
