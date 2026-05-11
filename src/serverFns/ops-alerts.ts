@@ -9,7 +9,7 @@ export type OpsAlert = {
   alert_kind: string;
   severity: "info" | "warning" | "critical";
   message: string;
-  metadata: Record<string, unknown> | null;
+  metadata: unknown;
   acknowledged_at: string | null;
   acknowledged_by: string | null;
   created_at: string;
