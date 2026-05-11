@@ -5,7 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   BadgeCheck,
-  Bell,
   CheckCircle2,
   ExternalLink,
   Loader2,
@@ -29,9 +28,7 @@ import {
 } from "recharts";
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TweetCard } from "@/components/feed/TweetCard";
 import { SetUpAlertsButton } from "@/components/watchlists/WatchlistFormDialog";
