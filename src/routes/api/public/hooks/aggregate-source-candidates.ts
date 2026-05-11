@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireCronAuth } from "@/server/cron-auth.server";
+import {
+  enrichHandlesViaX,
+  upsertSourceProfileByHandle,
+  markSourceEnrichmentAttempt,
+} from "@/server/x-enrichment.server";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -195,90 +200,96 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
 
         let enriched = 0;
         let enrichFailed = 0;
-        const xToken = process.env.X_BEARER_TOKEN;
-        if (xToken && pending && pending.length > 0) {
+        let sourcesEnriched = 0;
+
+        // 5a) Pull stale source rows that need (re)enrichment so we share the
+        //     same X API budget as the candidate enrichment.
+        const STALE_CUTOFF = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: staleSources } = await supabaseAdmin
+          .from("sources")
+          .select("handle")
+          .eq("active", true)
+          .or(`enriched_at.is.null,enriched_at.lt.${STALE_CUTOFF}`)
+          .order("enriched_at", { ascending: true, nullsFirst: true })
+          .limit(enrichLimit);
+        const staleHandles = new Set(
+          ((staleSources ?? []) as Array<{ handle: string }>).map((r) => NORMALIZE(r.handle)),
+        );
+
+        const candidateHandles = (pending ?? []).map((p) => p.handle);
+        // Merge candidate + stale-source handles, dedup, cap at enrichLimit.
+        const enrichSet = new Set<string>(candidateHandles.map(NORMALIZE));
+        for (const h of staleHandles) enrichSet.add(h);
+        const allEnrich = Array.from(enrichSet).slice(0, enrichLimit);
+
+        if (allEnrich.length > 0) {
           // X allows up to 100 usernames per call.
-          const handles = pending.map((p) => p.handle);
-          for (let i = 0; i < handles.length; i += 100) {
-            const chunk = handles.slice(i, i + 100);
-            const apiUrl = new URL("https://api.twitter.com/2/users/by");
-            apiUrl.searchParams.set("usernames", chunk.join(","));
-            apiUrl.searchParams.set(
-              "user.fields",
-              "name,username,verified,profile_image_url,description,public_metrics",
-            );
-            try {
-              const res = await fetch(apiUrl, { headers: { Authorization: `Bearer ${xToken}` } });
-              if (res.status === 429) {
-                // Stop early on rate limit; remaining handles stay pending.
-                break;
-              }
-              if (!res.ok) {
-                // Mark this whole chunk as failed for this attempt.
+          for (let i = 0; i < allEnrich.length; i += 100) {
+            const chunk = allEnrich.slice(i, i + 100);
+            const batch = await enrichHandlesViaX(chunk);
+            if (batch.rateLimited) break;
+            const nowISO = new Date().toISOString();
+
+            if (batch.errorStatus || batch.errorMessage) {
+              // Hard failure for the whole chunk: mark candidates failed,
+              // and stamp attempt time on any matching source rows.
+              const chunkCandidates = chunk.filter((h) => !staleHandles.has(h) || candidateHandles.includes(h));
+              if (chunkCandidates.length > 0) {
                 await supabaseAdmin
                   .from("source_candidates")
                   .update({
                     enrichment_status: "failed",
-                    enrichment_attempted_at: new Date().toISOString(),
-                    enrichment_error: `x_api_${res.status}`,
+                    enrichment_attempted_at: nowISO,
+                    enrichment_error: (batch.errorMessage ?? `x_api_${batch.errorStatus}`).slice(0, 200),
                   })
-                  .in("handle", chunk);
-                enrichFailed += chunk.length;
-                continue;
+                  .in("handle", chunkCandidates);
+                enrichFailed += chunkCandidates.length;
               }
-              const json = (await res.json()) as {
-                data?: Array<{
-                  id: string;
-                  username: string;
-                  name?: string;
-                  verified?: boolean;
-                  profile_image_url?: string;
-                  description?: string;
-                  public_metrics?: { followers_count?: number };
-                }>;
-              };
-              const found = new Set<string>();
-              for (const u of json.data ?? []) {
-                const h = NORMALIZE(u.username);
-                found.add(h);
+              for (const h of chunk) {
+                if (staleHandles.has(h)) await markSourceEnrichmentAttempt(h);
+              }
+              continue;
+            }
+
+            for (const [h, profile] of batch.found) {
+              // Write 1: source_candidates (only if it was a candidate).
+              if (candidateHandles.includes(h)) {
                 await supabaseAdmin
                   .from("source_candidates")
                   .update({
-                    display_name: u.name ?? u.username,
-                    avatar_url: u.profile_image_url ?? null,
-                    verified: !!u.verified,
-                    bio: u.description ?? null,
-                    external_user_id: u.id,
-                    followers_count: u.public_metrics?.followers_count ?? null,
+                    display_name: profile.display_name,
+                    avatar_url: profile.avatar_url ?? null,
+                    verified: profile.verified,
+                    bio: profile.bio,
+                    external_user_id: profile.external_user_id,
+                    followers_count: profile.followers_count,
                     enrichment_status: "enriched",
-                    enrichment_attempted_at: new Date().toISOString(),
+                    enrichment_attempted_at: nowISO,
                     enrichment_error: null,
                   })
                   .eq("handle", h);
                 enriched++;
               }
-              // Anything in chunk not returned by X is "not_found".
-              const notFound = chunk.filter((h) => !found.has(h));
-              if (notFound.length > 0) {
+              // Write 2: sources mirror (only if a sources row exists).
+              if (staleHandles.has(h)) {
+                await upsertSourceProfileByHandle(h, profile);
+                sourcesEnriched++;
+              }
+            }
+
+            // Anything in chunk not returned: candidates → not_found, sources
+            // → bump last_enrichment_attempt_at (don't touch enriched_at).
+            for (const h of batch.notFound) {
+              if (candidateHandles.includes(h)) {
                 await supabaseAdmin
                   .from("source_candidates")
                   .update({
                     enrichment_status: "not_found",
-                    enrichment_attempted_at: new Date().toISOString(),
+                    enrichment_attempted_at: nowISO,
                   })
-                  .in("handle", notFound);
+                  .eq("handle", h);
               }
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              await supabaseAdmin
-                .from("source_candidates")
-                .update({
-                  enrichment_status: "failed",
-                  enrichment_attempted_at: new Date().toISOString(),
-                  enrichment_error: msg.slice(0, 200),
-                })
-                .in("handle", chunk);
-              enrichFailed += chunk.length;
+              if (staleHandles.has(h)) await markSourceEnrichmentAttempt(h);
             }
           }
         }
@@ -288,9 +299,10 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
           since: sinceISO,
           unique_handles: allHandles.size,
           upserts,
+          sources_enriched: sourcesEnriched,
           enriched,
           enrich_failed: enrichFailed,
-          x_token_present: !!xToken,
+          x_token_present: !!process.env.X_BEARER_TOKEN,
         });
       },
     },

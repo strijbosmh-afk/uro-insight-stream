@@ -170,6 +170,10 @@ async function persistNewSource(u: XUser): Promise<LookupResult["source"]> {
     specialty: [],
     active: true,
     list_ids: [],
+    // bio/followers/enriched_at intentionally left null — the discovery
+    // aggregator cron picks up sources where enriched_at IS NULL on its
+    // next tick and fetches the full profile (description + public_metrics).
+    enriched_at: null,
   };
   await supabaseAdmin.from("sources").upsert(row, { onConflict: "id", ignoreDuplicates: false });
   return { id, handle: row.handle, display_name: row.display_name, avatar_url: row.avatar_url, verified: row.verified };

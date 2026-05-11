@@ -1547,10 +1547,14 @@ export type Database = {
         Row: {
           active: boolean
           avatar_url: string
+          bio: string | null
           created_at: string
           display_name: string
+          enriched_at: string | null
+          followers_count: number | null
           handle: string
           id: string
+          last_enrichment_attempt_at: string | null
           last_seen_at: string | null
           list_ids: string[]
           role: string
@@ -1562,10 +1566,14 @@ export type Database = {
         Insert: {
           active?: boolean
           avatar_url?: string
+          bio?: string | null
           created_at?: string
           display_name: string
+          enriched_at?: string | null
+          followers_count?: number | null
           handle: string
           id: string
+          last_enrichment_attempt_at?: string | null
           last_seen_at?: string | null
           list_ids?: string[]
           role?: string
@@ -1577,10 +1585,14 @@ export type Database = {
         Update: {
           active?: boolean
           avatar_url?: string
+          bio?: string | null
           created_at?: string
           display_name?: string
+          enriched_at?: string | null
+          followers_count?: number | null
           handle?: string
           id?: string
+          last_enrichment_attempt_at?: string | null
           last_seen_at?: string | null
           list_ids?: string[]
           role?: string

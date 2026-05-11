@@ -114,7 +114,7 @@ export async function nominateForGroupsByRules(
   for (let page = 0; page < 20; page++) {
     let q = supabaseAdmin
       .from("sources")
-      .select("id, handle, updated_at")
+      .select("id, handle, updated_at, bio")
       .eq("active", true)
       .order("updated_at", { ascending: false })
       .range(offset, offset + PAGE - 1);
@@ -122,37 +122,16 @@ export async function nominateForGroupsByRules(
     const { data, error } = await q;
     if (error) throw new Error(`sources: ${error.message}`);
     if (!data || data.length === 0) break;
-    // Merge bios from candidates (sources table has no bio column) — best-effort.
     sources.push(
-      ...data.map((r: { id: string; handle: string; updated_at: string }) => ({
+      ...data.map((r: { id: string; handle: string; updated_at: string; bio: string | null }) => ({
         id: r.id,
         handle: r.handle,
         updated_at: r.updated_at,
-        bio: null,
+        bio: r.bio,
       })),
     );
     if (data.length < PAGE) break;
     offset += data.length;
-  }
-
-  // Pull bios from source_candidates (where enrichment lives) keyed by handle.
-  if (sources.length > 0) {
-    const handles = sources.map((s) => s.handle);
-    const bios = new Map<string, string>();
-    for (let i = 0; i < handles.length; i += 500) {
-      const chunk = handles.slice(i, i + 500);
-      const { data } = await supabaseAdmin
-        .from("source_candidates")
-        .select("handle, bio")
-        .in("handle", chunk);
-      for (const r of (data ?? []) as Array<{ handle: string; bio: string | null }>) {
-        if (r.bio) bios.set(r.handle.toLowerCase(), r.bio);
-      }
-    }
-    for (const s of sources) {
-      const b = bios.get(s.handle.toLowerCase());
-      if (b) s.bio = b;
-    }
   }
 
   if (sources.length === 0) {
