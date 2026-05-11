@@ -517,7 +517,7 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
                 Get started <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             )}
-            {!scopeStep && (stepName === "Specialties" || stepName === "Congresses" || stepName === "Sources" || stepName === "Hashtags") && (
+            {!scopeStep && (stepName === "Specialties" || stepName === "Congresses" || stepName === "Sources" || stepName === "Hashtags" || stepName === "ImportFollows") && (
               <Button size="sm" onClick={goNext} disabled={!canContinue}>
                 Continue <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
