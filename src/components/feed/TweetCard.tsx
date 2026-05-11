@@ -1,6 +1,7 @@
 import * as React from "react";
 import { CheckCircle2, Heart, MessageCircle, Repeat2, ExternalLink, CornerDownRight } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { RoleBadge } from "@/components/sources/RoleBadge";
 import { cn } from "@/lib/utils";
@@ -191,12 +192,20 @@ export const TweetCard = React.memo(function TweetCard({
         </div>
       )}
       <div className="flex gap-3">
-        <img
-          src={source?.avatarUrl}
-          alt=""
-          loading="lazy"
-          className="w-9 h-9 rounded-[3px] border border-border bg-panel-elevated flex-shrink-0"
-        />
+        <Link
+          to="/sources/$handle"
+          params={{ handle }}
+          onClick={(e) => e.stopPropagation()}
+          className="flex-shrink-0"
+          aria-label={`View @${handle} profile`}
+        >
+          <img
+            src={source?.avatarUrl}
+            alt=""
+            loading="lazy"
+            className="w-9 h-9 rounded-[3px] border border-border bg-panel-elevated hover:border-accent transition-colors"
+          />
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[12px] flex-wrap">
             <HandleChip handle={handle} />
