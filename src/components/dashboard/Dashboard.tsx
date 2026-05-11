@@ -281,6 +281,8 @@ export function Dashboard() {
         />
       </div>
 
+      <FollowsImportNudge />
+
       {/* Main area */}
       <div className="flex flex-col gap-3 min-h-0">
         {/* Row 1: Now happening | Ingestion */}
