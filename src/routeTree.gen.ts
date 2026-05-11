@@ -22,6 +22,7 @@ import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SourcesHandleRouteImport } from './routes/sources_.$handle'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as MeXAccountRouteImport } from './routes/me.x-account'
 import { Route as MeProfileRouteImport } from './routes/me.profile'
@@ -124,6 +125,11 @@ const SplatRoute = SplatRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SourcesHandleRoute = SourcesHandleRouteImport.update({
+  id: '/sources_/$handle',
+  path: '/sources/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
@@ -365,6 +371,7 @@ export interface FileRoutesByFullPath {
   '/me/profile': typeof MeProfileRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -418,6 +425,7 @@ export interface FileRoutesByTo {
   '/me/profile': typeof MeProfileRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -472,6 +480,7 @@ export interface FileRoutesById {
   '/me/profile': typeof MeProfileRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
+  '/sources_/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -527,6 +536,7 @@ export interface FileRouteTypes {
     | '/me/profile'
     | '/me/x-account'
     | '/sessions/$sessionId'
+    | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -580,6 +590,7 @@ export interface FileRouteTypes {
     | '/me/profile'
     | '/me/x-account'
     | '/sessions/$sessionId'
+    | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -633,6 +644,7 @@ export interface FileRouteTypes {
     | '/me/profile'
     | '/me/x-account'
     | '/sessions/$sessionId'
+    | '/sources_/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -678,6 +690,7 @@ export interface RootRouteChildren {
   GroupsSlugRoute: typeof GroupsSlugRoute
   HelpInstructionsRoute: typeof HelpInstructionsRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
+  SourcesHandleRoute: typeof SourcesHandleRoute
   ApiPublicAccessRequestRoute: typeof ApiPublicAccessRequestRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -788,6 +801,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sources_/$handle': {
+      id: '/sources_/$handle'
+      path: '/sources/$handle'
+      fullPath: '/sources/$handle'
+      preLoaderRoute: typeof SourcesHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sessions/$sessionId': {
@@ -1131,6 +1151,7 @@ const rootRouteChildren: RootRouteChildren = {
   GroupsSlugRoute: GroupsSlugRoute,
   HelpInstructionsRoute: HelpInstructionsRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
+  SourcesHandleRoute: SourcesHandleRoute,
   ApiPublicAccessRequestRoute: ApiPublicAccessRequestRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
@@ -1156,12 +1177,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
