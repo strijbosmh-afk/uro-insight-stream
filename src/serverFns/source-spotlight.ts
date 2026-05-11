@@ -16,6 +16,11 @@ import {
   inferTimezoneFromHourly,
   type SourceTheme,
 } from "@/server/source-themes.server";
+import {
+  computeSourceBriefing,
+  currentWeekStartUTC,
+  type SourceBriefing,
+} from "@/server/source-briefing.server";
 
 export type SpotlightSource = {
   id: string;
