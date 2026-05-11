@@ -1,0 +1,1 @@
+ALTER TABLE public.user_watchlists ADD COLUMN IF NOT EXISTS timezone text NULL;
