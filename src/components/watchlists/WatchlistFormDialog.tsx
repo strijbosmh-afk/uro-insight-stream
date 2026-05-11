@@ -239,7 +239,14 @@ export function WatchlistFormDialog({
       return created;
     },
     onSuccess: () => {
-      toast.success(isEdit ? "Watchlist updated" : "Watchlist created");
+      toast.success(isEdit ? "Watchlist updated" : "Watchlist created", {
+        action: {
+          label: "View alerts",
+          onClick: () => {
+            window.location.href = "/alerts";
+          },
+        },
+      });
       qc.invalidateQueries({ queryKey: ["watchlists"] });
       qc.invalidateQueries({ queryKey: ["watchlist-for-target"] });
       qc.invalidateQueries({ queryKey: ["watchlist-unread"] });
