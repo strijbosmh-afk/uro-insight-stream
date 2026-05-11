@@ -1,5 +1,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAdapter, type AdapterName } from "@/adapters/twitter";
+
+// NOTE: ingest_queue.status mirrors enrichment_status automatically via the
+// `trg_sync_ingest_queue_status` BEFORE-trigger (see migration). Do not add
+// manual `status` updates here — write enrichment_status only and the trigger
+// keeps the legacy column in sync.
+
 import type { NormalizedTweet } from "@/adapters/twitter/types";
 import { createXApiV2OAuth1Adapter } from "@/adapters/twitter/xApiV2OAuth1";
 import {
