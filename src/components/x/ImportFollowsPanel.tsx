@@ -27,12 +27,14 @@ type Item = {
 export function ImportFollowsPanel({
   onDone,
   onSkip,
+  mode = "full",
 }: {
   onDone?: (counts: { subscribed: number }) => void;
   onSkip?: () => void;
+  mode?: "full" | "diff";
 }) {
   const qc = useQueryClient();
-  const [started, setStarted] = React.useState(false);
+  const [started, setStarted] = React.useState(mode === "diff");
   const [filter, setFilter] = React.useState("");
   const [showOther, setShowOther] = React.useState(false);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -41,9 +43,9 @@ export function ImportFollowsPanel({
   const subscribeFn = useServerFn(bulkSubscribeFromFollows);
 
   const { data, isFetching, refetch, error } = useQuery({
-    queryKey: ["x-scored-follows"],
+    queryKey: ["x-scored-follows", mode],
     enabled: started,
-    queryFn: () => fetchFn({ data: { refresh: false } }),
+    queryFn: () => fetchFn({ data: { refresh: false, mode } }),
     staleTime: 5 * 60_000,
   });
 
