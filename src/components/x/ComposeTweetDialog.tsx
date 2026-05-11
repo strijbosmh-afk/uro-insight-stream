@@ -255,6 +255,21 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                   {replyDraftsQuery.isLoading && (
                     <Loader2 className="w-3 h-3 animate-spin text-text-muted" />
                   )}
+                  {isAdmin && replyDraftsQuery.data && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateDrafts}
+                      disabled={regenerating}
+                      title="Regenerate drafts for all users (admin)"
+                      className="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-[3px] text-text-muted hover:text-accent hover:bg-panel-elevated disabled:opacity-50"
+                    >
+                      {regenerating ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <RotateCw className="w-3 h-3" />
+                      )}
+                    </button>
+                  )}
                 </div>
                 {replyDraftsQuery.isLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
