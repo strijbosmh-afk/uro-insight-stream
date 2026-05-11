@@ -11,11 +11,22 @@ import {
   Loader2,
   MessageSquareQuote,
   Plus,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/shell/Panel";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as ReTooltip,
+  ResponsiveContainer,
+} from "recharts";
 import {
   Tooltip,
   TooltipContent,
@@ -25,14 +36,21 @@ import {
 import { TweetCard } from "@/components/feed/TweetCard";
 import {
   getSourceSpotlightCore,
+  getSourceThemes,
+  getSourceRhythm,
+  getSourceInnerCircle,
   type SpotlightCore,
   type SpotlightTweet,
   type SpotlightSource,
+  type SpotlightThemes,
+  type SpotlightRhythm,
+  type SpotlightInnerCircle,
 } from "@/serverFns/source-spotlight";
 import {
   useFollowSource,
   useUnfollowSource,
 } from "@/hooks/useHandleActions";
+import { useCanAdmin } from "@/auth/permissions";
 import type { Source as DomainSource, Tweet as DomainTweet } from "@/types";
 
 export const Route = createFileRoute("/sources_/$handle")({
@@ -418,6 +436,10 @@ function SourceSpotlightPage() {
             </div>
           </Panel>
         </div>
+
+        <ThemesPanel handle={handle} />
+        <RhythmPanel handle={handle} />
+        <InnerCirclePanel handle={handle} />
       </div>
     </TooltipProvider>
   );
@@ -455,3 +477,346 @@ function BioBlock({ bio }: { bio: string | null }) {
 }
 
 export default SourceSpotlightPage;
+
+// =====================================================================
+// Phase B Panels
+// =====================================================================
+
+function PanelError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="py-6 flex flex-col items-center gap-2 text-[12px] text-text-muted">
+      <AlertTriangle className="w-4 h-4 text-amber-400" />
+      <p>{message}</p>
+      <Button variant="outline" size="sm" onClick={onRetry} className="gap-1">
+        <RefreshCw className="w-3 h-3" /> Retry
+      </Button>
+    </div>
+  );
+}
+
+function ThemesPanel({ handle }: { handle: string }) {
+  const fetchThemes = useServerFn(getSourceThemes);
+  const isAdmin = useCanAdmin();
+  const qc = useQueryClient();
+  const queryKey = ["source-themes", handle] as const;
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery<SpotlightThemes | null>({
+    queryKey,
+    queryFn: () => fetchThemes({ data: { handle, refresh: false } }),
+    staleTime: 5 * 60 * 1000,
+    retry: 0,
+  });
+
+  // If stale on mount, kick off a background refresh (admin only — others
+  // would 403 on the refresh path; for non-admins, the cached data still shows).
+  React.useEffect(() => {
+    if (data?.is_stale && isAdmin && !isFetching) {
+      fetchThemes({ data: { handle, refresh: true } })
+        .then(() => qc.invalidateQueries({ queryKey }))
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.is_stale, isAdmin, handle]);
+
+  const onForceRefresh = async () => {
+    try {
+      await fetchThemes({ data: { handle, refresh: true } });
+      qc.invalidateQueries({ queryKey });
+      toast.success("Themes refreshed");
+    } catch {
+      toast.error("Refresh failed");
+    }
+  };
+
+  const ageLabel = data?.computed_at ? `computed ${relativeAge(data.computed_at)}` : "";
+
+  return (
+    <Panel
+      title="Themes (LLM-derived)"
+      actions={
+        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          {ageLabel && <span>{ageLabel}</span>}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={onForceRefresh}
+              disabled={isFetching}
+              className="inline-flex items-center gap-1 hover:text-accent disabled:opacity-50"
+              title="Force refresh"
+            >
+              <RefreshCw className={`w-3 h-3 ${isFetching ? "animate-spin" : ""}`} />
+            </button>
+          )}
+        </div>
+      }
+    >
+      {isLoading ? (
+        <div className="py-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-28 w-full" />
+          ))}
+        </div>
+      ) : error ? (
+        <PanelError message="Couldn't compute themes" onRetry={() => refetch()} />
+      ) : !data || data.themes.length === 0 ? (
+        <p className="py-4 text-[12px] text-text-muted">
+          Not enough recent activity to derive themes (needs ~20+ posts).
+        </p>
+      ) : (
+        <div className="py-2 flex md:grid md:grid-cols-3 gap-2 overflow-x-auto md:overflow-visible">
+          {data.themes.map((t, i) => (
+            <div
+              key={i}
+              className="shrink-0 md:shrink min-w-[240px] md:min-w-0 border border-border rounded-[3px] p-3 bg-panel-elevated/30"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-[13px] text-text-primary font-medium leading-tight">
+                  {t.label}
+                </div>
+                <div className="text-[10px] font-mono text-text-muted shrink-0">
+                  {Math.round(t.weight * 100)}%
+                </div>
+              </div>
+              <div className="mt-1.5 h-1 bg-panel-elevated rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent/70"
+                  style={{ width: `${Math.round(t.weight * 100)}%` }}
+                />
+              </div>
+              {t.cancer_area_slug && (
+                <Badge
+                  variant="outline"
+                  className="mt-2 text-[9px] uppercase tracking-wider border-accent/40 text-accent"
+                >
+                  {t.cancer_area_slug}
+                </Badge>
+              )}
+              {t.top_hashtags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {t.top_hashtags.slice(0, 3).map((h) => (
+                    <span
+                      key={h}
+                      className="text-[10px] font-mono text-text-muted bg-panel-elevated px-1.5 py-0.5 rounded"
+                    >
+                      #{h}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {t.example_tweet_ids.length > 0 && (
+                <div className="mt-2 text-[10px] font-mono text-text-muted">
+                  {t.example_tweet_ids.length} example
+                  {t.example_tweet_ids.length > 1 ? "s" : ""}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function RhythmPanel({ handle }: { handle: string }) {
+  const fetchRhythm = useServerFn(getSourceRhythm);
+  const queryKey = ["source-rhythm", handle] as const;
+
+  const { data, isLoading, error, refetch } = useQuery<SpotlightRhythm>({
+    queryKey,
+    queryFn: () => fetchRhythm({ data: { handle } }),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const hourlyData = React.useMemo(
+    () => data?.hourly.map((count, hour) => ({ hour, count })) ?? [],
+    [data],
+  );
+  const dowData = React.useMemo(
+    () => data?.dow.map((count, i) => ({ day: DOW_LABELS[i], count })) ?? [],
+    [data],
+  );
+
+  return (
+    <Panel title="Posting rhythm (30d)">
+      {isLoading ? (
+        <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      ) : error ? (
+        <PanelError message="Couldn't load posting rhythm" onRetry={() => refetch()} />
+      ) : !data || data.total_tweets_30d === 0 ? (
+        <p className="py-4 text-[12px] text-text-muted">No posts in the last 30 days.</p>
+      ) : (
+        <div className="py-2 space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
+                Hour of day (UTC)
+              </div>
+              <div className="h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlyData}>
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 9, fill: "currentColor" }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={3}
+                    />
+                    <YAxis hide />
+                    <ReTooltip
+                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                      contentStyle={{
+                        background: "hsl(var(--panel))",
+                        border: "1px solid hsl(var(--border))",
+                        fontSize: 11,
+                      }}
+                      formatter={(v: number) => [`${v} posts`, ""]}
+                      labelFormatter={(h: number) => `${String(h).padStart(2, "0")}:00 UTC`}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
+                Day of week
+              </div>
+              <div className="h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dowData}>
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 9, fill: "currentColor" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis hide />
+                    <ReTooltip
+                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                      contentStyle={{
+                        background: "hsl(var(--panel))",
+                        border: "1px solid hsl(var(--border))",
+                        fontSize: 11,
+                      }}
+                      formatter={(v: number) => [`${v} posts`, ""]}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-text-muted">
+            Most active <span className="text-text-primary">{DOW_LABELS[data.peak_dow]}s</span>{" "}
+            around{" "}
+            <span className="text-text-primary">
+              {String(data.peak_hour).padStart(2, "0")}:00 UTC
+            </span>
+            {data.inferred_timezone && (
+              <>
+                {" "}— inferred timezone:{" "}
+                <span className="text-text-primary">{data.inferred_timezone}</span>
+              </>
+            )}
+            . Based on {data.total_tweets_30d} tweets in the last 30 days.
+          </p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function InnerCirclePanel({ handle }: { handle: string }) {
+  const fetchInner = useServerFn(getSourceInnerCircle);
+  const { data, isLoading, error, refetch } = useQuery<SpotlightInnerCircle>({
+    queryKey: ["source-inner-circle", handle],
+    queryFn: () => fetchInner({ data: { handle } }),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <Panel title="Inner circle (30d)">
+        <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </Panel>
+    );
+  }
+  if (error) {
+    return (
+      <Panel title="Inner circle (30d)">
+        <PanelError message="Couldn't load conversation network" onRetry={() => refetch()} />
+      </Panel>
+    );
+  }
+  if (!data || (data.outgoing.length === 0 && data.incoming.length === 0)) {
+    return null;
+  }
+
+  return (
+    <Panel title="Inner circle (30d)">
+      <div className="py-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <InnerCircleColumn title="Replies to most often" entries={data.outgoing} />
+        <InnerCircleColumn title="Replied to by most" entries={data.incoming} />
+      </div>
+    </Panel>
+  );
+}
+
+function InnerCircleColumn({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: SpotlightInnerCircle["outgoing"];
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
+        {title}
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-[11px] text-text-muted py-2">No data.</p>
+      ) : (
+        <ul className="space-y-1">
+          {entries.map((e) => (
+            <li key={e.handle}>
+              <Link
+                to="/sources/$handle"
+                params={{ handle: e.handle }}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-[3px] hover:bg-panel-elevated/60 transition-colors"
+              >
+                {e.avatar_url ? (
+                  <img
+                    src={e.avatar_url}
+                    alt=""
+                    className="w-7 h-7 rounded-[3px] border border-border bg-panel-elevated"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-[3px] border border-border bg-panel-elevated" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] text-text-primary truncate">
+                    {e.display_name || `@${e.handle}`}
+                  </div>
+                  <div className="text-[10px] font-mono text-text-muted truncate">
+                    @{e.handle}
+                    {!e.is_tracked && <span className="ml-1 opacity-60">· untracked</span>}
+                  </div>
+                </div>
+                <div className="text-[11px] font-mono text-text-muted shrink-0">{e.count}</div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
