@@ -427,6 +427,29 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
               }}
             />
           )}
+          {stepName === "ImportFollows" && (
+            <>
+              {xStatus ? (
+                <ImportFollowsPanel
+                  onDone={() => void goNext()}
+                  onSkip={() => void goNext()}
+                />
+              ) : (
+                <div className="space-y-4 max-w-xl">
+                  <h2 className="text-xl font-semibold text-text-primary">
+                    Import your X follows
+                  </h2>
+                  <p className="text-sm text-text-secondary">
+                    Skipped because X isn't connected — you can import your
+                    follows anytime from the Sources page after connecting.
+                  </p>
+                  <Button size="sm" onClick={() => void goNext()}>
+                    Continue <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
           {stepName === "Hashtags" && (
             <HashtagsStep
               input={hashtagInput}
