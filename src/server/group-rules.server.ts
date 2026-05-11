@@ -224,6 +224,19 @@ export async function nominateForGroupsByRules(
             bioMatches.push({ value: sig.value, weight: sig.weight });
           }
         }
+        // Also test hashtag-type signals against bio text (strip leading #).
+        // This avoids maintaining the same word in two parallel taxonomies:
+        // a hashtag like `#prostatecancer` will match a bio that contains
+        // the bare token `prostatecancer` (or `#prostatecancer`).
+        for (const sig of dict.hashtags) {
+          if (bioMatches.length >= MAX_BIO_MATCHES_COUNTED) break;
+          const needle = sig.value; // already lowercased + stripped of '#'
+          if (!needle) continue;
+          if (bioMatches.some((m) => m.value.toLowerCase() === needle)) continue;
+          if (lowerBio.includes(needle)) {
+            bioMatches.push({ value: needle, weight: sig.weight });
+          }
+        }
       }
       const bio_score = bioMatches.reduce((acc, m) => acc + m.weight, 0);
 
