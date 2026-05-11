@@ -987,8 +987,11 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          follows_import_nudge_dismissed_count: number
+          follows_import_nudge_last_dismissed_at: string | null
           id: string
           is_demo: boolean
+          legacy_user_import_prompt_seen_at: string | null
           pending_x_connection: boolean
           updated_at: string
           x_grace_until: string | null
@@ -999,8 +1002,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          follows_import_nudge_dismissed_count?: number
+          follows_import_nudge_last_dismissed_at?: string | null
           id: string
           is_demo?: boolean
+          legacy_user_import_prompt_seen_at?: string | null
           pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
@@ -1011,8 +1017,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          follows_import_nudge_dismissed_count?: number
+          follows_import_nudge_last_dismissed_at?: string | null
           id?: string
           is_demo?: boolean
+          legacy_user_import_prompt_seen_at?: string | null
           pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
