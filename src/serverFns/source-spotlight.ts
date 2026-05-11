@@ -10,6 +10,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertAdmin } from "@/server/admin-middleware.server";
+import {
+  computeSourceThemes,
+  inferTimezoneFromHourly,
+  type SourceTheme,
+} from "@/server/source-themes.server";
 
 export type SpotlightSource = {
   id: string;
