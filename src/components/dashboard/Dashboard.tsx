@@ -22,6 +22,7 @@ import {
 import { Panel } from "@/components/shell/Panel";
 import { HandleChip } from "@/components/handles/HandleChip";
 import { QuickStartPanel } from "@/components/dashboard/QuickStartPanel";
+import { FollowsImportNudge } from "@/components/dashboard/FollowsImportNudge";
 import { feedService } from "@/services/feedService";
 import { useLiveKpis } from "@/hooks/useLiveKpis";
 import { feedNowMs, initFeedClock } from "@/components/feed/feedClock";
@@ -279,6 +280,8 @@ export function Dashboard() {
           sub={`${allSummaries.length} all-time`}
         />
       </div>
+
+      <FollowsImportNudge />
 
       {/* Main area */}
       <div className="flex flex-col gap-3 min-h-0">

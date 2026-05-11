@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { ImportFollowsPanel } from "./ImportFollowsPanel";
 
-export function ImportFollowsCard() {
+export function ImportFollowsCard({
+  autoOpen = false,
+  onAutoOpened,
+}: {
+  autoOpen?: boolean;
+  onAutoOpened?: () => void;
+} = {}) {
   const { user } = useAuth();
   const [open, setOpen] = React.useState(false);
 
@@ -30,6 +36,16 @@ export function ImportFollowsCard() {
       return data;
     },
   });
+
+  // Auto-open the dialog when arriving with ?import=true and X is connected.
+  // Strip the query param after opening so the back button doesn't re-trigger.
+  React.useEffect(() => {
+    if (autoOpen && data?.x_username) {
+      setOpen(true);
+      onAutoOpened?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, data?.x_username]);
 
   if (!data?.x_username) return null;
 

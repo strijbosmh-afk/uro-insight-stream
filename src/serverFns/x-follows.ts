@@ -8,6 +8,10 @@ import {
   SUGGESTED_SCORE_THRESHOLD,
   type ScoredFollowItem,
 } from "@/server/x-follows.server";
+import {
+  isEligibleForFollowsImportNudge,
+  isEligibleForLegacyFollowsImportPrompt,
+} from "@/server/x-follows.server";
 
 const GetSchema = z.object({ refresh: z.boolean().optional() });
 
@@ -160,3 +164,55 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
   });
 
 export type ScoredFollow = ScoredFollowItem;
+
+// ---------- Discoverability nudge bridges ----------
+
+export const getFollowsImportNudgeStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const userId = context.userId;
+    // Legacy one-time prompt takes precedence — pre-launch users see it once.
+    if (await isEligibleForLegacyFollowsImportPrompt(userId)) {
+      return { eligible: true as const, kind: "legacy_one_time" as const };
+    }
+    if (await isEligibleForFollowsImportNudge(userId)) {
+      return { eligible: true as const, kind: "dashboard_recurring" as const };
+    }
+    return { eligible: false as const, kind: null };
+  });
+
+const DismissSchema = z.object({
+  kind: z.enum(["dashboard_recurring", "legacy_one_time"]),
+});
+
+export const dismissFollowsImportNudge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => DismissSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const nowISO = new Date().toISOString();
+    if (data.kind === "legacy_one_time") {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ legacy_user_import_prompt_seen_at: nowISO })
+        .eq("id", userId);
+      return { ok: true as const };
+    }
+    // dashboard_recurring: increment + stamp
+    const { data: p } = await supabaseAdmin
+      .from("profiles")
+      .select("follows_import_nudge_dismissed_count")
+      .eq("id", userId)
+      .maybeSingle();
+    const current =
+      ((p as { follows_import_nudge_dismissed_count?: number } | null)
+        ?.follows_import_nudge_dismissed_count) ?? 0;
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        follows_import_nudge_dismissed_count: current + 1,
+        follows_import_nudge_last_dismissed_at: nowISO,
+      })
+      .eq("id", userId);
+    return { ok: true as const };
+  });
