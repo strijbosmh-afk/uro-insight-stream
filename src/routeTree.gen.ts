@@ -55,7 +55,6 @@ import { Route as ApiPublicWatchlistMuteTokenRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
-import { Route as ApiPublicHooksSmokeWatchlistRouteImport } from './routes/api/public/hooks/smoke-watchlist'
 import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
 import { Route as ApiPublicHooksResetDemoAccountRouteImport } from './routes/api/public/hooks/reset-demo-account'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
@@ -301,12 +300,6 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksSmokeWatchlistRoute =
-  ApiPublicHooksSmokeWatchlistRouteImport.update({
-    id: '/api/public/hooks/smoke-watchlist',
-    path: '/api/public/hooks/smoke-watchlist',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicHooksSendDigestsRoute =
   ApiPublicHooksSendDigestsRouteImport.update({
     id: '/api/public/hooks/send-digests',
@@ -395,7 +388,6 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
-  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -451,7 +443,6 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
-  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -508,7 +499,6 @@ export interface FileRoutesById {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
-  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -566,7 +556,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
-    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -622,7 +611,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
-    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -678,7 +666,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
-    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -726,7 +713,6 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksResetDemoAccountRoute: typeof ApiPublicHooksResetDemoAccountRoute
   ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
-  ApiPublicHooksSmokeWatchlistRoute: typeof ApiPublicHooksSmokeWatchlistRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -1062,13 +1048,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/smoke-watchlist': {
-      id: '/api/public/hooks/smoke-watchlist'
-      path: '/api/public/hooks/smoke-watchlist'
-      fullPath: '/api/public/hooks/smoke-watchlist'
-      preLoaderRoute: typeof ApiPublicHooksSmokeWatchlistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/send-digests': {
       id: '/api/public/hooks/send-digests'
       path: '/api/public/hooks/send-digests'
@@ -1207,7 +1186,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksResetDemoAccountRoute: ApiPublicHooksResetDemoAccountRoute,
   ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
-  ApiPublicHooksSmokeWatchlistRoute: ApiPublicHooksSmokeWatchlistRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
