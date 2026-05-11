@@ -16,11 +16,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
 import { PostGraceBanner } from "@/components/x-wizard/PostGraceBanner";
+import { useWatchlistRealtime } from "@/hooks/useWatchlistRealtime";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
   const isMobile = useIsMobile();
   const { prefs } = useAuth();
+  useWatchlistRealtime();
   const density = prefs?.theme_density ?? "comfortable";
   const gate = useOnboardingGate();
   const [wizardOpen, setWizardOpen] = React.useState(false);

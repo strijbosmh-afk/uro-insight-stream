@@ -20,6 +20,7 @@ import {
   AtSign,
   Lightbulb,
   ShieldAlert,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -84,6 +85,7 @@ const WORKSPACE_ORDERED: NavItem[] = [
   { label: "Congresses", to: "/congresses", icon: CalendarRange },
   { label: "Discover", to: "/discover", icon: Compass },
   { label: "My Following", to: "/sources", icon: Database },
+  { label: "Alerts", to: "/alerts", icon: Bell },
   { label: "Digests", to: "/digests", icon: Mail },
 ];
 

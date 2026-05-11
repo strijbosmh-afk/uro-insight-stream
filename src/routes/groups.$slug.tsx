@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/shell/Panel";
 import { toTitleCase } from "@/lib/title-case";
+import { SetUpAlertsButton } from "@/components/watchlists/WatchlistFormDialog";
 import {
   getGroup,
   subscribeToGroup,
@@ -127,6 +128,13 @@ function GroupDetailPage() {
               <Button disabled={subMut.isPending || g.is_archived} onClick={() => subMut.mutate(g.id)}>
                 Subscribe
               </Button>
+            )}
+            {!g.is_archived && (
+              <SetUpAlertsButton
+                target={{ kind: "group", id: g.id, label: g.name }}
+                variant="outline"
+                className="ml-2"
+              />
             )}
           </div>
         </div>

@@ -20,6 +20,7 @@ import { Route as DigestsRouteImport } from './routes/digests'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CongressesRouteImport } from './routes/congresses'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SourcesHandleRouteImport } from './routes/sources_.$handle'
@@ -117,6 +118,11 @@ const CongressesRoute = CongressesRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlertsRoute = AlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -353,6 +359,7 @@ const ApiPublicHooksAggregateSourceCandidatesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
@@ -409,6 +416,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
@@ -466,6 +474,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/alerts': typeof AlertsRoute
   '/auth': typeof AuthRoute
   '/congresses': typeof CongressesRouteWithChildren
   '/dashboard': typeof DashboardRoute
@@ -524,6 +533,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/alerts'
     | '/auth'
     | '/congresses'
     | '/dashboard'
@@ -580,6 +590,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/alerts'
     | '/auth'
     | '/congresses'
     | '/dashboard'
@@ -636,6 +647,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/alerts'
     | '/auth'
     | '/congresses'
     | '/dashboard'
@@ -693,6 +705,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AlertsRoute: typeof AlertsRoute
   AuthRoute: typeof AuthRoute
   CongressesRoute: typeof CongressesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
@@ -815,6 +828,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alerts': {
+      id: '/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AlertsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -1170,6 +1190,7 @@ const MeRouteWithChildren = MeRoute._addFileChildren(MeRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AlertsRoute: AlertsRoute,
   AuthRoute: AuthRoute,
   CongressesRoute: CongressesRouteWithChildren,
   DashboardRoute: DashboardRoute,
