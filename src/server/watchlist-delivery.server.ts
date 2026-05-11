@@ -295,7 +295,9 @@ export async function flushPendingDeltas(): Promise<{ processed: number }> {
 
     const { data: wl } = await supabaseAdmin
       .from("user_watchlists")
-      .select("id, name, email_enabled, muted_until, max_emails_per_day")
+      .select(
+        "id, user_id, name, email_enabled, muted_until, max_emails_per_day, quiet_hours_start, quiet_hours_end, timezone",
+      )
       .eq("id", row.watchlist_id as string)
       .maybeSingle();
     if (!wl) {
@@ -313,6 +315,24 @@ export async function flushPendingDeltas(): Promise<{ processed: number }> {
         .from("watchlist_email_sends")
         .update({ delta_sent_at: nowIso })
         .eq("id", row.id as string);
+      continue;
+    }
+
+    // Honor quiet hours in the watchlist's resolved timezone. If we're
+    // currently inside the quiet window, leave delta_sent_at NULL so the
+    // next cron tick reconsiders once the window ends — don't ship a
+    // delta email at 03:30 local time just because UTC is 08:30.
+    const tz = await resolveWatchlistTimezone({
+      watchlistTimezone: wl.timezone as string | null,
+      userId: wl.user_id as string,
+    });
+    if (
+      isInQuietHoursTz(
+        wl.quiet_hours_start as number,
+        wl.quiet_hours_end as number,
+        tz,
+      )
+    ) {
       continue;
     }
 
