@@ -134,20 +134,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPrefs(null);
       }
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (typeof window !== "undefined") {
-        (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
-          data.session?.access_token ?? null;
-      }
-      if (data.session?.user) {
-        void loadAux(data.session.user.id).finally(() => setLoading(false));
-      } else {
+    // Hard timeout so a stalled token-refresh (network blocked, Supabase
+    // unreachable, etc.) cannot keep the whole shell stuck in the
+    // "checking…" skeleton forever. After 5s we release the gate and let
+    // the user see the unauthenticated UI; if the session resolves later,
+    // onAuthStateChange will populate state.
+    const fallback = setTimeout(() => setLoading(false), 5000);
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        if (typeof window !== "undefined") {
+          (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
+            data.session?.access_token ?? null;
+        }
+        if (data.session?.user) {
+          void loadAux(data.session.user.id).finally(() => setLoading(false));
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("[auth] getSession failed", err);
         setLoading(false);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
+      })
+      .finally(() => clearTimeout(fallback));
+    return () => {
+      clearTimeout(fallback);
+      sub.subscription.unsubscribe();
+    };
   }, [loadAux]);
 
   const value = React.useMemo<AuthCtx>(
