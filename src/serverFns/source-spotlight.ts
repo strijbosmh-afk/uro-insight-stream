@@ -338,3 +338,304 @@ export const getSourceSpotlightCore = createServerFn({ method: "POST" })
       not_found: false,
     };
   });
+
+// =====================================================================
+// Phase B — Themes (LLM-derived, cached 7d in source_themes)
+// =====================================================================
+
+export type SpotlightThemes = {
+  themes: SourceTheme[];
+  computed_at: string;
+  expires_at: string;
+  model: string;
+  is_stale: boolean;
+  cache_hit: boolean;
+};
+
+const ThemesInputSchema = z.object({
+  handle: z.string().min(1).max(50).transform((h) => h.replace(/^@/, "").trim().toLowerCase()),
+  refresh: z.boolean().optional().default(false),
+});
+
+export const getSourceThemes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ThemesInputSchema.parse(data))
+  .handler(async ({ data, context }): Promise<SpotlightThemes | null> => {
+    const id = data.handle;
+    const now = Date.now();
+
+    // If admin requests refresh, validate role.
+    if (data.refresh) {
+      await assertAdmin(context.supabase, context.userId);
+    }
+
+    const { data: cached } = await supabaseAdmin
+      .from("source_themes")
+      .select("themes, computed_at, expires_at, model")
+      .eq("source_id", id)
+      .maybeSingle();
+
+    const isStale =
+      !cached || new Date(cached.expires_at).getTime() < now;
+
+    if (cached && !isStale && !data.refresh) {
+      return {
+        themes: cached.themes as unknown as SourceTheme[],
+        computed_at: cached.computed_at,
+        expires_at: cached.expires_at,
+        model: cached.model,
+        is_stale: false,
+        cache_hit: true,
+      };
+    }
+
+    // Need to recompute. Fetch bio + recent 100 tweets + cancer area slugs.
+    const [{ data: src }, { data: tweetRows }, { data: areas }] = await Promise.all([
+      supabaseAdmin.from("sources").select("bio").eq("id", id).maybeSingle(),
+      supabaseAdmin
+        .from("tweets")
+        .select("id, text, hashtags, created_at")
+        .eq("source_id", id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin.from("cancer_areas").select("slug"),
+    ]);
+
+    const tweets = (tweetRows ?? []).map((t) => ({
+      id: t.id,
+      text: t.text,
+      hashtags: t.hashtags ?? [],
+      created_at: t.created_at,
+    }));
+
+    if (tweets.length < 20) {
+      // Not enough signal — return stale cache if any, otherwise null.
+      if (cached) {
+        return {
+          themes: cached.themes as unknown as SourceTheme[],
+          computed_at: cached.computed_at,
+          expires_at: cached.expires_at,
+          model: cached.model,
+          is_stale: true,
+          cache_hit: true,
+        };
+      }
+      return null;
+    }
+
+    const slugs = (areas ?? []).map((a) => a.slug);
+    const result = await computeSourceThemes({
+      bio: src?.bio ?? null,
+      tweets,
+      cancerAreaSlugs: slugs,
+    });
+
+    if (!result) {
+      // LLM failed — return stale cache if available.
+      if (cached) {
+        return {
+          themes: cached.themes as unknown as SourceTheme[],
+          computed_at: cached.computed_at,
+          expires_at: cached.expires_at,
+          model: cached.model,
+          is_stale: true,
+          cache_hit: true,
+        };
+      }
+      throw new Error("themes_unavailable");
+    }
+
+    const expiresAt = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const computedAt = new Date(now).toISOString();
+    await supabaseAdmin
+      .from("source_themes")
+      .upsert({
+        source_id: id,
+        themes: result.themes as unknown as never,
+        computed_at: computedAt,
+        expires_at: expiresAt,
+        model: result.model,
+      });
+
+    return {
+      themes: result.themes,
+      computed_at: computedAt,
+      expires_at: expiresAt,
+      model: result.model,
+      is_stale: false,
+      cache_hit: false,
+    };
+  });
+
+// =====================================================================
+// Phase B — Rhythm (pure SQL aggregations over recent tweets)
+// =====================================================================
+
+export type SpotlightRhythm = {
+  hourly: number[];
+  dow: number[];
+  inferred_timezone: string | null;
+  offset_hours: number | null;
+  total_tweets_30d: number;
+  peak_hour: number;
+  peak_dow: number;
+};
+
+const HandleOnlySchema = z.object({
+  handle: z.string().min(1).max(50).transform((h) => h.replace(/^@/, "").trim().toLowerCase()),
+});
+
+export const getSourceRhythm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => HandleOnlySchema.parse(data))
+  .handler(async ({ data }): Promise<SpotlightRhythm> => {
+    const id = data.handle;
+    const sinceISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("tweets")
+      .select("created_at")
+      .eq("source_id", id)
+      .gte("created_at", sinceISO)
+      .limit(2000);
+    if (error) throw new Error(error.message);
+
+    const hourly = new Array(24).fill(0) as number[];
+    const dow = new Array(7).fill(0) as number[]; // 0=Mon..6=Sun
+    for (const r of rows ?? []) {
+      const d = new Date(r.created_at);
+      hourly[d.getUTCHours()]++;
+      // JS getUTCDay: 0=Sun..6=Sat. Remap to 0=Mon..6=Sun.
+      const js = d.getUTCDay();
+      const idx = js === 0 ? 6 : js - 1;
+      dow[idx]++;
+    }
+
+    let peakHour = 0;
+    for (let i = 1; i < 24; i++) if (hourly[i] > hourly[peakHour]) peakHour = i;
+    let peakDow = 0;
+    for (let i = 1; i < 7; i++) if (dow[i] > dow[peakDow]) peakDow = i;
+
+    const tz = inferTimezoneFromHourly(hourly);
+
+    return {
+      hourly,
+      dow,
+      inferred_timezone: tz.inferred_timezone,
+      offset_hours: tz.offset_hours,
+      total_tweets_30d: rows?.length ?? 0,
+      peak_hour: peakHour,
+      peak_dow: peakDow,
+    };
+  });
+
+// =====================================================================
+// Phase B — Inner circle (conversation network, 30d)
+// =====================================================================
+
+export type InnerCircleEntry = {
+  handle: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  count: number;
+  is_tracked: boolean;
+};
+
+export type SpotlightInnerCircle = {
+  outgoing: InnerCircleEntry[]; // who this source replies-to/quotes most
+  incoming: InnerCircleEntry[]; // who replies to this source most
+};
+
+export const getSourceInnerCircle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => HandleOnlySchema.parse(data))
+  .handler(async ({ data }): Promise<SpotlightInnerCircle> => {
+    const id = data.handle;
+    const sinceISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Outgoing: tweets authored by this source that are replies/quotes,
+    // grouped by parent_handle.
+    const outgoingPromise = supabaseAdmin
+      .from("tweets")
+      .select("parent_handle")
+      .eq("source_id", id)
+      .in("tweet_type", ["reply", "quote"])
+      .gte("created_at", sinceISO)
+      .not("parent_handle", "is", null)
+      .limit(2000);
+
+    // Incoming: tweets where parent_handle = this source's handle.
+    const incomingPromise = supabaseAdmin
+      .from("tweets")
+      .select("author_handle")
+      .eq("parent_handle", id)
+      .gte("created_at", sinceISO)
+      .limit(2000);
+
+    const [outRes, inRes] = await Promise.all([outgoingPromise, incomingPromise]);
+    if (outRes.error) throw new Error(outRes.error.message);
+    if (inRes.error) throw new Error(inRes.error.message);
+
+    const tally = (rows: Array<Record<string, string | null>>, key: string) => {
+      const counts = new Map<string, number>();
+      for (const r of rows) {
+        const raw = r[key];
+        if (!raw) continue;
+        const h = raw.toLowerCase().replace(/^@/, "");
+        if (!h || h === id) continue;
+        counts.set(h, (counts.get(h) ?? 0) + 1);
+      }
+      return Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+    };
+
+    const outgoingTop = tally((outRes.data ?? []) as Array<Record<string, string | null>>, "parent_handle");
+    const incomingTop = tally((inRes.data ?? []) as Array<Record<string, string | null>>, "author_handle");
+
+    const allHandles = Array.from(new Set([...outgoingTop, ...incomingTop].map(([h]) => h)));
+    if (allHandles.length === 0) return { outgoing: [], incoming: [] };
+
+    const [{ data: srcRows }, { data: candRows }] = await Promise.all([
+      supabaseAdmin
+        .from("sources")
+        .select("id, handle, display_name, avatar_url")
+        .in("id", allHandles),
+      supabaseAdmin
+        .from("source_candidates")
+        .select("handle, display_name, avatar_url")
+        .in("handle", allHandles),
+    ]);
+
+    const trackedById = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+    for (const s of srcRows ?? []) trackedById.set(s.id, { display_name: s.display_name, avatar_url: s.avatar_url });
+    const candByHandle = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+    for (const c of candRows ?? []) candByHandle.set(c.handle.toLowerCase(), { display_name: c.display_name, avatar_url: c.avatar_url });
+
+    const enrich = (rows: Array<[string, number]>): InnerCircleEntry[] =>
+      rows.map(([handle, count]) => {
+        const tracked = trackedById.get(handle);
+        if (tracked) {
+          return {
+            handle,
+            display_name: tracked.display_name,
+            avatar_url: tracked.avatar_url,
+            count,
+            is_tracked: true,
+          };
+        }
+        const cand = candByHandle.get(handle);
+        return {
+          handle,
+          display_name: cand?.display_name ?? null,
+          avatar_url: cand?.avatar_url ?? null,
+          count,
+          is_tracked: false,
+        };
+      });
+
+    return {
+      outgoing: enrich(outgoingTop),
+      incoming: enrich(incomingTop),
+    };
+  });
