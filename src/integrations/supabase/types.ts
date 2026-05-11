@@ -1543,6 +1543,38 @@ export type Database = {
         }
         Relationships: []
       }
+      source_themes: {
+        Row: {
+          computed_at: string
+          expires_at: string
+          model: string
+          source_id: string
+          themes: Json
+        }
+        Insert: {
+          computed_at?: string
+          expires_at?: string
+          model: string
+          source_id: string
+          themes: Json
+        }
+        Update: {
+          computed_at?: string
+          expires_at?: string
+          model?: string
+          source_id?: string
+          themes?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_themes_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sources: {
         Row: {
           active: boolean
