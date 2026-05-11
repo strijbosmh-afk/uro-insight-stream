@@ -11,9 +11,15 @@ import {
 import {
   isEligibleForFollowsImportNudge,
   isEligibleForLegacyFollowsImportPrompt,
+  isEligibleForLowSourceCountNudge,
+  isEligibleForDiffNudge,
+  getPreviousHandles,
 } from "@/server/x-follows.server";
 
-const GetSchema = z.object({ refresh: z.boolean().optional() });
+const GetSchema = z.object({
+  refresh: z.boolean().optional(),
+  mode: z.enum(["full", "diff"]).optional(),
+});
 
 export const getScoredFollows = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -25,16 +31,26 @@ export const getScoredFollows = createServerFn({ method: "POST" })
     });
     if (!result.ok) return result;
 
+    // Diff mode: keep only handles that didn't exist in the previously-cached
+    // snapshot (newcomers since last import / last cron refresh).
+    let scopedItems = result.items;
+    if (data.mode === "diff") {
+      const prev = await getPreviousHandles(context.userId);
+      scopedItems = result.items.filter(
+        (it) => !prev.has(it.handle.toLowerCase()),
+      );
+    }
+
     // Partition + sort.
-    const suggested = result.items
+    const suggested = scopedItems
       .filter((it) => it.score >= SUGGESTED_SCORE_THRESHOLD)
       .sort((a, b) => b.score - a.score);
-    const other = result.items
+    const other = scopedItems
       .filter((it) => it.score < SUGGESTED_SCORE_THRESHOLD)
       .sort((a, b) => a.handle.localeCompare(b.handle));
 
     // Mark which handles are already subscribed.
-    const handles = result.items.map((it) => it.handle.toLowerCase());
+    const handles = scopedItems.map((it) => it.handle.toLowerCase());
     const { data: subs } = await supabaseAdmin
       .from("user_subscribed_sources")
       .select("source_id")
@@ -48,11 +64,12 @@ export const getScoredFollows = createServerFn({ method: "POST" })
       ok: true as const,
       suggested,
       other,
-      totalSeen: result.totalSeen,
+      totalSeen: data.mode === "diff" ? scopedItems.length : result.totalSeen,
       capped: result.capped,
       cached: result.cached,
       fetched_at: result.fetched_at,
       already_subscribed: Array.from(subscribedSet),
+      mode: data.mode ?? "full",
     };
   });
 
@@ -156,6 +173,8 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
       .update({
         follows_imported_at: nowISO,
         follows_count_at_import: cached.length || null,
+        follows_new_since_last_import: 0,
+        follows_diff_dismissed_at: nowISO,
       })
       .eq("user_id", userId)
       .eq("is_active", true);
@@ -171,18 +190,47 @@ export const getFollowsImportNudgeStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
-    // Legacy one-time prompt takes precedence — pre-launch users see it once.
+    // Priority: legacy_one_time > diff_dashboard > first_time_dashboard.
     if (await isEligibleForLegacyFollowsImportPrompt(userId)) {
-      return { eligible: true as const, kind: "legacy_one_time" as const };
+      return {
+        eligible: true as const,
+        kind: "legacy_one_time" as const,
+        new_count: 0,
+      };
+    }
+    const diff = await isEligibleForDiffNudge(userId);
+    if (diff.eligible) {
+      return {
+        eligible: true as const,
+        kind: "diff_dashboard" as const,
+        new_count: diff.new_count,
+      };
     }
     if (await isEligibleForFollowsImportNudge(userId)) {
-      return { eligible: true as const, kind: "dashboard_recurring" as const };
+      return {
+        eligible: true as const,
+        kind: "first_time_dashboard" as const,
+        new_count: 0,
+      };
     }
-    return { eligible: false as const, kind: null };
+    return { eligible: false as const, kind: null, new_count: 0 };
+  });
+
+export const getLowSourceCountNudgeStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    return {
+      eligible: await isEligibleForLowSourceCountNudge(context.userId),
+    };
   });
 
 const DismissSchema = z.object({
-  kind: z.enum(["dashboard_recurring", "legacy_one_time"]),
+  kind: z.enum([
+    "first_time_dashboard",
+    "legacy_one_time",
+    "low_source_count",
+    "diff_dashboard",
+  ]),
 });
 
 export const dismissFollowsImportNudge = createServerFn({ method: "POST" })
@@ -198,7 +246,22 @@ export const dismissFollowsImportNudge = createServerFn({ method: "POST" })
         .eq("id", userId);
       return { ok: true as const };
     }
-    // dashboard_recurring: increment + stamp
+    if (data.kind === "low_source_count") {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ low_source_count_nudge_dismissed_at: nowISO })
+        .eq("id", userId);
+      return { ok: true as const };
+    }
+    if (data.kind === "diff_dashboard") {
+      await supabaseAdmin
+        .from("user_x_credentials")
+        .update({ follows_diff_dismissed_at: nowISO })
+        .eq("user_id", userId)
+        .eq("is_active", true);
+      return { ok: true as const };
+    }
+    // first_time_dashboard: increment + stamp
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select("follows_import_nudge_dismissed_count")
