@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, ChevronRight, Menu, ChevronDown, Check, Plus } from "lucide-react";
+import { Search, ChevronRight, Menu, ChevronDown, Check, Plus, Link2 } from "lucide-react";
+import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { feedService } from "@/services/feedService";
@@ -178,6 +179,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
 
       {/* Avatar */}
       {!isMobile && <XHandleBadge />}
+      {!isMobile && <ConnectXHeaderLink />}
       {!isMobile && <ShareToXButton />}
       {!isMobile && (
         <button
@@ -252,6 +254,29 @@ function XHandleBadge() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function ConnectXHeaderLink() {
+  const [open, setOpen] = React.useState(false);
+  const { data: status, isLoading } = useQuery({
+    queryKey: ["x-connection-status"],
+    queryFn: () => getXConnectionStatus(),
+  });
+  if (isLoading || (status && !status.revoked_at && status.x_username)) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Connect your X (Twitter) account"
+        className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-accent/50 bg-accent/10 text-[11px] font-mono text-accent hover:bg-accent/20 transition-colors"
+      >
+        <Link2 className="w-3 h-3" />
+        <span>Connect X</span>
+      </button>
+      <XConnectWizard open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
