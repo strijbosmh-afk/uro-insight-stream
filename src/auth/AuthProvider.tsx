@@ -147,6 +147,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
+    // Clear any corrupted persisted session BEFORE wiring up the auth
+    // listener so gotrue doesn't immediately try to refresh a bad token.
+    purgeCorruptSupabaseSession();
     // 1. Subscribe FIRST, then 2. fetch existing session.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
