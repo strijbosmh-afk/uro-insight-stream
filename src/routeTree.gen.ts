@@ -55,6 +55,7 @@ import { Route as ApiPublicWatchlistMuteTokenRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
+import { Route as ApiPublicHooksSmokeWatchlistRouteImport } from './routes/api/public/hooks/smoke-watchlist'
 import { Route as ApiPublicHooksSendDigestsRouteImport } from './routes/api/public/hooks/send-digests'
 import { Route as ApiPublicHooksResetDemoAccountRouteImport } from './routes/api/public/hooks/reset-demo-account'
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
@@ -62,7 +63,6 @@ import { Route as ApiPublicHooksNominateGroupMembersRouteImport } from './routes
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
-import { Route as ApiPublicHooksSmokeWatchlistRouteImport } from './routes/api/public/hooks/_smoke-watchlist'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -301,6 +301,12 @@ const ApiPublicHooksSummarizeJobRoute =
     path: '/api/public/hooks/summarize-job',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSmokeWatchlistRoute =
+  ApiPublicHooksSmokeWatchlistRouteImport.update({
+    id: '/api/public/hooks/smoke-watchlist',
+    path: '/api/public/hooks/smoke-watchlist',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSendDigestsRoute =
   ApiPublicHooksSendDigestsRouteImport.update({
     id: '/api/public/hooks/send-digests',
@@ -343,12 +349,6 @@ const ApiPublicHooksAggregateSourceCandidatesRoute =
     path: '/api/public/hooks/aggregate-source-candidates',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksSmokeWatchlistRoute =
-  ApiPublicHooksSmokeWatchlistRouteImport.update({
-    id: '/api/public/hooks/_smoke-watchlist',
-    path: '/api/public/hooks',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -388,7 +388,6 @@ export interface FileRoutesByFullPath {
   '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
-  '/api/public/hooks': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -396,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
+  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -444,7 +444,6 @@ export interface FileRoutesByTo {
   '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
-  '/api/public/hooks': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -452,6 +451,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
+  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -501,7 +501,6 @@ export interface FileRoutesById {
   '/sources_/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
-  '/api/public/hooks/_smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -509,6 +508,7 @@ export interface FileRoutesById {
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
   '/api/public/hooks/reset-demo-account': typeof ApiPublicHooksResetDemoAccountRoute
   '/api/public/hooks/send-digests': typeof ApiPublicHooksSendDigestsRoute
+  '/api/public/hooks/smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
@@ -559,7 +559,6 @@ export interface FileRouteTypes {
     | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
-    | '/api/public/hooks'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -567,6 +566,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
+    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -615,7 +615,6 @@ export interface FileRouteTypes {
     | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
-    | '/api/public/hooks'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -623,6 +622,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
+    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -671,7 +671,6 @@ export interface FileRouteTypes {
     | '/sources_/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
-    | '/api/public/hooks/_smoke-watchlist'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -679,6 +678,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-ingest-queue'
     | '/api/public/hooks/reset-demo-account'
     | '/api/public/hooks/send-digests'
+    | '/api/public/hooks/smoke-watchlist'
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
@@ -719,7 +719,6 @@ export interface RootRouteChildren {
   SourcesHandleRoute: typeof SourcesHandleRoute
   ApiPublicAccessRequestRoute: typeof ApiPublicAccessRequestRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
-  ApiPublicHooksSmokeWatchlistRoute: typeof ApiPublicHooksSmokeWatchlistRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -727,6 +726,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
   ApiPublicHooksResetDemoAccountRoute: typeof ApiPublicHooksResetDemoAccountRoute
   ApiPublicHooksSendDigestsRoute: typeof ApiPublicHooksSendDigestsRoute
+  ApiPublicHooksSmokeWatchlistRoute: typeof ApiPublicHooksSmokeWatchlistRoute
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
@@ -1062,6 +1062,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSummarizeJobRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/smoke-watchlist': {
+      id: '/api/public/hooks/smoke-watchlist'
+      path: '/api/public/hooks/smoke-watchlist'
+      fullPath: '/api/public/hooks/smoke-watchlist'
+      preLoaderRoute: typeof ApiPublicHooksSmokeWatchlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-digests': {
       id: '/api/public/hooks/send-digests'
       path: '/api/public/hooks/send-digests'
@@ -1109,13 +1116,6 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/aggregate-source-candidates'
       fullPath: '/api/public/hooks/aggregate-source-candidates'
       preLoaderRoute: typeof ApiPublicHooksAggregateSourceCandidatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/_smoke-watchlist': {
-      id: '/api/public/hooks/_smoke-watchlist'
-      path: '/api/public/hooks'
-      fullPath: '/api/public/hooks'
-      preLoaderRoute: typeof ApiPublicHooksSmokeWatchlistRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1196,7 +1196,6 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesHandleRoute: SourcesHandleRoute,
   ApiPublicAccessRequestRoute: ApiPublicAccessRequestRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
-  ApiPublicHooksSmokeWatchlistRoute: ApiPublicHooksSmokeWatchlistRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
     ApiPublicHooksAggregateSourceCandidatesRoute,
   ApiPublicHooksBackfillHierarchyRecentRoute:
@@ -1208,6 +1207,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksProcessIngestQueueRoute: ApiPublicHooksProcessIngestQueueRoute,
   ApiPublicHooksResetDemoAccountRoute: ApiPublicHooksResetDemoAccountRoute,
   ApiPublicHooksSendDigestsRoute: ApiPublicHooksSendDigestsRoute,
+  ApiPublicHooksSmokeWatchlistRoute: ApiPublicHooksSmokeWatchlistRoute,
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
@@ -1221,3 +1221,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
