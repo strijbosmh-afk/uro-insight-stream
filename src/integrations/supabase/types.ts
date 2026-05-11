@@ -2391,6 +2391,7 @@ export type Database = {
           target_group_id: string | null
           target_kind: string
           target_source_id: string | null
+          timezone: string | null
           updated_at: string
           user_id: string
         }
@@ -2407,6 +2408,7 @@ export type Database = {
           target_group_id?: string | null
           target_kind: string
           target_source_id?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2423,6 +2425,7 @@ export type Database = {
           target_group_id?: string | null
           target_kind?: string
           target_source_id?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }

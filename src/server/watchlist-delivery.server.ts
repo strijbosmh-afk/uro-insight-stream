@@ -7,6 +7,7 @@
 //  - 5-minute coalescing window per watchlist
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { resolveWatchlistTimezone, isInQuietHoursTz } from "./watchlist-tz.server";
 
 const COALESCE_WINDOW_MS = 5 * 60 * 1000;
 const SITE_NAME = "uro-insight-stream";
@@ -24,14 +25,6 @@ function generateToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function isInQuietHoursUtc(start: number, end: number, now: Date = new Date()): boolean {
-  const h = now.getUTCHours();
-  if (start === end) return false;
-  if (start < end) return h >= start && h < end;
-  // Wraps midnight (e.g. 22 → 8).
-  return h >= start || h < end;
 }
 
 function publicSiteUrl(): string {
@@ -164,7 +157,7 @@ export async function deliverWatchlistMatches(matches: IncomingMatch[]): Promise
   const { data: watchlists } = await supabaseAdmin
     .from("user_watchlists")
     .select(
-      "id, user_id, name, email_enabled, quiet_hours_start, quiet_hours_end, max_emails_per_day, muted_until",
+      "id, user_id, name, email_enabled, quiet_hours_start, quiet_hours_end, max_emails_per_day, muted_until, timezone",
     )
     .in("id", wlIds);
 
@@ -174,8 +167,16 @@ export async function deliverWatchlistMatches(matches: IncomingMatch[]): Promise
     if (!wl.email_enabled) continue;
     const muted = wl.muted_until && new Date(wl.muted_until as string).getTime() > Date.now();
     if (muted) continue;
+    const tz = await resolveWatchlistTimezone({
+      watchlistTimezone: wl.timezone as string | null,
+      userId: wl.user_id as string,
+    });
     if (
-      isInQuietHoursUtc(wl.quiet_hours_start as number, wl.quiet_hours_end as number)
+      isInQuietHoursTz(
+        wl.quiet_hours_start as number,
+        wl.quiet_hours_end as number,
+        tz,
+      )
     ) {
       continue;
     }

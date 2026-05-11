@@ -25,6 +25,7 @@ const CreateSchema = z
     quiet_hours_start: z.number().int().min(0).max(23).optional(),
     quiet_hours_end: z.number().int().min(0).max(23).optional(),
     max_emails_per_day: z.number().int().min(1).max(100).optional(),
+    timezone: z.string().trim().max(64).optional().nullable(),
     topics: z.array(z.string().trim().min(2).max(80)).max(20).optional().default([]),
   })
   .and(TargetSchema);
@@ -44,6 +45,7 @@ export const createWatchlist = createServerFn({ method: "POST" })
       quiet_hours_start?: number;
       quiet_hours_end?: number;
       max_emails_per_day?: number;
+      timezone?: string | null;
     } = {
       user_id: userId,
       name: data.name,
@@ -55,6 +57,7 @@ export const createWatchlist = createServerFn({ method: "POST" })
     if (data.quiet_hours_start !== undefined) insertRow.quiet_hours_start = data.quiet_hours_start;
     if (data.quiet_hours_end !== undefined) insertRow.quiet_hours_end = data.quiet_hours_end;
     if (data.max_emails_per_day !== undefined) insertRow.max_emails_per_day = data.max_emails_per_day;
+    if (data.timezone !== undefined) insertRow.timezone = data.timezone || null;
 
     const { data: created, error } = await supabase
       .from("user_watchlists")
@@ -83,6 +86,7 @@ const UpdateSchema = z.object({
   quiet_hours_end: z.number().int().min(0).max(23).optional(),
   max_emails_per_day: z.number().int().min(1).max(100).optional(),
   is_active: z.boolean().optional(),
+  timezone: z.string().trim().max(64).nullable().optional(),
 });
 
 export const updateWatchlist = createServerFn({ method: "POST" })
@@ -116,7 +120,7 @@ export const listWatchlists = createServerFn({ method: "GET" })
     const { data: wls, error } = await context.supabase
       .from("user_watchlists")
       .select(
-        "id, name, target_kind, target_source_id, target_group_id, email_enabled, quiet_hours_start, quiet_hours_end, max_emails_per_day, is_active, muted_until, created_at",
+        "id, name, target_kind, target_source_id, target_group_id, email_enabled, quiet_hours_start, quiet_hours_end, max_emails_per_day, is_active, muted_until, timezone, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -273,4 +277,38 @@ export const getMyLlmQuotaToday = createServerFn({ method: "GET" })
       .eq("day", today)
       .maybeSingle();
     return { used: (data?.classifications as number | undefined) ?? 0, cap: 500 };
+  });
+const TargetLookupSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("source"), id: z.string().min(1).max(64) }),
+  z.object({ kind: z.literal("group"), id: z.string().uuid() }),
+]);
+
+/**
+ * Returns the current user's watchlist for the given source/group, or null
+ * if none exists. Used by Spotlight + group "Set up alerts" CTAs to flip
+ * between create and edit mode.
+ */
+export const getMyWatchlistForTarget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => TargetLookupSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const col = data.kind === "source" ? "target_source_id" : "target_group_id";
+    const { data: row } = await context.supabase
+      .from("user_watchlists")
+      .select(
+        "id, name, target_kind, target_source_id, target_group_id, email_enabled, quiet_hours_start, quiet_hours_end, max_emails_per_day, is_active, muted_until, timezone",
+      )
+      .eq(col, data.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!row) return null;
+    const { data: topics } = await context.supabase
+      .from("user_watchlist_topics")
+      .select("topic, is_active")
+      .eq("watchlist_id", row.id as string);
+    return {
+      ...row,
+      topics: (topics ?? []).filter((t) => t.is_active).map((t) => t.topic as string),
+    };
   });
