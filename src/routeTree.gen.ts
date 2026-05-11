@@ -62,6 +62,7 @@ import { Route as ApiPublicHooksNominateGroupMembersRouteImport } from './routes
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
+import { Route as ApiPublicHooksSmokeWatchlistRouteImport } from './routes/api/public/hooks/_smoke-watchlist'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -342,6 +343,12 @@ const ApiPublicHooksAggregateSourceCandidatesRoute =
     path: '/api/public/hooks/aggregate-source-candidates',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSmokeWatchlistRoute =
+  ApiPublicHooksSmokeWatchlistRouteImport.update({
+    id: '/api/public/hooks/_smoke-watchlist',
+    path: '/api/public/hooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -381,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -436,6 +444,7 @@ export interface FileRoutesByTo {
   '/sources/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -492,6 +501,7 @@ export interface FileRoutesById {
   '/sources_/$handle': typeof SourcesHandleRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/hooks/_smoke-watchlist': typeof ApiPublicHooksSmokeWatchlistRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
+    | '/api/public/hooks'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -604,6 +615,7 @@ export interface FileRouteTypes {
     | '/sources/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
+    | '/api/public/hooks'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -659,6 +671,7 @@ export interface FileRouteTypes {
     | '/sources_/$handle'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
+    | '/api/public/hooks/_smoke-watchlist'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
     | '/api/public/hooks/match-tweets-to-sessions'
@@ -706,6 +719,7 @@ export interface RootRouteChildren {
   SourcesHandleRoute: typeof SourcesHandleRoute
   ApiPublicAccessRequestRoute: typeof ApiPublicAccessRequestRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicHooksSmokeWatchlistRoute: typeof ApiPublicHooksSmokeWatchlistRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
@@ -1097,6 +1111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAggregateSourceCandidatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/_smoke-watchlist': {
+      id: '/api/public/hooks/_smoke-watchlist'
+      path: '/api/public/hooks'
+      fullPath: '/api/public/hooks'
+      preLoaderRoute: typeof ApiPublicHooksSmokeWatchlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1175,6 +1196,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesHandleRoute: SourcesHandleRoute,
   ApiPublicAccessRequestRoute: ApiPublicAccessRequestRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicHooksSmokeWatchlistRoute: ApiPublicHooksSmokeWatchlistRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
     ApiPublicHooksAggregateSourceCandidatesRoute,
   ApiPublicHooksBackfillHierarchyRecentRoute:
