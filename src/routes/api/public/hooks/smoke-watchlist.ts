@@ -6,7 +6,7 @@ import { classifyNewTweets } from "@/server/watchlist-classifier.server";
 
 const SMOKE_SECRET = "a195a37a2d8b36ddb8055cf6fc00c1d5";
 
-export const Route = createFileRoute("/api/public/hooks/_smoke-watchlist")({
+export const Route = createFileRoute("/api/public/hooks/smoke-watchlist")({
   server: {
     handlers: {
       POST: async ({ request }) => {
