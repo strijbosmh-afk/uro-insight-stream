@@ -574,25 +574,31 @@ function PersonCard({
         </button>
       )}
       <div className="flex items-start gap-3">
-        {card.avatar_url ? (
-          <img
-            src={card.avatar_url}
-            alt=""
-            loading="lazy"
-            className="w-12 h-12 rounded-full bg-panel-elevated shrink-0"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-panel-elevated shrink-0" />
-        )}
+        <Link to="/sources/$handle" params={{ handle: card.handle }} className="shrink-0">
+          {card.avatar_url ? (
+            <img
+              src={card.avatar_url}
+              alt=""
+              loading="lazy"
+              className="w-12 h-12 rounded-full bg-panel-elevated hover:ring-2 hover:ring-accent/40 transition"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-panel-elevated" />
+          )}
+        </Link>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <Link
+            to="/sources/$handle"
+            params={{ handle: card.handle }}
+            className="flex items-center gap-1.5 flex-wrap hover:text-accent"
+          >
             <span className="text-[15px] font-semibold text-text-primary truncate">
               {card.display_name || `@${card.handle}`}
             </span>
             {card.verified && (
               <BadgeCheck className="w-4 h-4 text-accent shrink-0" />
             )}
-          </div>
+          </Link>
           <div className="text-[12px] font-mono text-text-muted truncate">
             @{card.handle}
           </div>
