@@ -16,6 +16,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
 import { PostGraceBanner } from "@/components/x-wizard/PostGraceBanner";
+import { PreGraceBanner } from "@/components/x-wizard/PreGraceBanner";
 import { useWatchlistRealtime } from "@/hooks/useWatchlistRealtime";
 
 export function AppShell() {
@@ -87,6 +88,7 @@ export function AppShell() {
           </div>
           <DemoBanner />
           <PostGraceBanner />
+          <PreGraceBanner />
           {!wizardOpen &&
             gate.needsResumeBanner &&
             !bannerDismissed &&
