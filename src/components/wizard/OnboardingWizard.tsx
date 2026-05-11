@@ -12,12 +12,15 @@ import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from 
 import { Link } from "@tanstack/react-router";
 import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
 import { feedService } from "@/services/feedService";
+import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
+import { getXConnectionStatus } from "@/serverFns/x-credentials";
 
 const STEPS = [
   "Welcome",
   "Specialties",
   "Congresses",
   "Sources",
+  "ConnectX",
   "Hashtags",
   "Review",
   "Provisioning",
@@ -59,6 +62,11 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const [draftSources, setDraftSources] = React.useState<DraftSource[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const enqueueFn = useServerFn(enqueueUserSources);
+  const [xWizardOpen, setXWizardOpen] = React.useState(false);
+  const { data: xStatus } = useQuery({
+    queryKey: ["x-connection-status"],
+    queryFn: () => getXConnectionStatus(),
+  });
 
   // Hydrate existing user state when scope-running so users see their picks.
   React.useEffect(() => {
@@ -402,6 +410,21 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
               token={null /* using fetch with session */}
             />
           )}
+          {stepName === "ConnectX" && (
+            <ConnectXStep
+              connected={!!xStatus}
+              username={xStatus?.x_username ?? null}
+              onLaunch={() => setXWizardOpen(true)}
+              onDefer={async () => {
+                if (!user) return;
+                await supabase
+                  .from("profiles")
+                  .update({ pending_x_connection: true })
+                  .eq("id", user.id);
+                await goNext();
+              }}
+            />
+          )}
           {stepName === "Hashtags" && (
             <HashtagsStep
               input={hashtagInput}
@@ -483,6 +506,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
           </div>
         </div>
       </div>
+      {xWizardOpen && (
+        <XConnectWizard
+          open={xWizardOpen}
+          onOpenChange={setXWizardOpen}
+          onConnected={async () => {
+            if (user) {
+              await supabase
+                .from("profiles")
+                .update({ pending_x_connection: false })
+                .eq("id", user.id);
+            }
+            qc.invalidateQueries({ queryKey: ["x-connection-status"] });
+            setXWizardOpen(false);
+            await goNext();
+          }}
+        />
+      )}
     </div>
   );
 }
