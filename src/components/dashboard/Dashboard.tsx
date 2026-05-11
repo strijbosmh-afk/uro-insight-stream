@@ -280,27 +280,10 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Main 2-column area */}
-      <div className="flex-1 min-h-0 grid grid-cols-12 gap-3">
-        <div className="col-span-12 xl:col-span-6 flex flex-col gap-3 min-h-0">
-          <Panel
-            title={
-              <span className="flex items-center gap-2">
-                <ServerCog className="w-3 h-3 text-accent" />
-                Ingestion
-              </span>
-            }
-            className="hidden md:flex"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {cronHealth.map((job) => (
-                <CronHealthRow key={job.jobname} job={job} />
-              ))}
-              {cronHealth.length === 0 && <EmptyState text="No cron health data yet." />}
-            </div>
-          </Panel>
-
-          {/* Now happening */}
+      {/* Main area */}
+      <div className="flex flex-col gap-3 min-h-0">
+        {/* Row 1: Now happening | Ingestion */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
           <Panel
             title={
               <span className="flex items-center gap-2">
@@ -342,40 +325,51 @@ export function Dashboard() {
             )}
           </Panel>
 
-          {/* Most discussed */}
           <Panel
             title={
               <span className="flex items-center gap-2">
-                <Flame className="w-3 h-3 text-warning" />
-                Most discussed · last 24h
+                <ServerCog className="w-3 h-3 text-accent" />
+                Ingestion
               </span>
             }
-            className="flex-1 min-h-0"
-            bodyClassName="overflow-y-auto"
+            className="hidden md:flex"
           >
-            {mostDiscussed.length === 0 ? (
-              <EmptyState text="Not enough chatter yet." />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {mostDiscussed.map(({ session, count }) => (
-                  <DiscussedCard
-                    key={session.id}
-                    session={session}
-                    congress={congressMap.get(session.congressId)}
-                    count={count}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {cronHealth.map((job) => (
+                <CronHealthRow key={job.jobname} job={job} />
+              ))}
+              {cronHealth.length === 0 && <EmptyState text="No cron health data yet." />}
+            </div>
           </Panel>
         </div>
 
-        {/* Right rail — activity */}
+        {/* Row 2: Most discussed (full width) */}
         <Panel
-          title="Recent activity"
-          className="col-span-12 xl:col-span-6 min-h-0"
-          bodyClassName="overflow-y-auto"
+          title={
+            <span className="flex items-center gap-2">
+              <Flame className="w-3 h-3 text-warning" />
+              Most discussed · last 24h
+            </span>
+          }
         >
+          {mostDiscussed.length === 0 ? (
+            <EmptyState text="Not enough chatter yet." />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+              {mostDiscussed.map(({ session, count }) => (
+                <DiscussedCard
+                  key={session.id}
+                  session={session}
+                  congress={congressMap.get(session.congressId)}
+                  count={count}
+                />
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        {/* Row 3: Recent activity (full width) */}
+        <Panel title="Recent activity">
           <div className="space-y-2">
             {recentTweets.map((t) => (
               <ActivityRow
