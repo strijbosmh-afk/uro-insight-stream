@@ -14,13 +14,15 @@ import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongress
 import { feedService } from "@/services/feedService";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
+import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
 
 const STEPS = [
   "Welcome",
   "Specialties",
   "Congresses",
-  "Sources",
   "ConnectX",
+  "ImportFollows",
+  "Sources",
   "Hashtags",
   "Review",
   "Provisioning",
