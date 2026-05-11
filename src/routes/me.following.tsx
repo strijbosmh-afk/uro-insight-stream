@@ -105,7 +105,21 @@ function MeFollowingPage() {
       </div>
 
       {isLoading && (
-        <div className="text-[12px] font-mono text-text-muted">Loading…</div>
+        <ul className="flex flex-col gap-2" aria-busy="true" aria-label="Loading follows">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <li
+              key={i}
+              className="bg-panel border border-border rounded-[3px] p-3 flex items-center gap-3"
+            >
+              <div className="w-12 h-12 rounded-full bg-panel-elevated border border-border shrink-0 animate-pulse" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3.5 w-2/5 bg-panel-elevated rounded animate-pulse" />
+                <div className="h-3 w-3/5 bg-panel-elevated rounded animate-pulse" />
+              </div>
+              <div className="h-11 w-[90px] bg-panel-elevated border border-border rounded animate-pulse" />
+            </li>
+          ))}
+        </ul>
       )}
 
       {!isLoading && filtered.length === 0 && (
