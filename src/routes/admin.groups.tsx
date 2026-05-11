@@ -487,12 +487,24 @@ function CandidatesTab() {
                     </td>
                     <td className="py-2 px-2">
                       <div className="flex items-start gap-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={c.source_avatar_url ?? undefined} />
-                          <AvatarFallback>{c.source_handle.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <Link
+                          to="/sources/$handle"
+                          params={{ handle: c.source_handle }}
+                          className="shrink-0"
+                        >
+                          <Avatar className="w-8 h-8 hover:ring-2 hover:ring-accent/40 transition">
+                            <AvatarImage src={c.source_avatar_url ?? undefined} />
+                            <AvatarFallback>{c.source_handle.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                        </Link>
                         <div className="min-w-0">
-                          <div className="font-medium">@{c.source_handle}</div>
+                          <Link
+                            to="/sources/$handle"
+                            params={{ handle: c.source_handle }}
+                            className="font-medium hover:text-accent hover:underline"
+                          >
+                            @{c.source_handle}
+                          </Link>
                           {c.source_bio && (
                             <div className="text-xs text-text-muted line-clamp-2 max-w-sm">
                               {c.source_bio}
