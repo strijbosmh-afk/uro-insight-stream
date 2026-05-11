@@ -190,7 +190,6 @@ export function Dashboard() {
   return (
     <div className="flex flex-col h-full min-h-0 gap-3 p-3 overflow-y-auto">
       <QuickStartPanel />
-      <FollowsImportNudge />
       {newRecs && ((newRecs.sourceCount ?? newRecs.count) > 0 || (newRecs.groupCount ?? 0) > 0) && !bannerDismissed && (
         <div
           className="flex items-center justify-between px-3 py-2 shrink-0"
