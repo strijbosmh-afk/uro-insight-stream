@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { feedService } from "@/services/feedService";
 import { ShareToXButton } from "@/components/x/ShareToXButton";
+import { NotificationsBell } from "@/components/watchlists/NotificationsBell";
 import {
   getXConnectionStatus,
   listXAccounts,
@@ -181,6 +182,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       {!isMobile && <XHandleBadge />}
       {!isMobile && <ConnectXHeaderLink />}
       {!isMobile && <ShareToXButton />}
+      {!isMobile && <NotificationsBell />}
       {!isMobile && (
         <button
           type="button"
