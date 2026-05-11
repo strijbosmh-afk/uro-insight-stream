@@ -2489,6 +2489,8 @@ export type Database = {
           consumer_key: string | null
           consumer_secret_encrypted: string | null
           created_at: string
+          follows_count_at_import: number | null
+          follows_imported_at: string | null
           id: string
           is_active: boolean
           last_post_at: string | null
@@ -2513,6 +2515,8 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret_encrypted?: string | null
           created_at?: string
+          follows_count_at_import?: number | null
+          follows_imported_at?: string | null
           id?: string
           is_active?: boolean
           last_post_at?: string | null
@@ -2537,6 +2541,8 @@ export type Database = {
           consumer_key?: string | null
           consumer_secret_encrypted?: string | null
           created_at?: string
+          follows_count_at_import?: number | null
+          follows_imported_at?: string | null
           id?: string
           is_active?: boolean
           last_post_at?: string | null
@@ -2553,6 +2559,30 @@ export type Database = {
           user_id?: string
           x_user_id?: string | null
           x_username?: string | null
+        }
+        Relationships: []
+      }
+      user_x_follows_cache: {
+        Row: {
+          expires_at: string
+          fetched_at: string
+          follows: Json
+          total_count: number
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string
+          fetched_at?: string
+          follows: Json
+          total_count: number
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          fetched_at?: string
+          follows?: Json
+          total_count?: number
+          user_id?: string
         }
         Relationships: []
       }

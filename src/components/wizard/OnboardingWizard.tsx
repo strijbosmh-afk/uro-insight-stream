@@ -14,13 +14,15 @@ import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongress
 import { feedService } from "@/services/feedService";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
+import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
 
 const STEPS = [
   "Welcome",
   "Specialties",
   "Congresses",
-  "Sources",
   "ConnectX",
+  "ImportFollows",
+  "Sources",
   "Hashtags",
   "Review",
   "Provisioning",
@@ -425,6 +427,29 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
               }}
             />
           )}
+          {stepName === "ImportFollows" && (
+            <>
+              {xStatus ? (
+                <ImportFollowsPanel
+                  onDone={() => void goNext()}
+                  onSkip={() => void goNext()}
+                />
+              ) : (
+                <div className="space-y-4 max-w-xl">
+                  <h2 className="text-xl font-semibold text-text-primary">
+                    Import your X follows
+                  </h2>
+                  <p className="text-sm text-text-secondary">
+                    Skipped because X isn't connected — you can import your
+                    follows anytime from the Sources page after connecting.
+                  </p>
+                  <Button size="sm" onClick={() => void goNext()}>
+                    Continue <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
           {stepName === "Hashtags" && (
             <HashtagsStep
               input={hashtagInput}
@@ -492,7 +517,7 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
                 Get started <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             )}
-            {!scopeStep && (stepName === "Specialties" || stepName === "Congresses" || stepName === "Sources" || stepName === "Hashtags") && (
+            {!scopeStep && (stepName === "Specialties" || stepName === "Congresses" || stepName === "Sources" || stepName === "Hashtags" || stepName === "ImportFollows") && (
               <Button size="sm" onClick={goNext} disabled={!canContinue}>
                 Continue <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
