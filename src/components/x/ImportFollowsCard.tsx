@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { ImportFollowsPanel } from "./ImportFollowsPanel";
 
-export function ImportFollowsCard() {
+export function ImportFollowsCard({
+  autoOpen = false,
+  onAutoOpened,
+}: {
+  autoOpen?: boolean;
+  onAutoOpened?: () => void;
+} = {}) {
   const { user } = useAuth();
   const [open, setOpen] = React.useState(false);
 
@@ -32,6 +38,13 @@ export function ImportFollowsCard() {
   });
 
   if (!data?.x_username) return null;
+
+  // Auto-open the dialog when arriving with ?import=true and X is connected.
+  // Strip the query param after opening so the back button doesn't re-trigger.
+  if (autoOpen && !open) {
+    setOpen(true);
+    onAutoOpened?.();
+  }
 
   const importedAt = data.follows_imported_at
     ? new Date(data.follows_imported_at).toLocaleDateString()
