@@ -72,9 +72,13 @@ const ADMIN_SECTION: NavSection = {
     { label: "Groups", to: "/admin/groups", icon: Users2 },
     { label: "Recommendations", to: "/admin/recommendations", icon: Sparkles },
     { label: "Ingestion", to: "/admin/ingestion", icon: RadioTower },
-    BRAINSTORM_ITEM,
     { label: "Email diagnostics", to: "/admin/email-diagnostics", icon: ShieldAlert },
   ],
+};
+
+const BRAINSTORM_SECTION: NavSection = {
+  label: "Team",
+  items: [BRAINSTORM_ITEM],
 };
 
 // Reorder Workspace per spec: Dashboard, Live Feed, Summaries, Congresses, Discover, My Following, Digests
@@ -102,7 +106,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     () => {
       const workspace: NavSection = { label: "Workspace", items: WORKSPACE_ORDERED };
       if (!isAdmin) return [workspace];
-      return [workspace, ADMIN_SECTION];
+      return [workspace, BRAINSTORM_SECTION, ADMIN_SECTION];
     },
     [isAdmin],
   );
