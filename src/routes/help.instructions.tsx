@@ -216,11 +216,129 @@ const SECTIONS: Section[] = [
       { title: "Groups", body: "Create and curate the source groups that show up under Discover → By group." },
       { title: "Recommendations", body: "Tune the recommendation engine, review nominated handles, and approve them into the catalogue." },
       { title: "Ingestion", body: "Trigger or inspect ingestion jobs, the queue, and webhook health." },
-      { title: "Brainstorm", body: "Internal team brainstorm space. The sidebar badge shows unread messages." },
       { title: "Email diagnostics", body: "Inspect the email queue, recent sends, bounces, and DLQ entries." },
     ],
     screenshot: "Admin panel",
     image: "/help-screenshots/admin.png",
+  },
+  {
+    id: "spotlight",
+    number: "15",
+    title: "Source Spotlight",
+    overview:
+      "A deep-dive page for any X handle in the catalogue. Click a @handle anywhere in the app — feed cards, digests, alerts — to land here. Combines header, themes, rhythm, inner circle, recent tweets, and the actions you'd want before a meeting or reply.",
+    steps: [
+      { title: "Open a Spotlight", body: "Click any @handle chip in the feed, in a digest, or in an alert match. Direct URL: /sources/:handle." },
+      { title: "Read the header", body: "Avatar, display name, verified badge, bio, follower count, cancer-area chips, and group memberships. Group pills link back to /groups/:slug." },
+      { title: "Use the CTAs", body: "Follow / Unfollow, 'Set up alerts' (creates a watchlist pre-filled with this source), and 'Generate briefing' (see next section)." },
+      { title: "Themes panel", body: "LLM-derived themes from the last ~30 days of activity, each with cancer-area chips, top hashtags, and example tweets." },
+      { title: "Rhythm panel", body: "Two histograms — hour-of-day and day-of-week — with an inferred timezone caption so you know when this person is most active." },
+      { title: "Inner circle", body: "Two columns: who they reply to most, and who replies to them most. Hidden cleanly when there isn't enough signal.", tip: "Click any handle in either column to jump to that source's Spotlight." },
+      { title: "Recent tweets", body: "Tabs for Recent and Top (re-ranked by engagement). Open any tweet in the standard thread dialog." },
+    ],
+    screenshot: "Source Spotlight with header, themes, rhythm, inner circle",
+  },
+  {
+    id: "briefings",
+    number: "16",
+    title: "Source Briefings",
+    overview:
+      "A printable one-pager summarising a source's last 30 days — themes, recent stances, points of disagreement, conversation partners, upcoming relevance, and recommended angles. Designed for the 'before a congress, before a clinical meeting, before a cold reply' use case.",
+    steps: [
+      { title: "Generate a briefing", body: "On any Source Spotlight page, click 'Generate briefing'. First open takes 5–10s while the LLM runs; subsequent opens hit the weekly cache and render instantly." },
+      { title: "Read the sections", body: "Executive summary, main themes (with weight bars), notable stances (with citations), points of disagreement, conversation partners, upcoming relevance, recommended angles, and caveats." },
+      { title: "Recommended angles", body: "The highlighted section near the bottom — concrete conversation starters tied to specific recent tweets. This is the 'why you opened the briefing' payoff." },
+      { title: "Copy as text", body: "Plain-text serialisation of all sections. Useful for pasting into a CRM, prep doc, or reply draft." },
+      { title: "Print", body: "Optimised print stylesheet hides the dialog chrome, switches to a serif body, and breaks the page so Recommended Angles starts at the top of page 2.", tip: "Briefings are cached per source for 7 days. Admins see a refresh icon to force regeneration." },
+    ],
+    screenshot: "Source briefing dialog with all sections expanded",
+  },
+  {
+    id: "alerts",
+    number: "17",
+    title: "Alerts & Watchlists",
+    overview:
+      "Watchlists turn 'I want to know when X happens' into emails and an in-app inbox. Bind a watchlist to a source, group, congress, or hashtag, add topic keywords, and pick how you want to be told. The /alerts page has two tabs: Inbox (matches) and Watchlists (rules).",
+    steps: [
+      { title: "Create a watchlist", body: "Easiest path: open a Source Spotlight and click 'Set up alerts' — the dialog pre-fills source and target. You can also create one directly from /alerts → Watchlists tab." },
+      { title: "Add topics", body: "Topics are keywords or short phrases. A match fires when a tweet from the target mentions any topic (literal or semantic). Press Enter to add a chip; click X to remove." },
+      { title: "Configure email delivery", body: "Toggle email on, set quiet hours and timezone (defaults to your digest timezone), and choose a daily cap. Matches that arrive during quiet hours are coalesced into a single email when the window ends." },
+      { title: "Inbox tab", body: "Stream of all matches across all watchlists. Each card shows source, tweet excerpt, matched-topic chip, and a match-reason chip ('keyword: …' or 'semantic: …'). Reply, Open on X, or Dismiss inline." },
+      { title: "Real-time updates", body: "New matches appear instantly via realtime — both the topbar bell and the Inbox update without a refresh." },
+      { title: "Mute / Pause / Delete", body: "Per-watchlist kebab menu: Mute 24h (in-app stays, email stops), Pause (no new matches at all), or Delete. The mute link in every email also works as a single-use 24h mute.", tip: "Use Pause when you're on holiday; use Mute when you just want a quiet day." },
+    ],
+    screenshot: "Alerts inbox with realtime match cards",
+  },
+  {
+    id: "reply-drafts",
+    number: "18",
+    title: "Reply Drafts",
+    overview:
+      "When you click Reply on a feed card or an alert match, the compose dialog can suggest three LLM-drafted replies in distinct registers — academic question, supporting context, or counterpoint. Pick one, edit, send.",
+    steps: [
+      { title: "Open the composer in reply mode", body: "Click Reply on any post (in the feed, a thread, or an alert match). The dialog opens with the source tweet quoted at the top." },
+      { title: "Suggest drafts", body: "Click 'Suggest drafts'. Three options render in distinct registers so you can pick the angle that matches your voice." },
+      { title: "Pick and edit", body: "Click a draft to populate the textarea (with the @handle pre-prepended). Edit freely — the draft is a starting point, not a script." },
+      { title: "Send", body: "Posts using your active connected X account. Success toast includes a 'View on X' link.", tip: "Daily post limit is 50/account/day. If you hit it, you'll get a friendly error and the attempt is logged but never sent to X." },
+    ],
+    screenshot: "Compose dialog with three suggested reply drafts",
+  },
+  {
+    id: "onboarding",
+    number: "19",
+    title: "Onboarding Wizard",
+    overview:
+      "The first-run flow that gets you from sign-up to a working feed in about three minutes. Steps: Welcome, Specialties, Congresses, Sources, Connect X, Hashtags, Review, Provisioning. Resumable — close it and a banner brings you back.",
+    steps: [
+      { title: "Pick specialties", body: "Choose 2–3 cancer areas and mark one primary. Drives 'For you' recommendations, the specialty digest preset, and the Quick Start panel." },
+      { title: "Pick congresses & sources", body: "Optional but recommended — seeds your feed with relevant signal from day one." },
+      { title: "Connect X", body: "Inserted between Sources and Hashtags. Opens the Connect X Wizard (next section). You can skip and connect later from Settings — a grace banner reminds you." },
+      { title: "Pick hashtags", body: "1–2 hashtags relevant to your specialties keeps the live feed flowing." },
+      { title: "Review & provision", body: "Confirm everything, submit, and the provisioning step seeds your initial ingestion. You land on the Dashboard with Quick Start active." },
+    ],
+    screenshot: "Onboarding wizard step list",
+  },
+  {
+    id: "connect-x-wizard",
+    number: "20",
+    title: "Connect X Wizard",
+    overview:
+      "An eight-step illustrated walkthrough that takes you from 'no X developer account' to 'connected with Read+Write'. Used during onboarding and re-openable any time from Settings → X account.",
+    steps: [
+      { title: "Open the wizard", body: "Triggered automatically during onboarding, or on demand from Settings → X account → 'Set this up now'." },
+      { title: "Walk the eight steps", body: "Create a developer account, create an App, choose a tier, configure permissions to Read+Write, generate Consumer Keys, generate Access Tokens, paste into UroFeed, verify." },
+      { title: "Verify", body: "Step 8 calls X with your credentials and confirms 'Connected as @username — Read ✓ — Write ✓'. Confetti fires once and the wizard closes." },
+      { title: "Grace period", body: "If you skip during onboarding, you have a grace period before posting features start nudging. The header shows a 'pending X connection' link.", tip: "Use a dedicated app, not your personal one, if you'll be posting on behalf of a team." },
+    ],
+    screenshot: "Connect X wizard step 8 with verified state",
+  },
+  {
+    id: "brainstorm",
+    number: "21",
+    title: "Brainstorm",
+    overview:
+      "A standalone team chat surface (separate from Admin) for product and clinical team conversations. Realtime presence, reactions, and per-message read state.",
+    steps: [
+      { title: "Open Brainstorm", body: "Sidebar → Brainstorm. The badge counts unread messages addressed to your role." },
+      { title: "Post a message", body: "Composer at the bottom; supports plain text, mentions, and reactions." },
+      { title: "React", body: "Hover any message and pick a reaction. Reactions are realtime across all connected clients." },
+      { title: "Catch up after time away", body: "The 'Unread since you were last here' dialog summarises what you missed when you reopen the channel." },
+    ],
+    screenshot: "Brainstorm message list with presence and reactions",
+  },
+  {
+    id: "groups",
+    number: "22",
+    title: "Groups",
+    overview:
+      "Curated, admin-maintained source lists (e.g. 'Prostate cancer KOLs', 'Industry voices'). Subscribe to a whole group and every member feeds into your stream. Group detail pages show members, recent activity, and let you subscribe in one click.",
+    steps: [
+      { title: "Browse groups", body: "Discover → By group shows every official group filtered by your specialties." },
+      { title: "Open a group", body: "Click any card to open /groups/:slug — full member list with handle chips, follow status, and subscribe-to-group toggle at the top." },
+      { title: "Subscribe", body: "Subscribing pins the group to your following set so all current and future members feed into your live stream." },
+      { title: "Unsubscribe", body: "Unsubscribe at any time from the same toggle. Individually-followed members stay followed.", tip: "Group membership changes propagate automatically — no need to re-subscribe when admins add new handles." },
+    ],
+    screenshot: "Group detail page with member list and subscribe toggle",
   },
 ];
 
