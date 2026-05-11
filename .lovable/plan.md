@@ -1,99 +1,81 @@
+# Connect-X Wizard + Per-User Ingestion
+
 ## Scope
 
-Surface-level restructure across navigation, Discover, Compose entry points, and Settings. One small migration adds digest preference columns; no other schema changes.
+1. Schema: extend `user_x_credentials`, add `user_x_setup_progress`, add `profiles.x_grace_until`, ensure `ingest_queue.requested_by` exists.
+2. Wizard UI: `XConnectWizard` — 8 steps, resumable, opened from Settings → X tab and from a new (skippable) onboarding step. Honest SVG illustrations using app palette + font, captioned "Illustration".
+3. Ingestion refactor: worker resolves credentials per `requested_by` user; falls back to `X_BEARER_TOKEN` only inside the user's per-user grace window with reduced cadence (1×/day) and source cap (top 10 most-recently-subscribed).
+4. Status surfaces: connected card with read/post quota usage; banner after grace expires for unconnected users.
 
----
+## Steps
 
-### 1. Sidebar (`src/components/shell/Sidebar.tsx`)
-
-Restructure into two visible sections + a bottom utility area separated by a divider.
-
-- Workspace (non-admin): Dashboard, Live Feed, Summaries, Congresses, Discover, **My Following** (was Sources), Digests
-- Admin section (admin only): Users, Groups, Recommendations, Ingestion, **Brainstorm** (moved here), **Email diagnostics** (new entry → `/admin/email-diagnostics`)
-- Bottom (above collapse toggle, divider above): Help, Settings
-- Remove "Configuration" group entirely; remove second Discover entry; remove the Help group container (Help becomes a bottom item; Contact stays as a bottom item too).
-- Re-route `/admin/email-diagnostics` to render `EmailDiagnosticsView` (currently it redirects to `/admin/users` — replace).
-
-### 2. Discover unification
-
-- Rewrite `src/routes/discover.tsx` (currently `<Outlet />`) into a real page with a header and three tabs (`for-you`, `by-group`, `by-specialty`).
-- Tab persistence: `localStorage["urofeed:discover:tab"]`, default `by-specialty` for new users; reads `?tab=` search param to allow direct linking.
-- Header filter bar above tabs: search input, specialty chip filter, verified-only toggle. Filters apply to all three tabs (passed down as props).
-- Reuse existing logic from `discover.index.tsx` and `discover.groups.tsx` by importing their main components.
-- New "By specialty" tab component:
-  - Reads `user_specialties` for current user → queries `recommended_sources_by_specialty` joined to `sources` filtered by those specialty IDs.
-  - Excludes sources already followed (left-join `user_subscribed_sources` filter).
-  - Groups by specialty with section headers ("Specialty · N recommendations"), primary specialty first, weight desc.
-  - Empty state when user has no specialties: prompt + button dispatches `urofeed:open-wizard-step` event with `Specialties` step.
-  - Follow uses existing `useFollowSource` hook.
-- Old routes:
-  - `discover.index.tsx` → redirect to `/discover?tab=for-you`
-  - `discover.groups.tsx` → redirect to `/discover?tab=by-group`
-
-### 3. Compose promotion
-
-- `TopBar.tsx`: replace ComposeButton with primary CTA (`bg-accent text-accent-foreground`, h-9, ~110px wide, "Share to X" + Send icon) on `sm+`, 40px accent icon-only on mobile. Same dialog.
-- `TweetStream.tsx` (top of feed): inline composer Panel with avatar + muted prompt "What did you take away from this?". Click opens `ComposeTweetDialog` with initialText pre-filled with the active congress's first primary hashtag if `feedFilters.congressId` is set.
-- `TweetCard.tsx`: add Quote icon between reply and external-link. Opens compose dialog with initialText `https://x.com/<handle>/status/<id>\n\n` and cursor at the end.
-- Mobile FAB: new `<MobileComposeFab />` rendered inside `AppShell.tsx`. Uses a `useShouldShowComposeFab(pathname)` hook with allowlist (`/`, `/dashboard`, `/feed`, `/summaries`, `/congresses`, `/congresses/$`, `/sessions/$`, `/discover`, `/sources`, `/digests`); hidden on `/auth`, `/settings`, `/admin/*`, `/help/*`, `/configuration/*`, `/unsubscribe`. 56px circle, `fixed bottom-6 right-4 z-30`, accent bg, Plus icon, `active:scale-95`, `shadow-lg`, only shows on viewport `< md`. Hidden when dialog is open and when keyboard visible (visualViewport heuristic).
-
-### 4. Settings consolidation
-
-- Tabs: **Profile** · Preferences · **Notifications** · AI · X account
-- Drop Team and Ingestion tabs (and their imports).
-- New `ProfileSettings.tsx`: read-only email, editable display_name + avatar_url (writes to `profiles`), specialty multi-select moved from Interests (writes to `user_specialties`), Sign out button. Remove the Interests tab entirely.
-- Rename "X (Twitter)" tab label to "X account".
-- New `NotificationsSettings.tsx`: top mono caption with link to `/digests`. Then form bound to new `user_preferences` columns:
-  - `digest_default_frequency` (daily | weekly | biweekly | monthly, default weekly)
-  - `digest_default_send_hour` (0–23, default 9)
-  - `digest_default_timezone` (text, default 'UTC')
-  - `digests_active_by_default` (bool, default true)
-  - `digests_master_enabled` (bool, default true) — when false, `send-digests` route skips the user
-  - In-app toggles: `notify_new_summary` (bool), `notify_new_tweet_followed_source` (bool), `notify_weekly_recap` (bool)
-- DigestWizard reads defaults from `user_preferences` (replaces hardcoded `weekly` / `9`).
-- `send-digests` cron handler: skip subscriptions where the owning user has `digests_master_enabled = false`.
-- `/digests` stays as-is, sidebar entry stays. No redirect.
-
-### 5. Migration
-
-Add columns to `user_preferences` with defaults so existing rows stay valid:
-
-```sql
-ALTER TABLE public.user_preferences
-  ADD COLUMN IF NOT EXISTS digest_default_frequency text NOT NULL DEFAULT 'weekly',
-  ADD COLUMN IF NOT EXISTS digest_default_send_hour smallint NOT NULL DEFAULT 9,
-  ADD COLUMN IF NOT EXISTS digest_default_timezone text NOT NULL DEFAULT 'UTC',
-  ADD COLUMN IF NOT EXISTS digests_active_by_default boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS digests_master_enabled boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS notify_new_summary boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS notify_new_tweet_followed_source boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS notify_weekly_recap boolean NOT NULL DEFAULT true;
-
-ALTER TABLE public.user_preferences
-  ADD CONSTRAINT user_preferences_digest_frequency_check
-  CHECK (digest_default_frequency IN ('daily','weekly','biweekly','monthly'));
-
-ALTER TABLE public.user_preferences
-  ADD CONSTRAINT user_preferences_digest_send_hour_check
-  CHECK (digest_default_send_hour BETWEEN 0 AND 23);
+```text
+1  Do you have a developer account?     → branch: yes / no (link to developer.x.com signup)
+2  Pick your tier (Free/Basic/Pro)      → user-declared, stored on credentials.tier; explains read+post quota
+3  Create a Project + App                → illustration of Portal nav
+4  Set User authentication settings      → Read+Write, OAuth 1.0a, Type=Web App, callback http://localhost
+5  Generate Consumer Keys + Access Token → illustration of Keys&Tokens tab; "regenerate Access Token AFTER setting permissions"
+6  Paste credentials                     → 4 inputs; calls existing connectX server fn (verifies + stores encrypted)
+7  Verify                                → shows username pulled back, read+post scopes
+8  Done                                  → links to Sources page; explains grace period if applicable
 ```
 
-No RLS changes needed (existing per-user policies on `user_preferences` cover the new columns).
+Each step:
+- Left: instructions + copy buttons for callback URL.
+- Right: SVG illustration component (`<PortalIllustration variant="..." />`) with footer "Illustration — the actual X Developer Portal may look different."
+- Bottom: Back / Save & exit / Next. Progress persisted on Next via `saveSetupProgress` server fn.
 
----
+## Per-user ingestion
 
-### Implementation order
+`src/server/ingestion.server.ts` (and queue worker `process-ingest-queue`):
 
-1. Run the migration (await approval).
-2. Sidebar restructure + email-diagnostics route swap.
-3. Discover unification + redirects.
-4. Settings tabs (Profile, Notifications, drop Team/Interests/Ingestion).
-5. DigestWizard + send-digests honor new prefs.
-6. Compose promotion (TopBar, inline composer, TweetCard quote, mobile FAB).
-7. Sanity check build, navigate the affected routes in preview.
+```text
+for each job with requested_by = U:
+  creds = getActiveCredentials(U)       // decrypts via x-credentials.server
+  if creds: use OAuth1 user-context for X v2 search
+  else:
+    grace_until = profile.x_grace_until ?? created_at + 14d
+    if now < grace_until AND job is among U's top-10 most-recent subs
+       AND U has no successful ingest in last 24h:
+         use platform X_BEARER_TOKEN
+    else: mark job skipped(reason='no_credentials' | 'grace_expired' | 'rate_capped')
+```
 
-### Out of scope
+Bump per-user `read_count_today` (rolling 15-min window resets).
 
-- No changes to `BrainstormUnreadDialog` or its preference (already done in prior turn).
-- No new bottom-tab-bar (POLISH_TODO item, not built).
-- No copy/visual changes outside the surfaces named above.
+## Files
+
+**Migrations** (single migration):
+- `alter user_x_credentials add tier, scope_read, read_count_window_start, read_count_today`
+- `create user_x_setup_progress` + RLS owner-only
+- `alter profiles add x_grace_until timestamptz` + backfill `created_at + interval '14 days'`
+- `alter ingest_queue add requested_by uuid` (only if missing)
+
+**Server**
+- `src/server/x-ingestion-credentials.server.ts` — resolve creds + grace policy.
+- Patch `src/server/ingestion.server.ts` to use it.
+- `src/serverFns/x-setup-progress.ts` — get/save wizard progress; `setTier`.
+
+**Client**
+- `src/components/x-wizard/XConnectWizard.tsx` (Dialog host + step router)
+- `src/components/x-wizard/steps/Step1Account.tsx` … `Step8Done.tsx`
+- `src/components/x-wizard/PortalIllustration.tsx` (8 variants, inline SVG, themed)
+- `src/components/x-wizard/IllustrationFrame.tsx` (caption wrapper)
+- Hook into `XSettings.tsx`: replace raw key form with "Connect via wizard" CTA + keep advanced manual entry collapsed.
+- `OnboardingWizard.tsx`: insert "Connect X" step (skippable; sets a dismissed flag).
+- `AppShell` or top-level: show `XGracePostExpiryBanner` when `!connected && now > x_grace_until`.
+
+## Acceptance
+
+- Migration applies cleanly; existing connected users unaffected.
+- Wizard opens from Settings → X and onboarding; step state persists across reload.
+- Pasting valid keys returns username and writes encrypted record.
+- Ingest job for connected user uses their token (verified via `ingestion_runs` notes column carrying `auth=user`).
+- Ingest job for unconnected user within grace runs once/day on top-10 sources only.
+- After grace, unconnected user sees banner; their queued jobs are marked skipped with `grace_expired`.
+
+## Out of scope (this pass)
+
+- Real X Developer Portal screenshots (illustrations only; slot left for later).
+- OAuth-based "one-click connect" (still manual key paste).
+- Automatic tier auto-detection (user-declared).
