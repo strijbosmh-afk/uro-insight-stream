@@ -254,8 +254,30 @@ export const apiFeedService: FeedService = {
     return rowToSource(data);
   },
   async removeSource(idArg) {
+    // Pre-query watchlists that target this source so we can leave a
+    // breadcrumb in admin_audit_log (the FK is ON DELETE CASCADE — without
+    // this, support has no way to answer "where did my watchlist go?").
+    const { data: cascaded } = await supabase
+      .from("user_watchlists")
+      .select("id, user_id, name")
+      .eq("target_source_id", idArg);
     const { error } = await supabase.from("sources").delete().eq("id", idArg);
     if (error) throw new Error(error.message);
+    if (cascaded && cascaded.length > 0) {
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        await supabase.from("admin_audit_log").insert({
+          actor_user_id: u.user.id,
+          action: "source.delete.cascaded_watchlists",
+          metadata: {
+            source_id: idArg,
+            cascaded_watchlists: cascaded.length,
+            watchlist_ids: cascaded.map((w) => w.id),
+            affected_users: Array.from(new Set(cascaded.map((w) => w.user_id))),
+          } as never,
+        });
+      }
+    }
   },
   async testSource(idArg) {
     const { data, error } = await supabase
