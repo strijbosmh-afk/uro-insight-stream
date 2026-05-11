@@ -48,6 +48,39 @@ export interface AuthCtx {
 
 const AuthContext = React.createContext<AuthCtx | null>(null);
 
+// Defensive cleanup for a corrupted persisted Supabase session.
+// If the stored refresh_token is missing or obviously malformed (real
+// gotrue tokens are long opaque strings), gotrue's auto-refresh will
+// hammer /auth/v1/token forever with `Failed to fetch`/`invalid_grant`
+// loops. Wipe the bad entry so the user falls back to a clean
+// signed-out state instead of an infinite background error storm.
+function purgeCorruptSupabaseSession() {
+  if (typeof window === "undefined") return;
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key) continue;
+      if (!/^sb-.*-auth-token$/.test(key)) continue;
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      const rt = (parsed as { refresh_token?: unknown })?.refresh_token;
+      if (typeof rt !== "string" || rt.length < 20) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+    }
+  } catch {
+    // ignore — never let cleanup crash the app
+  }
+}
+
 const DEFAULT_PREFS: UserPreferences = {
   default_congress_id: null,
   default_source_list_id: null,
