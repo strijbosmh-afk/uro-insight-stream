@@ -14,6 +14,7 @@ import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongress
 import { feedService } from "@/services/feedService";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
+import { getXSetupProgress } from "@/serverFns/x-setup-progress";
 import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
 
 const STEPS = [
@@ -68,6 +69,10 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const { data: xStatus } = useQuery({
     queryKey: ["x-connection-status"],
     queryFn: () => getXConnectionStatus(),
+  });
+  const { data: xSetup } = useQuery({
+    queryKey: ["x-setup-progress"],
+    queryFn: () => getXSetupProgress(),
   });
 
   // Hydrate existing user state when scope-running so users see their picks.
@@ -416,6 +421,7 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
             <ConnectXStep
               connected={!!xStatus}
               username={xStatus?.x_username ?? null}
+              currentStep={xSetup?.progress?.current_step ?? 1}
               onLaunch={() => setXWizardOpen(true)}
               onDefer={async () => {
                 if (!user) return;
