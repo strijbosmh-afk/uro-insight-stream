@@ -138,6 +138,22 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
 
   const notConnected = !statusLoading && !status;
 
+  // Pre-cached reply starter drafts, keyed by parent tweet. Only fetched when
+  // the dialog is open in reply mode for a real tweet id.
+  const fetchReplyDrafts = useServerFn(suggestReplyDrafts);
+  const replyDraftsQuery = useQuery<ReplyDraftsResult>({
+    queryKey: ["reply-drafts", reply?.tweetId],
+    queryFn: () => fetchReplyDrafts({ data: { tweetId: reply!.tweetId } }),
+    enabled: open && !!reply?.tweetId && !notConnected,
+    staleTime: 60 * 60 * 1000,
+    retry: 0,
+  });
+
+  function applyDraftText(draftText: string) {
+    const mention = reply ? `@${reply.authorHandle} ` : "";
+    setText(mention + draftText);
+  }
+
   async function handleSuggest() {
     setSuggestLoading(true);
     try {
