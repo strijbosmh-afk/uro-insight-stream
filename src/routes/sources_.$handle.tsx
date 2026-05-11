@@ -331,6 +331,17 @@ function SourceSpotlightPage() {
                   target={{ kind: "source", id: src.id, label: `@${src.handle}` }}
                   className="gap-1 text-[11px]"
                 />
+                <SourceBriefingDialog
+                  handle={src.handle}
+                  displayName={src.display_name || `@${src.handle}`}
+                  avatarUrl={src.avatar_url}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="gap-1 text-[11px]">
+                      <FileText className="w-3 h-3" />
+                      Briefing
+                    </Button>
+                  }
+                />
                 <a
                   href={`https://x.com/${src.handle}`}
                   target="_blank"
