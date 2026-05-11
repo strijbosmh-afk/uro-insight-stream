@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,9 +19,33 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useUnfollowSource } from "@/hooks/useHandleActions";
 
+function FollowingErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <MobileSubPage title="Following">
+      <div className="bg-panel border border-border rounded-[3px] p-6 text-center">
+        <div className="text-[14px] text-text-primary mb-1">Couldn't load your follows</div>
+        <div className="text-[12px] text-text-muted mb-4">
+          {error.message || "Network error. Please try again."}
+        </div>
+        <Button
+          size="sm"
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    </MobileSubPage>
+  );
+}
+
 export const Route = createFileRoute("/me/following")({
   head: () => ({ meta: [{ title: "People I follow — UroFeed" }] }),
   component: MeFollowingPage,
+  errorComponent: FollowingErrorComponent,
 });
 
 type Source = {
@@ -42,6 +66,8 @@ function MeFollowingPage() {
   const { data: sources = [], isLoading } = useQuery({
     queryKey: ["me-following-sources", user?.id],
     enabled: !!user,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_subscribed_sources")
