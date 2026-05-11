@@ -11,11 +11,22 @@ import {
   Loader2,
   MessageSquareQuote,
   Plus,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/shell/Panel";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as ReTooltip,
+  ResponsiveContainer,
+} from "recharts";
 import {
   Tooltip,
   TooltipContent,
@@ -25,14 +36,21 @@ import {
 import { TweetCard } from "@/components/feed/TweetCard";
 import {
   getSourceSpotlightCore,
+  getSourceThemes,
+  getSourceRhythm,
+  getSourceInnerCircle,
   type SpotlightCore,
   type SpotlightTweet,
   type SpotlightSource,
+  type SpotlightThemes,
+  type SpotlightRhythm,
+  type SpotlightInnerCircle,
 } from "@/serverFns/source-spotlight";
 import {
   useFollowSource,
   useUnfollowSource,
 } from "@/hooks/useHandleActions";
+import { useIsAdmin } from "@/auth/permissions";
 import type { Source as DomainSource, Tweet as DomainTweet } from "@/types";
 
 export const Route = createFileRoute("/sources_/$handle")({
