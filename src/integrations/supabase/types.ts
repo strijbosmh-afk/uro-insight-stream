@@ -956,6 +956,7 @@ export type Database = {
           email: string
           id: string
           is_demo: boolean
+          pending_x_connection: boolean
           updated_at: string
           x_grace_until: string | null
         }
@@ -967,6 +968,7 @@ export type Database = {
           email: string
           id: string
           is_demo?: boolean
+          pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
         }
@@ -978,6 +980,7 @@ export type Database = {
           email?: string
           id?: string
           is_demo?: boolean
+          pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
         }
