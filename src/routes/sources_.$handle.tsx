@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/tooltip";
 import { TweetCard } from "@/components/feed/TweetCard";
 import { SetUpAlertsButton } from "@/components/watchlists/WatchlistFormDialog";
+import { SourceBriefingDialog } from "@/components/spotlight/SourceBriefingDialog";
+import { FileText } from "lucide-react";
 import {
   getSourceSpotlightCore,
   getSourceThemes,
