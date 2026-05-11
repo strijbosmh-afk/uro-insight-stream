@@ -50,7 +50,7 @@ import {
   useFollowSource,
   useUnfollowSource,
 } from "@/hooks/useHandleActions";
-import { useIsAdmin } from "@/auth/permissions";
+import { useCanAdmin } from "@/auth/permissions";
 import type { Source as DomainSource, Tweet as DomainTweet } from "@/types";
 
 export const Route = createFileRoute("/sources_/$handle")({
