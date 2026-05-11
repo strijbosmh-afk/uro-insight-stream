@@ -715,14 +715,18 @@ function SpecialtiesStep({
 function ConnectXStep({
   connected,
   username,
+  currentStep,
   onLaunch,
   onDefer,
 }: {
   connected: boolean;
   username: string | null;
+  currentStep: number;
   onLaunch: () => void;
   onDefer: () => void | Promise<void>;
 }) {
+  const completed = Math.max(0, Math.min(8, currentStep - 1));
+  const inProgress = !connected && completed > 0;
   return (
     <div className="space-y-5 max-w-xl">
       <div>
@@ -750,7 +754,11 @@ function ConnectXStep({
       )}
       <div className="flex flex-wrap gap-2">
         <Button onClick={onLaunch}>
-          {connected ? "Manage X connection" : "Set this up now"}
+          {connected
+            ? "Manage X connection"
+            : inProgress
+              ? `Resume setup (${completed} of 8 complete)`
+              : "Set this up now"}
         </Button>
         <Button variant="ghost" onClick={() => void onDefer()}>
           I'll do this later
