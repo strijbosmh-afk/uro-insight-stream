@@ -66,7 +66,7 @@ export function HandleChip({ handle, className, variant = "default", children }:
     }
     e.preventDefault();
     e.stopPropagation();
-    setMenuPos({ x: e.clientX, y: e.clientY });
+    navigate({ to: "/sources/$handle", params: { handle: cleanHandle } });
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLSpanElement>) => {
@@ -146,6 +146,11 @@ export function HandleChip({ handle, className, variant = "default", children }:
     navigate({ to: "/feed" });
   };
 
+  const onViewProfile = () => {
+    closeMenu();
+    navigate({ to: "/sources/$handle", params: { handle: cleanHandle } });
+  };
+
   const isFollowing = !!sub?.isSubscribed;
 
   return (
@@ -176,7 +181,7 @@ export function HandleChip({ handle, className, variant = "default", children }:
           <span
             className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 whitespace-nowrap font-mono text-[10px] uppercase tracking-wider text-text-muted bg-panel-elevated border border-border px-1.5 py-1 rounded-[2px]"
           >
-            right-click for actions · ⌘ click to open on X
+            click for profile · right-click for actions · ⌘ click to open on X
           </span>
         )}
       </span>
@@ -195,6 +200,7 @@ export function HandleChip({ handle, className, variant = "default", children }:
             openX();
           }}
           onViewTweets={onViewTweets}
+          onViewProfile={onViewProfile}
         />
       )}
     </>
@@ -217,6 +223,7 @@ function HandleMenu({
   onCopy,
   onOpenX,
   onViewTweets,
+  onViewProfile,
 }: {
   pos: MenuPos;
   handle: string;
@@ -228,6 +235,7 @@ function HandleMenu({
   onCopy: () => void;
   onOpenX: () => void;
   onViewTweets: () => void;
+  onViewProfile: () => void;
 }) {
   // Clamp to viewport
   const [adj, setAdj] = React.useState<MenuPos>(pos);
@@ -265,6 +273,7 @@ function HandleMenu({
         </MenuRow>
       )}
       <Sep />
+      <MenuRow onClick={onViewProfile}>View profile</MenuRow>
       <MenuRow onClick={onOpenX}>
         Open @{handle} on X <span className="text-text-muted">↗</span>
       </MenuRow>

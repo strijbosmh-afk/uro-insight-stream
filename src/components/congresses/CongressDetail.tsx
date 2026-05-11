@@ -353,7 +353,13 @@ export function CongressDetail({ congressId }: { congressId: string }) {
                   {scopedSources.slice(0, 20).map((s) => (
                     <TableRow key={s.id} className="border-border">
                       <TableCell className="font-mono text-[12px] text-accent">
-                        @{s.handle}
+                        <Link
+                          to="/sources/$handle"
+                          params={{ handle: s.handle.replace(/^@/, "") }}
+                          className="hover:underline"
+                        >
+                          @{s.handle.replace(/^@/, "")}
+                        </Link>
                       </TableCell>
                       <TableCell className="text-[12px]">{s.displayName}</TableCell>
                       <TableCell className="text-[11px] uppercase tracking-wider text-text-muted">

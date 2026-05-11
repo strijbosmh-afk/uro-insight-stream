@@ -139,18 +139,24 @@ function GroupDetailPage() {
           <ul className="divide-y divide-border">
             {g.members.map((m) => (
               <li key={m.source_id} className="flex items-center gap-3 py-2">
-                {m.avatar_url ? (
-                  <img src={m.avatar_url} alt="" className="w-8 h-8 rounded-full" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-panel-elevated border border-border" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] text-text-primary truncate flex items-center gap-1">
-                    {m.display_name || m.handle}
-                    {m.verified && <BadgeCheck className="w-3 h-3 text-accent" />}
+                <Link
+                  to="/sources/$handle"
+                  params={{ handle: m.handle }}
+                  className="flex items-center gap-3 min-w-0 flex-1 group"
+                >
+                  {m.avatar_url ? (
+                    <img src={m.avatar_url} alt="" className="w-8 h-8 rounded-full group-hover:ring-2 group-hover:ring-accent/40 transition" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-panel-elevated border border-border" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] text-text-primary truncate flex items-center gap-1 group-hover:text-accent transition-colors">
+                      {m.display_name || m.handle}
+                      {m.verified && <BadgeCheck className="w-3 h-3 text-accent" />}
+                    </div>
+                    <div className="text-[11px] font-mono text-text-muted">@{m.handle}</div>
                   </div>
-                  <div className="text-[11px] font-mono text-text-muted">@{m.handle}</div>
-                </div>
+                </Link>
                 <a
                   href={`https://twitter.com/${m.handle}`}
                   target="_blank"

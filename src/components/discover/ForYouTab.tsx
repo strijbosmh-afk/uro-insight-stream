@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Loader2, UserPlus, X, BadgeCheck, Users } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
 import { Button } from "@/components/ui/button";
@@ -159,19 +160,31 @@ export function ForYouTab({ filters }: { filters: DiscoverFilterState }) {
                 className="mt-1"
                 aria-label={`Select @${c.handle}`}
               />
-              {c.avatar_url ? (
-                <img src={c.avatar_url} alt="" loading="lazy"
-                  className="w-10 h-10 rounded-full shrink-0 bg-panel-elevated" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-panel-elevated shrink-0" />
-              )}
+              <Link to="/sources/$handle" params={{ handle: c.handle }} className="shrink-0">
+                {c.avatar_url ? (
+                  <img src={c.avatar_url} alt="" loading="lazy"
+                    className="w-10 h-10 rounded-full bg-panel-elevated hover:ring-2 hover:ring-accent/40 transition" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-panel-elevated" />
+                )}
+              </Link>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium text-text-primary truncate">
+                  <Link
+                    to="/sources/$handle"
+                    params={{ handle: c.handle }}
+                    className="font-medium text-text-primary truncate hover:text-accent hover:underline"
+                  >
                     {c.display_name || `@${c.handle}`}
-                  </span>
+                  </Link>
                   {c.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
-                  <span className="text-text-muted text-sm">@{c.handle}</span>
+                  <Link
+                    to="/sources/$handle"
+                    params={{ handle: c.handle }}
+                    className="text-text-muted text-sm hover:text-accent"
+                  >
+                    @{c.handle}
+                  </Link>
                 </div>
                 {c.bio && (
                   <p className="text-sm text-text-muted mt-0.5 line-clamp-2">{c.bio}</p>
