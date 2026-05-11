@@ -1258,6 +1258,41 @@ export type Database = {
         }
         Relationships: []
       }
+      source_briefings: {
+        Row: {
+          briefing: Json
+          computed_at: string
+          expires_at: string
+          model: string
+          source_id: string
+          week_start: string
+        }
+        Insert: {
+          briefing: Json
+          computed_at?: string
+          expires_at?: string
+          model: string
+          source_id: string
+          week_start: string
+        }
+        Update: {
+          briefing?: Json
+          computed_at?: string
+          expires_at?: string
+          model?: string
+          source_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_briefings_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_candidate_dismissals: {
         Row: {
           created_at: string

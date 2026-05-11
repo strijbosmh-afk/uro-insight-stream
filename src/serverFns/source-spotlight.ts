@@ -16,6 +16,11 @@ import {
   inferTimezoneFromHourly,
   type SourceTheme,
 } from "@/server/source-themes.server";
+import {
+  computeSourceBriefing,
+  currentWeekStartUTC,
+  type SourceBriefing,
+} from "@/server/source-briefing.server";
 
 export type SpotlightSource = {
   id: string;
@@ -637,5 +642,211 @@ export const getSourceInnerCircle = createServerFn({ method: "POST" })
     return {
       outgoing: enrich(outgoingTop),
       incoming: enrich(incomingTop),
+    };
+  });
+
+// =====================================================================
+// Phase C — Briefing (LLM-derived one-pager, cached weekly)
+// =====================================================================
+
+export type SpotlightBriefing = {
+  briefing: SourceBriefing;
+  week_start: string;
+  computed_at: string;
+  expires_at: string;
+  model: string;
+  is_stale: boolean;
+  cache_hit: boolean;
+};
+
+const BriefingInputSchema = z.object({
+  handle: z
+    .string()
+    .min(1)
+    .max(50)
+    .transform((h) => h.replace(/^@/, "").trim().toLowerCase()),
+  refresh: z.boolean().optional().default(false),
+});
+
+export const getSourceBriefing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => BriefingInputSchema.parse(data))
+  .handler(async ({ data, context }): Promise<SpotlightBriefing | null> => {
+    const id = data.handle;
+    const now = Date.now();
+    const weekStart = currentWeekStartUTC();
+
+    if (data.refresh) {
+      await assertAdmin(context.supabase, context.userId);
+    }
+
+    // Confirm source exists
+    const { data: src } = await supabaseAdmin
+      .from("sources")
+      .select("id, bio")
+      .eq("id", id)
+      .maybeSingle();
+    if (!src) return null;
+
+    // Cache lookup keyed by (source_id, week_start).
+    const { data: cached } = await supabaseAdmin
+      .from("source_briefings")
+      .select("briefing, computed_at, expires_at, model")
+      .eq("source_id", id)
+      .eq("week_start", weekStart)
+      .maybeSingle();
+
+    const isStale = !cached || new Date(cached.expires_at).getTime() < now;
+    if (cached && !isStale && !data.refresh) {
+      return {
+        briefing: cached.briefing as unknown as SourceBriefing,
+        week_start: weekStart,
+        computed_at: cached.computed_at,
+        expires_at: cached.expires_at,
+        model: cached.model,
+        is_stale: false,
+        cache_hit: true,
+      };
+    }
+
+    // Pull inputs in parallel.
+    const sinceISO = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: tweetRows }, { data: areas }, { data: groupsRes }, { data: congressRes }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("tweets")
+          .select(
+            "id, text, hashtags, created_at, like_count, retweet_count, reply_count, tweet_type, parent_handle",
+          )
+          .eq("source_id", id)
+          .gte("created_at", sinceISO)
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabaseAdmin.from("cancer_areas").select("slug"),
+        supabaseAdmin
+          .from("source_group_members")
+          .select("source_groups:group_id ( name, is_archived )")
+          .eq("source_id", id),
+        supabaseAdmin
+          .from("congress_featured_sources")
+          .select(
+            "role, congresses:congress_id ( name, start_date, city, country )",
+          )
+          .eq("source_id", id),
+      ]);
+
+    const tweets = (tweetRows ?? []).map((t) => ({
+      id: t.id,
+      text: t.text,
+      hashtags: t.hashtags ?? [],
+      created_at: t.created_at,
+      like_count: t.like_count ?? 0,
+      retweet_count: t.retweet_count ?? 0,
+      reply_count: t.reply_count ?? 0,
+      tweet_type: t.tweet_type ?? null,
+      parent_handle: t.parent_handle ?? null,
+    }));
+
+    if (tweets.length < 10) {
+      // Not enough signal — return stale cache if available, else null.
+      if (cached) {
+        return {
+          briefing: cached.briefing as unknown as SourceBriefing,
+          week_start: weekStart,
+          computed_at: cached.computed_at,
+          expires_at: cached.expires_at,
+          model: cached.model,
+          is_stale: true,
+          cache_hit: true,
+        };
+      }
+      return null;
+    }
+
+    type GroupNameRow = { name: string; is_archived: boolean };
+    const groupNames: string[] = [];
+    for (const r of (groupsRes ?? []) as Array<{
+      source_groups: GroupNameRow | GroupNameRow[] | null;
+    }>) {
+      const g = Array.isArray(r.source_groups) ? r.source_groups[0] : r.source_groups;
+      if (g && !g.is_archived) groupNames.push(g.name);
+    }
+
+    type CongressMini = {
+      name: string;
+      start_date: string | null;
+      city: string | null;
+      country: string | null;
+    };
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const upcomingCongresses: Array<{
+      name: string;
+      start_date: string | null;
+      city: string | null;
+      country: string | null;
+      role: string | null;
+    }> = [];
+    for (const r of (congressRes ?? []) as Array<{
+      role: string | null;
+      congresses: CongressMini | CongressMini[] | null;
+    }>) {
+      const c = Array.isArray(r.congresses) ? r.congresses[0] : r.congresses;
+      if (!c) continue;
+      if (c.start_date && c.start_date < todayISO) continue;
+      upcomingCongresses.push({
+        name: c.name,
+        start_date: c.start_date,
+        city: c.city,
+        country: c.country,
+        role: r.role,
+      });
+    }
+
+    const slugs = (areas ?? []).map((a) => a.slug);
+    const result = await computeSourceBriefing({
+      handle: id,
+      bio: src.bio ?? null,
+      tweets,
+      cancerAreaSlugs: slugs,
+      upcomingCongresses,
+      groupNames,
+    });
+
+    if (!result) {
+      if (cached) {
+        return {
+          briefing: cached.briefing as unknown as SourceBriefing,
+          week_start: weekStart,
+          computed_at: cached.computed_at,
+          expires_at: cached.expires_at,
+          model: cached.model,
+          is_stale: true,
+          cache_hit: true,
+        };
+      }
+      throw new Error("briefing_unavailable");
+    }
+
+    const expiresAt = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const computedAt = new Date(now).toISOString();
+    await supabaseAdmin
+      .from("source_briefings")
+      .upsert({
+        source_id: id,
+        week_start: weekStart,
+        briefing: result.briefing as unknown as never,
+        computed_at: computedAt,
+        expires_at: expiresAt,
+        model: result.model,
+      });
+
+    return {
+      briefing: result.briefing,
+      week_start: weekStart,
+      computed_at: computedAt,
+      expires_at: expiresAt,
+      model: result.model,
+      is_stale: false,
+      cache_hit: false,
     };
   });
