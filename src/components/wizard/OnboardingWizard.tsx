@@ -12,12 +12,15 @@ import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from 
 import { Link } from "@tanstack/react-router";
 import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
 import { feedService } from "@/services/feedService";
+import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
+import { getXConnectionStatus } from "@/serverFns/x-credentials";
 
 const STEPS = [
   "Welcome",
   "Specialties",
   "Congresses",
   "Sources",
+  "ConnectX",
   "Hashtags",
   "Review",
   "Provisioning",
@@ -59,6 +62,11 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const [draftSources, setDraftSources] = React.useState<DraftSource[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const enqueueFn = useServerFn(enqueueUserSources);
+  const [xWizardOpen, setXWizardOpen] = React.useState(false);
+  const { data: xStatus } = useQuery({
+    queryKey: ["x-connection-status"],
+    queryFn: () => getXConnectionStatus(),
+  });
 
   // Hydrate existing user state when scope-running so users see their picks.
   React.useEffect(() => {
@@ -402,6 +410,21 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
               token={null /* using fetch with session */}
             />
           )}
+          {stepName === "ConnectX" && (
+            <ConnectXStep
+              connected={!!xStatus}
+              username={xStatus?.x_username ?? null}
+              onLaunch={() => setXWizardOpen(true)}
+              onDefer={async () => {
+                if (!user) return;
+                await supabase
+                  .from("profiles")
+                  .update({ pending_x_connection: true })
+                  .eq("id", user.id);
+                await goNext();
+              }}
+            />
+          )}
           {stepName === "Hashtags" && (
             <HashtagsStep
               input={hashtagInput}
@@ -483,6 +506,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
           </div>
         </div>
       </div>
+      {xWizardOpen && (
+        <XConnectWizard
+          open={xWizardOpen}
+          onOpenChange={setXWizardOpen}
+          onConnected={async () => {
+            if (user) {
+              await supabase
+                .from("profiles")
+                .update({ pending_x_connection: false })
+                .eq("id", user.id);
+            }
+            qc.invalidateQueries({ queryKey: ["x-connection-status"] });
+            setXWizardOpen(false);
+            await goNext();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -636,6 +676,55 @@ function SpecialtiesStep({
           </select>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------- Connect X ----------------
+function ConnectXStep({
+  connected,
+  username,
+  onLaunch,
+  onDefer,
+}: {
+  connected: boolean;
+  username: string | null;
+  onLaunch: () => void;
+  onDefer: () => void | Promise<void>;
+}) {
+  return (
+    <div className="space-y-5 max-w-xl">
+      <div>
+        <h2 className="text-xl font-semibold text-text-primary">
+          Connect your X (Twitter) API
+        </h2>
+        <p className="mt-2 text-sm text-text-secondary">
+          UroFeed runs ingestion and posting through <b>your</b> X developer
+          credentials so the platform doesn't share a single quota across
+          everyone. The setup wizard walks you through the X Developer Portal
+          in 8 illustrated steps — about 5 minutes.
+        </p>
+      </div>
+      {connected ? (
+        <div className="border border-success/40 bg-success/10 rounded-[3px] p-3 text-sm">
+          <Check className="inline w-4 h-4 text-success mr-1" />
+          Connected as <b>@{username}</b>. You can continue.
+        </div>
+      ) : (
+        <div className="border border-border rounded-[3px] p-3 text-xs text-text-muted bg-panel-elevated">
+          You have a 14-day grace window: ingestion runs once daily on up to
+          10 sources using a shared platform token while you set this up.
+          After that, ingestion pauses until you connect.
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={onLaunch}>
+          {connected ? "Manage X connection" : "Set this up now"}
+        </Button>
+        <Button variant="ghost" onClick={() => void onDefer()}>
+          I'll do this later
+        </Button>
+      </div>
     </div>
   );
 }

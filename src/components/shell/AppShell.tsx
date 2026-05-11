@@ -15,6 +15,7 @@ import { DemoBanner } from "./DemoBanner";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
+import { PostGraceBanner } from "@/components/x-wizard/PostGraceBanner";
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -83,6 +84,7 @@ export function AppShell() {
             <TopBar onOpenMobileNav={undefined} />
           </div>
           <DemoBanner />
+          <PostGraceBanner />
           {!wizardOpen &&
             gate.needsResumeBanner &&
             !bannerDismissed &&

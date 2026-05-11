@@ -26,6 +26,7 @@ import {
   postTweet,
 } from "@/serverFns/x-credentials";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 
 function graphemeLen(s: string) {
   try {
@@ -66,6 +67,7 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
   const qc = useQueryClient();
   const isMobile = useIsMobile();
   const [text, setText] = React.useState(initialText);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<
     { text: string; angle: string }[]
   >([]);
@@ -187,10 +189,13 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button asChild>
-                <Link to="/settings" onClick={() => onOpenChange(false)}>
-                  Go to Settings
-                </Link>
+              <Button
+                onClick={() => {
+                  setWizardOpen(true);
+                  onOpenChange(false);
+                }}
+              >
+                Connect X now
               </Button>
             </div>
           </div>
@@ -330,6 +335,7 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
 
   if (isMobile) {
     return (
+      <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
@@ -365,10 +371,13 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
           </div>
         </SheetContent>
       </Sheet>
+      <XConnectWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      </>
     );
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl bg-panel border-border">
         <DialogHeader>
@@ -379,6 +388,8 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
         {body}
       </DialogContent>
     </Dialog>
+    <XConnectWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+    </>
   );
 }
 

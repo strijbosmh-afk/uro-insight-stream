@@ -32,6 +32,7 @@ import {
   switchActiveXAccount,
 } from "@/serverFns/x-credentials";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
+import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 
 const DAILY_CAP = 50;
 
@@ -50,6 +51,7 @@ export function XSettings() {
   });
 
   const [adding, setAdding] = React.useState(false);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
 
   if (isLoading) {
     return <div className="text-text-muted text-sm">Loading…</div>;
@@ -80,20 +82,31 @@ export function XSettings() {
         <AccountList
           accounts={accountList}
           activeStatus={status ?? null}
-          onAdd={() => setAdding(true)}
+          onAdd={() => setWizardOpen(true)}
           onChanged={invalidateAll}
         />
       )}
 
-      {(adding || !hasAny) && (
-        <ConnectForm
-          onConnected={() => {
-            setAdding(false);
-            invalidateAll();
-          }}
-          onCancel={hasAny ? () => setAdding(false) : undefined}
-        />
+      {!hasAny && (
+        <div className="border border-border rounded-[3px] p-4 bg-panel space-y-3">
+          <div className="text-sm text-text-primary">
+            You haven't connected an X account yet. The setup wizard walks
+            you through the X Developer Portal in 8 illustrated steps.
+          </div>
+          <Button onClick={() => setWizardOpen(true)}>
+            Launch setup wizard
+          </Button>
+        </div>
       )}
+
+      <XConnectWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        onConnected={() => {
+          setAdding(false);
+          invalidateAll();
+        }}
+      />
 
       {activeAccount && !adding && (
         <RecentPosts username={activeAccount.x_username} />
