@@ -350,8 +350,8 @@ Rules:
     const upcoming_relevance: BriefingUpcoming[] = Array.isArray(parsed.upcoming_relevance)
       ? (parsed.upcoming_relevance as unknown[])
           .filter((t): t is Record<string, unknown> => !!t && typeof t === "object")
-          .map((t) => ({
-            kind: t.kind === "paper_referenced" ? "paper_referenced" : ("congress" as const),
+          .map((t): BriefingUpcoming => ({
+            kind: t.kind === "paper_referenced" ? "paper_referenced" : "congress",
             label: String(t.label ?? "").slice(0, 200),
             detail: String(t.detail ?? "").slice(0, 300),
             starts_at: typeof t.starts_at === "string" ? t.starts_at : null,
