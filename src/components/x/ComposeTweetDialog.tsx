@@ -25,6 +25,8 @@ import {
   getXConnectionStatus,
   postTweet,
 } from "@/serverFns/x-credentials";
+import { useServerFn } from "@tanstack/react-start";
+import { suggestReplyDrafts, type ReplyDraftsResult } from "@/serverFns/reply-drafts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 
@@ -136,6 +138,22 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
 
   const notConnected = !statusLoading && !status;
 
+  // Pre-cached reply starter drafts, keyed by parent tweet. Only fetched when
+  // the dialog is open in reply mode for a real tweet id.
+  const fetchReplyDrafts = useServerFn(suggestReplyDrafts);
+  const replyDraftsQuery = useQuery<ReplyDraftsResult>({
+    queryKey: ["reply-drafts", reply?.tweetId],
+    queryFn: () => fetchReplyDrafts({ data: { tweetId: reply!.tweetId } }),
+    enabled: open && !!reply?.tweetId && !notConnected,
+    staleTime: 60 * 60 * 1000,
+    retry: 0,
+  });
+
+  function applyDraftText(draftText: string) {
+    const mention = reply ? `@${reply.authorHandle} ` : "";
+    setText(mention + draftText);
+  }
+
   async function handleSuggest() {
     setSuggestLoading(true);
     try {
@@ -209,6 +227,57 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                 <div className="line-clamp-3 text-text-primary/80 whitespace-pre-wrap">
                   {reply.text}
                 </div>
+              </div>
+            )}
+            {reply && (
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-accent" />
+                  Quick-start drafts
+                  {replyDraftsQuery.isLoading && (
+                    <Loader2 className="w-3 h-3 animate-spin text-text-muted" />
+                  )}
+                </div>
+                {replyDraftsQuery.isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="h-16 rounded-[3px] border border-border bg-panel-elevated/50 animate-pulse"
+                      />
+                    ))}
+                  </div>
+                ) : replyDraftsQuery.error ? (
+                  <div className="flex items-center justify-between text-[11px] text-text-muted border border-border rounded-[3px] px-2 py-1.5">
+                    <span>Couldn't load drafts.</span>
+                    <button
+                      type="button"
+                      onClick={() => replyDraftsQuery.refetch()}
+                      className="text-accent hover:underline font-mono uppercase text-[10px] tracking-wider"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : replyDraftsQuery.data?.drafts.length ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+                    {replyDraftsQuery.data.drafts.map((d) => (
+                      <button
+                        key={d.register}
+                        type="button"
+                        onClick={() => applyDraftText(d.text)}
+                        className="text-left border border-border rounded-[3px] p-2 bg-panel-elevated/30 hover:border-accent hover:bg-panel-elevated transition-colors"
+                        title="Click to insert"
+                      >
+                        <div className="text-[9px] font-mono uppercase tracking-wider text-accent mb-1">
+                          {d.label}
+                        </div>
+                        <div className="text-[11px] text-text-primary line-clamp-3 whitespace-pre-wrap">
+                          {d.text}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
             <Textarea

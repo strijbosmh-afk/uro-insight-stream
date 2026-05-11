@@ -1749,6 +1749,38 @@ export type Database = {
         }
         Relationships: []
       }
+      tweet_reply_suggestions: {
+        Row: {
+          computed_at: string
+          drafts: Json
+          expires_at: string
+          model: string
+          tweet_id: string
+        }
+        Insert: {
+          computed_at?: string
+          drafts: Json
+          expires_at?: string
+          model: string
+          tweet_id: string
+        }
+        Update: {
+          computed_at?: string
+          drafts?: Json
+          expires_at?: string
+          model?: string
+          tweet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tweet_reply_suggestions_tweet_id_fkey"
+            columns: ["tweet_id"]
+            isOneToOne: true
+            referencedRelation: "tweets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tweets: {
         Row: {
           abstract_id: string | null
