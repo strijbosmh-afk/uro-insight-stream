@@ -436,6 +436,10 @@ function SourceSpotlightPage() {
             </div>
           </Panel>
         </div>
+
+        <ThemesPanel handle={handle} />
+        <RhythmPanel handle={handle} />
+        <InnerCirclePanel handle={handle} />
       </div>
     </TooltipProvider>
   );
