@@ -34,7 +34,17 @@ export const createWatchlist = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const insertRow: Record<string, unknown> = {
+    const insertRow: {
+      user_id: string;
+      name: string;
+      target_kind: "source" | "group";
+      target_source_id: string | null;
+      target_group_id: string | null;
+      email_enabled: boolean;
+      quiet_hours_start?: number;
+      quiet_hours_end?: number;
+      max_emails_per_day?: number;
+    } = {
       user_id: userId,
       name: data.name,
       target_kind: data.target_kind,
