@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ import { useUnfollowSource } from "@/hooks/useHandleActions";
 export const Route = createFileRoute("/me/following")({
   head: () => ({ meta: [{ title: "People I follow — UroFeed" }] }),
   component: MeFollowingPage,
+  errorComponent: FollowingErrorComponent,
 });
 
 type Source = {
@@ -42,6 +43,8 @@ function MeFollowingPage() {
   const { data: sources = [], isLoading } = useQuery({
     queryKey: ["me-following-sources", user?.id],
     enabled: !!user,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_subscribed_sources")
