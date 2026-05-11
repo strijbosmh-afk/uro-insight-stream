@@ -48,7 +48,24 @@ export const runWatchlistSmoke = createServerFn({ method: "POST" })
 
     // Stage 1: keyword pass.
     const lower = data.tweetText.toLowerCase();
-    const keywordHit = topics.find((t) => lower.includes(t.toLowerCase())) ?? null;
+    let matchedTopic: string | null = null;
+    let matchedSubstring: string | null = null;
+    let evidenceSnippet: string | null = null;
+    for (const t of topics) {
+      const idx = lower.indexOf(t.toLowerCase());
+      if (idx >= 0) {
+        matchedTopic = t;
+        matchedSubstring = data.tweetText.slice(idx, idx + t.length);
+        const start = Math.max(0, idx - 30);
+        const end = Math.min(data.tweetText.length, idx + t.length + 30);
+        evidenceSnippet =
+          (start > 0 ? "…" : "") +
+          data.tweetText.slice(start, end) +
+          (end < data.tweetText.length ? "…" : "");
+        break;
+      }
+    }
+    const keywordHit = matchedTopic;
 
     // Delivery decision (dry-run): replicate gating in deliverWatchlistMatches.
     let deliveryDecision: {
@@ -111,6 +128,9 @@ export const runWatchlistSmoke = createServerFn({ method: "POST" })
       watchlist: { id: wl.id, name: wl.name, topics_count: topics.length },
       classifier: {
         keyword_hit: keywordHit,
+        matched_topic: matchedTopic,
+        matched_substring: matchedSubstring,
+        evidence: evidenceSnippet,
         // LLM stage intentionally omitted from the dry-run to keep this
         // diagnostic free + deterministic. Use real ingestion to exercise it.
         llm_invoked: false,
