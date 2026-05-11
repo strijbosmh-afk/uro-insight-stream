@@ -43,6 +43,7 @@ import { Route as AdminRecommendationsRouteImport } from './routes/admin.recomme
 import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as AdminEmailDiagnosticsRouteImport } from './routes/admin.email-diagnostics'
+import { Route as SourcesRouteImport } from './routes/sources_.'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicAccessRequestRouteImport } from './routes/api/public/access-request'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -231,6 +232,11 @@ const AdminEmailDiagnosticsRoute = AdminEmailDiagnosticsRouteImport.update({
   path: '/admin/email-diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SourcesRoute = SourcesRouteImport.update({
+  id: '/sources_/',
+  path: '/sources/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/sources/': typeof SourcesRoute
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
@@ -451,6 +458,7 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/sources_/': typeof SourcesRoute
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
@@ -506,6 +514,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
+    | '/sources/'
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
@@ -612,6 +621,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
+    | '/sources_/'
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
@@ -666,6 +676,7 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  SourcesRoute: typeof SourcesRoute
   AdminEmailDiagnosticsRoute: typeof AdminEmailDiagnosticsRoute
   AdminGroupsRoute: typeof AdminGroupsRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
@@ -937,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmailDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sources_/': {
+      id: '/sources_/'
+      path: '/sources'
+      fullPath: '/sources/'
+      preLoaderRoute: typeof SourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
       path: '/lovable/email/suppression'
@@ -1119,6 +1137,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  SourcesRoute: SourcesRoute,
   AdminEmailDiagnosticsRoute: AdminEmailDiagnosticsRoute,
   AdminGroupsRoute: AdminGroupsRoute,
   AdminIngestionRoute: AdminIngestionRoute,
@@ -1156,3 +1175,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
