@@ -42,6 +42,7 @@ import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-con
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
+import { Route as AdminOpsRouteImport } from './routes/admin.ops'
 import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as AdminEmailDiagnosticsRouteImport } from './routes/admin.email-diagnostics'
@@ -62,6 +63,7 @@ import { Route as ApiPublicHooksResetDemoAccountRouteImport } from './routes/api
 import { Route as ApiPublicHooksProcessIngestQueueRouteImport } from './routes/api/public/hooks/process-ingest-queue'
 import { Route as ApiPublicHooksNominateGroupMembersRouteImport } from './routes/api/public/hooks/nominate-group-members'
 import { Route as ApiPublicHooksMatchTweetsToSessionsRouteImport } from './routes/api/public/hooks/match-tweets-to-sessions'
+import { Route as ApiPublicHooksCheckQueueHealthRouteImport } from './routes/api/public/hooks/check-queue-health'
 import { Route as ApiPublicHooksBackfillHierarchyRecentRouteImport } from './routes/api/public/hooks/backfill-hierarchy-recent'
 import { Route as ApiPublicHooksAggregateSourceCandidatesRouteImport } from './routes/api/public/hooks/aggregate-source-candidates'
 
@@ -230,6 +232,11 @@ const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
   path: '/admin/recommendations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminOpsRoute = AdminOpsRouteImport.update({
+  id: '/admin/ops',
+  path: '/admin/ops',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIngestionRoute = AdminIngestionRouteImport.update({
   id: '/admin/ingestion',
   path: '/admin/ingestion',
@@ -343,6 +350,12 @@ const ApiPublicHooksMatchTweetsToSessionsRoute =
     path: '/api/public/hooks/match-tweets-to-sessions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksCheckQueueHealthRoute =
+  ApiPublicHooksCheckQueueHealthRouteImport.update({
+    id: '/api/public/hooks/check-queue-health',
+    path: '/api/public/hooks/check-queue-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksBackfillHierarchyRecentRoute =
   ApiPublicHooksBackfillHierarchyRecentRouteImport.update({
     id: '/api/public/hooks/backfill-hierarchy-recent',
@@ -374,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -397,6 +411,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/check-queue-health': typeof ApiPublicHooksCheckQueueHealthRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -431,6 +446,7 @@ export interface FileRoutesByTo {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -454,6 +470,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/check-queue-health': typeof ApiPublicHooksCheckQueueHealthRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -489,6 +506,7 @@ export interface FileRoutesById {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -512,6 +530,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
   '/api/public/hooks/backfill-hierarchy-recent': typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  '/api/public/hooks/check-queue-health': typeof ApiPublicHooksCheckQueueHealthRoute
   '/api/public/hooks/match-tweets-to-sessions': typeof ApiPublicHooksMatchTweetsToSessionsRoute
   '/api/public/hooks/nominate-group-members': typeof ApiPublicHooksNominateGroupMembersRoute
   '/api/public/hooks/process-ingest-queue': typeof ApiPublicHooksProcessIngestQueueRoute
@@ -548,6 +567,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -571,6 +591,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/check-queue-health'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
@@ -605,6 +626,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -628,6 +650,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/check-queue-health'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
@@ -662,6 +685,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -685,6 +709,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
     | '/api/public/hooks/backfill-hierarchy-recent'
+    | '/api/public/hooks/check-queue-health'
     | '/api/public/hooks/match-tweets-to-sessions'
     | '/api/public/hooks/nominate-group-members'
     | '/api/public/hooks/process-ingest-queue'
@@ -720,6 +745,7 @@ export interface RootRouteChildren {
   AdminEmailDiagnosticsRoute: typeof AdminEmailDiagnosticsRoute
   AdminGroupsRoute: typeof AdminGroupsRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
+  AdminOpsRoute: typeof AdminOpsRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
@@ -734,6 +760,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
   ApiPublicHooksBackfillHierarchyRecentRoute: typeof ApiPublicHooksBackfillHierarchyRecentRoute
+  ApiPublicHooksCheckQueueHealthRoute: typeof ApiPublicHooksCheckQueueHealthRoute
   ApiPublicHooksMatchTweetsToSessionsRoute: typeof ApiPublicHooksMatchTweetsToSessionsRoute
   ApiPublicHooksNominateGroupMembersRoute: typeof ApiPublicHooksNominateGroupMembersRoute
   ApiPublicHooksProcessIngestQueueRoute: typeof ApiPublicHooksProcessIngestQueueRoute
@@ -984,6 +1011,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRecommendationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/ops': {
+      id: '/admin/ops'
+      path: '/admin/ops'
+      fullPath: '/admin/ops'
+      preLoaderRoute: typeof AdminOpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/ingestion': {
       id: '/admin/ingestion'
       path: '/admin/ingestion'
@@ -1124,6 +1158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMatchTweetsToSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/check-queue-health': {
+      id: '/api/public/hooks/check-queue-health'
+      path: '/api/public/hooks/check-queue-health'
+      fullPath: '/api/public/hooks/check-queue-health'
+      preLoaderRoute: typeof ApiPublicHooksCheckQueueHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/backfill-hierarchy-recent': {
       id: '/api/public/hooks/backfill-hierarchy-recent'
       path: '/api/public/hooks/backfill-hierarchy-recent'
@@ -1205,6 +1246,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEmailDiagnosticsRoute: AdminEmailDiagnosticsRoute,
   AdminGroupsRoute: AdminGroupsRoute,
   AdminIngestionRoute: AdminIngestionRoute,
+  AdminOpsRoute: AdminOpsRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
@@ -1221,6 +1263,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksAggregateSourceCandidatesRoute,
   ApiPublicHooksBackfillHierarchyRecentRoute:
     ApiPublicHooksBackfillHierarchyRecentRoute,
+  ApiPublicHooksCheckQueueHealthRoute: ApiPublicHooksCheckQueueHealthRoute,
   ApiPublicHooksMatchTweetsToSessionsRoute:
     ApiPublicHooksMatchTweetsToSessionsRoute,
   ApiPublicHooksNominateGroupMembersRoute:

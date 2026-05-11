@@ -3,6 +3,8 @@ import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, ChevronRight, Menu, ChevronDown, Check, Plus, Link2 } from "lucide-react";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
+import { useAuth } from "@/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { feedService } from "@/services/feedService";
@@ -261,20 +263,42 @@ function XHandleBadge() {
 
 function ConnectXHeaderLink() {
   const [open, setOpen] = React.useState(false);
+  const { user } = useAuth();
   const { data: status, isLoading } = useQuery({
     queryKey: ["x-connection-status"],
     queryFn: () => getXConnectionStatus(),
   });
+  const { data: pendingFlag } = useQuery({
+    queryKey: ["profile-pending-x", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("pending_x_connection")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return !!(data as { pending_x_connection?: boolean } | null)?.pending_x_connection;
+    },
+  });
   if (isLoading || (status && !status.revoked_at && status.x_username)) return null;
+  const showDot = !!pendingFlag;
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         title="Connect your X (Twitter) account"
-        className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-accent/50 bg-accent/10 text-[11px] font-mono text-accent hover:bg-accent/20 transition-colors"
+        className="relative hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-accent/50 bg-accent/10 text-[11px] font-mono text-accent hover:bg-accent/20 transition-colors"
       >
-        <Link2 className="w-3 h-3" />
+        <span className="relative inline-flex">
+          <Link2 className="w-3 h-3" />
+          {showDot && (
+            <span
+              aria-label="You skipped this earlier"
+              className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent ring-1 ring-bg"
+            />
+          )}
+        </span>
         <span>Connect X</span>
       </button>
       <XConnectWizard open={open} onOpenChange={setOpen} />

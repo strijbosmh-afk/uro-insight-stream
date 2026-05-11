@@ -14,6 +14,7 @@ import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongress
 import { feedService } from "@/services/feedService";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
+import { getXSetupProgress } from "@/serverFns/x-setup-progress";
 import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
 
 const STEPS = [
@@ -68,6 +69,10 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const { data: xStatus } = useQuery({
     queryKey: ["x-connection-status"],
     queryFn: () => getXConnectionStatus(),
+  });
+  const { data: xSetup } = useQuery({
+    queryKey: ["x-setup-progress"],
+    queryFn: () => getXSetupProgress(),
   });
 
   // Hydrate existing user state when scope-running so users see their picks.
@@ -416,6 +421,7 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
             <ConnectXStep
               connected={!!xStatus}
               username={xStatus?.x_username ?? null}
+              currentStep={xSetup?.progress?.current_step ?? 1}
               onLaunch={() => setXWizardOpen(true)}
               onDefer={async () => {
                 if (!user) return;
@@ -709,14 +715,18 @@ function SpecialtiesStep({
 function ConnectXStep({
   connected,
   username,
+  currentStep,
   onLaunch,
   onDefer,
 }: {
   connected: boolean;
   username: string | null;
+  currentStep: number;
   onLaunch: () => void;
   onDefer: () => void | Promise<void>;
 }) {
+  const completed = Math.max(0, Math.min(8, currentStep - 1));
+  const inProgress = !connected && completed > 0;
   return (
     <div className="space-y-5 max-w-xl">
       <div>
@@ -744,7 +754,11 @@ function ConnectXStep({
       )}
       <div className="flex flex-wrap gap-2">
         <Button onClick={onLaunch}>
-          {connected ? "Manage X connection" : "Set this up now"}
+          {connected
+            ? "Manage X connection"
+            : inProgress
+              ? `Resume setup (${completed} of 8 complete)`
+              : "Set this up now"}
         </Button>
         <Button variant="ghost" onClick={() => void onDefer()}>
           I'll do this later
