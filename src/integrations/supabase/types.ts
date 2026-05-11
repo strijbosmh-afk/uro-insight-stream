@@ -2586,25 +2586,34 @@ export type Database = {
       }
       watchlist_email_sends: {
         Row: {
+          delta_sent_at: string | null
           id: string
           match_ids: string[]
+          pending_match_ids: string[]
           sent_at: string
           user_id: string
           watchlist_id: string
+          window_closes_at: string | null
         }
         Insert: {
+          delta_sent_at?: string | null
           id?: string
           match_ids?: string[]
+          pending_match_ids?: string[]
           sent_at?: string
           user_id: string
           watchlist_id: string
+          window_closes_at?: string | null
         }
         Update: {
+          delta_sent_at?: string | null
           id?: string
           match_ids?: string[]
+          pending_match_ids?: string[]
           sent_at?: string
           user_id?: string
           watchlist_id?: string
+          window_closes_at?: string | null
         }
         Relationships: [
           {
