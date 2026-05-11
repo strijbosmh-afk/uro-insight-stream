@@ -205,11 +205,17 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
         // 5a) Pull stale source rows that need (re)enrichment so we share the
         //     same X API budget as the candidate enrichment.
         const STALE_CUTOFF = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        // Backoff: don't re-attempt a handle more than once per 6h. Without
+        // this, dead/not-found handles (enriched_at stays null, attempt time
+        // gets bumped) would be re-fetched on every cron tick and silently
+        // burn X API quota.
+        const ATTEMPT_BACKOFF = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
         const { data: staleSources } = await supabaseAdmin
           .from("sources")
           .select("handle")
           .eq("active", true)
           .or(`enriched_at.is.null,enriched_at.lt.${STALE_CUTOFF}`)
+          .or(`last_enrichment_attempt_at.is.null,last_enrichment_attempt_at.lt.${ATTEMPT_BACKOFF}`)
           .order("enriched_at", { ascending: true, nullsFirst: true })
           .limit(enrichLimit);
         const staleHandles = new Set(
