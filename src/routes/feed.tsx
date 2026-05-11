@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import * as React from "react";
+import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { FeedFilterProvider } from "@/components/feed/FeedFilterContext";
 import { FilterBar } from "@/components/feed/FilterBar";
 import { TweetStream } from "@/components/feed/TweetStream";
@@ -33,6 +35,19 @@ function FeedLayout() {
 }
 
 function DesktopFeedLayout({ data }: { data: FeedDataset }) {
+  const [timelineOpen, setTimelineOpen] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("feed:timelineOpen") === "1";
+  });
+  const toggleTimeline = () => {
+    setTimelineOpen((v) => {
+      const next = !v;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("feed:timelineOpen", next ? "1" : "0");
+      }
+      return next;
+    });
+  };
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
       <div className="border border-border rounded-[4px] bg-panel overflow-hidden">
@@ -49,8 +64,36 @@ function DesktopFeedLayout({ data }: { data: FeedDataset }) {
           <LiveSignals tweets={data.tweets} sourcesById={data.sourcesById} />
         </div>
       </div>
-      <div className="h-[120px] shrink-0">
-        <TimelineScrubber />
+      <div className="shrink-0">
+        {timelineOpen ? (
+          <div className="relative h-[120px]">
+            <TimelineScrubber />
+            <button
+              type="button"
+              onClick={toggleTimeline}
+              aria-label="Hide timeline"
+              className="absolute top-2 right-2 z-10 h-6 px-2 inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary border border-border rounded-[3px] bg-panel"
+            >
+              <ChevronDown className="w-3 h-3" />
+              hide
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleTimeline}
+            className="w-full h-8 px-3 flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary border border-border rounded-[4px] bg-panel"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5" />
+              Timeline · 24h
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <ChevronUp className="w-3 h-3" />
+              show
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
