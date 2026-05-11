@@ -957,6 +957,7 @@ export type Database = {
           id: string
           is_demo: boolean
           updated_at: string
+          x_grace_until: string | null
         }
         Insert: {
           active?: boolean
@@ -967,6 +968,7 @@ export type Database = {
           id: string
           is_demo?: boolean
           updated_at?: string
+          x_grace_until?: string | null
         }
         Update: {
           active?: boolean
@@ -977,6 +979,7 @@ export type Database = {
           id?: string
           is_demo?: boolean
           updated_at?: string
+          x_grace_until?: string | null
         }
         Relationships: []
       }
@@ -2215,8 +2218,12 @@ export type Database = {
           last_verified_at: string | null
           post_count_today: number
           post_count_window_start: string | null
+          read_count_today: number
+          read_count_window_start: string | null
           revoked_at: string | null
+          scope_read: boolean
           scope_write: boolean
+          tier: string | null
           updated_at: string
           user_id: string
           x_user_id: string | null
@@ -2235,8 +2242,12 @@ export type Database = {
           last_verified_at?: string | null
           post_count_today?: number
           post_count_window_start?: string | null
+          read_count_today?: number
+          read_count_window_start?: string | null
           revoked_at?: string | null
+          scope_read?: boolean
           scope_write?: boolean
+          tier?: string | null
           updated_at?: string
           user_id: string
           x_user_id?: string | null
@@ -2255,8 +2266,12 @@ export type Database = {
           last_verified_at?: string | null
           post_count_today?: number
           post_count_window_start?: string | null
+          read_count_today?: number
+          read_count_window_start?: string | null
           revoked_at?: string | null
+          scope_read?: boolean
           scope_write?: boolean
+          tier?: string | null
           updated_at?: string
           user_id?: string
           x_user_id?: string | null
@@ -2299,6 +2314,33 @@ export type Database = {
           quoted_tweet_id?: string | null
           status?: string
           text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_x_setup_progress: {
+        Row: {
+          completed_steps: number[]
+          current_step: number
+          notes: string | null
+          tier_chosen: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_steps?: number[]
+          current_step?: number
+          notes?: string | null
+          tier_chosen?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_steps?: number[]
+          current_step?: number
+          notes?: string | null
+          tier_chosen?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

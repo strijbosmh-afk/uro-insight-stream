@@ -12,6 +12,7 @@ type Job = {
   attempts: number;
   priority: number;
   since: string;
+  requested_by: string | null;
 };
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -51,7 +52,7 @@ async function claimJobs(limit: number): Promise<Job[]> {
     .update({ enrichment_status: "processing", last_processed_at: nowISO, started_at: nowISO })
     .in("id", ids)
     .eq("enrichment_status", "pending")
-    .select("id, source_id, job_type, attempts, priority, since");
+    .select("id, source_id, job_type, attempts, priority, since, requested_by");
   return (claimed ?? []) as Job[];
 }
 
@@ -63,7 +64,12 @@ async function processJob(job: Job): Promise<{ outcome: Outcome; xCalls: number;
     return { outcome: "failed", xCalls: 0, error: "missing_source_id" };
   }
   try {
-    const result = await runIngestionForTarget("handle", handle, job.since, undefined);
+    const result = await runIngestionForTarget(
+      "handle",
+      handle,
+      job.since,
+      job.requested_by ?? undefined,
+    );
     if (result.status === "rate_limited") {
       // Back off 5 minutes (X v2 recent search returns no reset header here; conservative)
       const until = new Date(Date.now() + 5 * 60_000).toISOString();

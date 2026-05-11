@@ -1,6 +1,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAdapter, type AdapterName } from "@/adapters/twitter";
 import type { NormalizedTweet } from "@/adapters/twitter/types";
+import { createXApiV2OAuth1Adapter } from "@/adapters/twitter/xApiV2OAuth1";
+import {
+  resolveIngestionAuth,
+  bumpReadCounter,
+} from "@/server/x-ingestion-credentials.server";
 
 export type IngestionConfig = {
   adapter: AdapterName;
@@ -109,7 +114,39 @@ export async function runIngestionForTarget(
   triggeredBy?: string,
 ): Promise<RunResult> {
   const cfg = await loadConfig();
-  const adapter = getAdapter(cfg.adapter);
+  // Per-user routing: when a triggeredBy user is supplied, prefer their
+  // OAuth1 credentials; fall back to platform bearer only inside grace.
+  let adapter = getAdapter(cfg.adapter);
+  let authMode: "user" | "platform_grace" | "platform_default" = "platform_default";
+  let skipReason: string | null = null;
+  if (triggeredBy) {
+    const decision = await resolveIngestionAuth(triggeredBy, target);
+    if (decision.mode === "user") {
+      adapter = createXApiV2OAuth1Adapter({
+        consumerKey: decision.creds.consumerKey,
+        consumerSecret: decision.creds.consumerSecret,
+        accessToken: decision.creds.accessToken,
+        accessTokenSecret: decision.creds.accessTokenSecret,
+      });
+      authMode = "user";
+    } else if (decision.mode === "skip") {
+      skipReason = decision.reason;
+    } else {
+      authMode = "platform_grace";
+    }
+  }
+
+  if (skipReason) {
+    return {
+      target_type: targetType,
+      target,
+      status: "error",
+      fetched: 0,
+      inserted: 0,
+      error: `skipped:${skipReason}`,
+    };
+  }
+
   const startedAt = new Date().toISOString();
 
   let runId: string | undefined;
@@ -119,7 +156,7 @@ export async function runIngestionForTarget(
       .insert({
         target_type: targetType,
         target,
-        adapter: adapter.name,
+        adapter: adapter.name + (authMode !== "platform_default" ? `:${authMode}` : ""),
         status: "running",
         started_at: startedAt,
         triggered_by: triggeredBy ?? null,
@@ -136,6 +173,9 @@ export async function runIngestionForTarget(
         : await adapter.searchByHashtag(target, sinceISO);
     const congressTagMap = await buildCongressTagMap();
     const inserted = await upsertTweets(tweets, congressTagMap);
+    if (authMode === "user" && triggeredBy) {
+      await bumpReadCounter(triggeredBy).catch(() => undefined);
+    }
     if (runId) {
       await supabaseAdmin
         .from("ingestion_runs")
