@@ -33,6 +33,10 @@ export type FetchFollowsResult =
 const HARD_MAX = 1000;
 const DEFAULT_LIMIT = 500;
 
+const LOW_SOURCE_COUNT_THRESHOLD = 5;
+const LOW_SOURCE_MIN_ACCOUNT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const DIFF_NUDGE_MIN_NEWCOMERS = 3;
+
 function makeOAuth(consumerKey: string, consumerSecret: string) {
   return new OAuth({
     consumer: { key: consumerKey, secret: consumerSecret },
@@ -316,6 +320,59 @@ async function writeCache(
   );
 }
 
+/**
+ * Refresh the cached follow list while preserving the prior set of handles
+ * in `previous_handles`. Used by the nightly diff cron so the diff-mode UI
+ * can show only newcomers since the last cached snapshot.
+ */
+export async function refreshFollowsCacheWithDiff(
+  userId: string,
+  freshItems: XFollowItem[],
+  totalSeen: number,
+): Promise<{ previous_handles: string[] }> {
+  const { data: prior } = await supabaseAdmin
+    .from("user_x_follows_cache")
+    .select("follows")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const prevItems =
+    ((prior?.follows as { items?: XFollowItem[] } | null)?.items ?? []) as XFollowItem[];
+  const previous_handles = prevItems.map((p) => p.handle.toLowerCase());
+
+  const now = new Date();
+  const expires = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  await supabaseAdmin.from("user_x_follows_cache").upsert(
+    {
+      user_id: userId,
+      follows: { items: freshItems } as never,
+      previous_handles,
+      total_count: totalSeen,
+      fetched_at: now.toISOString(),
+      expires_at: expires.toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  return { previous_handles };
+}
+
+/**
+ * Read the previously-cached handle set (snapshot from before the last
+ * diff-cron refresh). Used by the import dialog in `mode: 'diff'` to filter
+ * the current cache down to newcomers only.
+ */
+export async function getPreviousHandles(
+  userId: string,
+): Promise<Set<string>> {
+  const { data } = await supabaseAdmin
+    .from("user_x_follows_cache")
+    .select("previous_handles")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const arr = ((data as { previous_handles?: string[] | null } | null)
+    ?.previous_handles) ?? [];
+  return new Set(arr.map((h) => h.toLowerCase()));
+}
+
 export type ImportFollowsResult =
   | {
       ok: true;
@@ -483,4 +540,88 @@ export async function isEligibleForLegacyFollowsImportPrompt(
     new Date(p.created_at).getTime() <
     new Date(FOLLOWS_FEATURE_LAUNCH_DATE).getTime()
   );
+}
+
+/**
+ * True when the user has X connected, never imported, has manually added
+ * fewer than 5 sources, the account is at least 7 days old, and the
+ * contextual nudge hasn't been dismissed yet.
+ */
+export async function isEligibleForLowSourceCountNudge(
+  userId: string,
+): Promise<boolean> {
+  const [{ data: cred }, { data: prof }, { count: subCount }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("user_x_credentials")
+        .select("follows_imported_at, scope_read, revoked_at, is_active")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .is("revoked_at", null)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("profiles")
+        .select("created_at, low_source_count_nudge_dismissed_at")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("user_subscribed_sources")
+        .select("source_id", { count: "exact", head: true })
+        .eq("user_id", userId),
+    ]);
+  if (!cred) return false;
+  const c = cred as { follows_imported_at: string | null; scope_read: boolean };
+  if (!c.scope_read || c.follows_imported_at) return false;
+  const p = (prof ?? {}) as {
+    created_at?: string;
+    low_source_count_nudge_dismissed_at?: string | null;
+  };
+  if (p.low_source_count_nudge_dismissed_at) return false;
+  if (!p.created_at) return false;
+  if (Date.now() - new Date(p.created_at).getTime() < LOW_SOURCE_MIN_ACCOUNT_AGE_MS)
+    return false;
+  if ((subCount ?? 0) >= LOW_SOURCE_COUNT_THRESHOLD) return false;
+  return true;
+}
+
+/**
+ * True when the user has already imported once but the nightly diff cron
+ * has surfaced new oncology-relevant follows since then, and the user
+ * hasn't dismissed *this* batch yet.
+ */
+export async function isEligibleForDiffNudge(
+  userId: string,
+): Promise<{ eligible: boolean; new_count: number }> {
+  const { data: cred } = await supabaseAdmin
+    .from("user_x_credentials")
+    .select(
+      "follows_imported_at, scope_read, revoked_at, is_active, follows_new_since_last_import, follows_diff_dismissed_at, follows_diff_last_checked_at",
+    )
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (!cred) return { eligible: false, new_count: 0 };
+  const c = cred as {
+    follows_imported_at: string | null;
+    scope_read: boolean;
+    follows_new_since_last_import: number | null;
+    follows_diff_dismissed_at: string | null;
+    follows_diff_last_checked_at: string | null;
+  };
+  if (!c.scope_read || !c.follows_imported_at)
+    return { eligible: false, new_count: 0 };
+  const newCount = c.follows_new_since_last_import ?? 0;
+  if (newCount < DIFF_NUDGE_MIN_NEWCOMERS)
+    return { eligible: false, new_count: newCount };
+  // Re-arm: if the dismissal predates the latest check, this is a fresh batch.
+  if (c.follows_diff_dismissed_at && c.follows_diff_last_checked_at) {
+    if (
+      new Date(c.follows_diff_dismissed_at).getTime() >=
+      new Date(c.follows_diff_last_checked_at).getTime()
+    ) {
+      return { eligible: false, new_count: newCount };
+    }
+  }
+  return { eligible: true, new_count: newCount };
 }

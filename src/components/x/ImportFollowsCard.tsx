@@ -14,9 +14,11 @@ import { ImportFollowsPanel } from "./ImportFollowsPanel";
 
 export function ImportFollowsCard({
   autoOpen = false,
+  mode = "full",
   onAutoOpened,
 }: {
   autoOpen?: boolean;
+  mode?: "full" | "diff";
   onAutoOpened?: () => void;
 } = {}) {
   const { user } = useAuth();
@@ -80,9 +82,11 @@ export function ImportFollowsCard({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import X follows</DialogTitle>
+            <DialogTitle>
+              {mode === "diff" ? "Review new X follows" : "Import X follows"}
+            </DialogTitle>
           </DialogHeader>
-          <ImportFollowsPanel onDone={() => setOpen(false)} />
+          <ImportFollowsPanel mode={mode} onDone={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </>
