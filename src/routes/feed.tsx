@@ -4,7 +4,6 @@ import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { FeedFilterProvider } from "@/components/feed/FeedFilterContext";
 import { FilterBar } from "@/components/feed/FilterBar";
 import { TweetStream } from "@/components/feed/TweetStream";
-import { LiveSignals } from "@/components/feed/LiveSignals";
 import { TimelineScrubber } from "@/components/feed/TimelineScrubber";
 import { useFilteredTweets, type FeedDataset } from "@/components/feed/useFilteredTweets";
 import { InlineComposer } from "@/components/x/InlineComposer";
@@ -53,15 +52,10 @@ function DesktopFeedLayout({ data }: { data: FeedDataset }) {
       <div className="border border-border rounded-[4px] bg-panel overflow-hidden">
         <FilterBar />
       </div>
-      <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-        <div className="col-span-12 xl:col-span-9 min-h-0 flex flex-col gap-3">
-          <InlineComposer />
-          <div className="flex-1 min-h-0">
-            <TweetStream data={data} />
-          </div>
-        </div>
-        <div className="col-span-12 xl:col-span-3 min-h-0">
-          <LiveSignals tweets={data.tweets} sourcesById={data.sourcesById} />
+      <div className="flex-1 min-h-0 flex flex-col gap-3">
+        <InlineComposer />
+        <div className="flex-1 min-h-0">
+          <TweetStream data={data} />
         </div>
       </div>
       <div className="shrink-0">
