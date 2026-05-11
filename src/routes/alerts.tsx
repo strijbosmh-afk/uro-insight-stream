@@ -209,7 +209,7 @@ function InboxTab() {
         </div>
       ) : (matchesQ.data ?? []).length === 0 ? (
         <EmptyState
-          icon={<Bell className="w-5 h-5" />}
+          icon={Bell}
           title="No matches yet"
           description={
             includeDismissed
@@ -429,7 +429,7 @@ function WatchlistsTab() {
         </div>
       ) : (watchlistsQ.data ?? []).length === 0 ? (
         <EmptyState
-          icon={<Bell className="w-5 h-5" />}
+          icon={Bell}
           title="No watchlists yet"
           description="Create one from a source spotlight or group page, or use 'New watchlist' above."
         />
