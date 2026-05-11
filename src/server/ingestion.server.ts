@@ -6,6 +6,7 @@ import {
   resolveIngestionAuth,
   bumpReadCounter,
 } from "@/server/x-ingestion-credentials.server";
+import { classifyNewTweets } from "@/server/watchlist-classifier.server";
 
 export type IngestionConfig = {
   adapter: AdapterName;
@@ -48,6 +49,21 @@ async function upsertTweets(
   congressTagMap: Map<string, string>,
 ): Promise<number> {
   if (tweets.length === 0) return 0;
+
+  // Bulk pre-check: which of the incoming tweet IDs are NEW to our DB?
+  // Single round-trip (NOT N+1) — we use this set to fire watchlist
+  // classification only for genuinely new tweets, so re-ingests of known
+  // tweets don't re-spend LLM budget or re-trigger email coalescing.
+  const incomingIds = tweets.map((t) => t.id);
+  const existingTweetIds = new Set<string>();
+  if (incomingIds.length > 0) {
+    const { data: existingTweetRows } = await supabaseAdmin
+      .from("tweets")
+      .select("id")
+      .in("id", incomingIds);
+    (existingTweetRows ?? []).forEach((r) => existingTweetIds.add(r.id as string));
+  }
+  const newTweetIds = incomingIds.filter((id) => !existingTweetIds.has(id));
 
   // For replies/quotes, look up which parent ids we already have in our DB
   // so we can fill parent_in_db_id (best-effort link to local card).
@@ -95,6 +111,15 @@ async function upsertTweets(
     .from("tweets")
     .upsert(rows, { onConflict: "id", ignoreDuplicates: true, count: "exact" });
   if (error) throw new Error(error.message);
+
+  // Fire-and-forget watchlist classification for genuinely new tweets only.
+  // The classifier swallows its own errors; we never let it break ingestion.
+  if (newTweetIds.length > 0) {
+    void classifyNewTweets(newTweetIds).catch((e: unknown) =>
+      console.error("[ingestion] classifyNewTweets failed", e),
+    );
+  }
+
   return count ?? rows.length;
 }
 

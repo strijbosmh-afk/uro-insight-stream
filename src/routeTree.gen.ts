@@ -51,6 +51,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicWatchlistMuteTokenRouteImport } from './routes/api/public/watchlist-mute.$token'
 import { Route as ApiPublicHooksTweetIngestRouteImport } from './routes/api/public/hooks/tweet-ingest'
 import { Route as ApiPublicHooksTestHierarchyParseRouteImport } from './routes/api/public/hooks/test-hierarchy-parse'
 import { Route as ApiPublicHooksSummarizeJobRouteImport } from './routes/api/public/hooks/summarize-job'
@@ -275,6 +276,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWatchlistMuteTokenRoute =
+  ApiPublicWatchlistMuteTokenRouteImport.update({
+    id: '/api/public/watchlist-mute/$token',
+    path: '/api/public/watchlist-mute/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksTweetIngestRoute =
   ApiPublicHooksTweetIngestRouteImport.update({
     id: '/api/public/hooks/tweet-ingest',
@@ -384,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/api/public/watchlist-mute/$token': typeof ApiPublicWatchlistMuteTokenRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -438,6 +446,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/api/public/watchlist-mute/$token': typeof ApiPublicWatchlistMuteTokenRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   '/api/public/hooks/summarize-job': typeof ApiPublicHooksSummarizeJobRoute
   '/api/public/hooks/test-hierarchy-parse': typeof ApiPublicHooksTestHierarchyParseRoute
   '/api/public/hooks/tweet-ingest': typeof ApiPublicHooksTweetIngestRoute
+  '/api/public/watchlist-mute/$token': typeof ApiPublicWatchlistMuteTokenRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
+    | '/api/public/watchlist-mute/$token'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -603,6 +614,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
+    | '/api/public/watchlist-mute/$token'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -657,6 +669,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/summarize-job'
     | '/api/public/hooks/test-hierarchy-parse'
     | '/api/public/hooks/tweet-ingest'
+    | '/api/public/watchlist-mute/$token'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -703,6 +716,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSummarizeJobRoute: typeof ApiPublicHooksSummarizeJobRoute
   ApiPublicHooksTestHierarchyParseRoute: typeof ApiPublicHooksTestHierarchyParseRoute
   ApiPublicHooksTweetIngestRoute: typeof ApiPublicHooksTweetIngestRoute
+  ApiPublicWatchlistMuteTokenRoute: typeof ApiPublicWatchlistMuteTokenRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1006,6 +1020,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/watchlist-mute/$token': {
+      id: '/api/public/watchlist-mute/$token'
+      path: '/api/public/watchlist-mute/$token'
+      fullPath: '/api/public/watchlist-mute/$token'
+      preLoaderRoute: typeof ApiPublicWatchlistMuteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/tweet-ingest': {
       id: '/api/public/hooks/tweet-ingest'
       path: '/api/public/hooks/tweet-ingest'
@@ -1168,6 +1189,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSummarizeJobRoute: ApiPublicHooksSummarizeJobRoute,
   ApiPublicHooksTestHierarchyParseRoute: ApiPublicHooksTestHierarchyParseRoute,
   ApiPublicHooksTweetIngestRoute: ApiPublicHooksTweetIngestRoute,
+  ApiPublicWatchlistMuteTokenRoute: ApiPublicWatchlistMuteTokenRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
