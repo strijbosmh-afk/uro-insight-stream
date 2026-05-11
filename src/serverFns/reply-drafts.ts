@@ -96,6 +96,14 @@ export const suggestReplyDrafts = createServerFn({ method: "POST" })
       model: result.model,
     });
 
+    if (data.refresh) {
+      await supabaseAdmin.from("admin_audit_log").insert({
+        actor_user_id: context.userId,
+        action: "reply_drafts.regenerate",
+        metadata: { tweet_id: data.tweetId, model: result.model },
+      });
+    }
+
     return {
       drafts: result.drafts,
       computed_at: computedAt,

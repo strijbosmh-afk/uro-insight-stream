@@ -1,81 +1,93 @@
-# Connect-X Wizard + Per-User Ingestion
-
 ## Scope
 
-1. Schema: extend `user_x_credentials`, add `user_x_setup_progress`, add `profiles.x_grace_until`, ensure `ingest_queue.requested_by` exists.
-2. Wizard UI: `XConnectWizard` — 8 steps, resumable, opened from Settings → X tab and from a new (skippable) onboarding step. Honest SVG illustrations using app palette + font, captioned "Illustration".
-3. Ingestion refactor: worker resolves credentials per `requested_by` user; falls back to `X_BEARER_TOKEN` only inside the user's per-user grace window with reduced cadence (1×/day) and source cap (top 10 most-recently-subscribed).
-4. Status surfaces: connected card with read/post quota usage; banner after grace expires for unconnected users.
+One turn covers: (1) the `Regenerate drafts` admin fold-in on `ComposeTweetDialog`, and (2) Phase 1 of Watchlist Alerts — schema, hybrid matcher, in-app surfaces, opt-in email delivery, Spotlight + Group CTAs. Watchlist analytics dashboards and per-watchlist tuning UI beyond the basics are explicitly out.
 
-## Steps
+## Part A — Regenerate drafts (fold-in)
 
-```text
-1  Do you have a developer account?     → branch: yes / no (link to developer.x.com signup)
-2  Pick your tier (Free/Basic/Pro)      → user-declared, stored on credentials.tier; explains read+post quota
-3  Create a Project + App                → illustration of Portal nav
-4  Set User authentication settings      → Read+Write, OAuth 1.0a, Type=Web App, callback http://localhost
-5  Generate Consumer Keys + Access Token → illustration of Keys&Tokens tab; "regenerate Access Token AFTER setting permissions"
-6  Paste credentials                     → 4 inputs; calls existing connectX server fn (verifies + stores encrypted)
-7  Verify                                → shows username pulled back, read+post scopes
-8  Done                                  → links to Sources page; explains grace period if applicable
-```
+- `suggestReplyDrafts` server fn: add `refresh?: boolean` (Zod). When `true`, require admin via existing `assertAdmin`; bypass cache, call LLM, upsert row, write `admin_audit_log` (`action='reply_drafts.regenerate'`, `metadata={tweet_id}`).
+- `ComposeTweetDialog` reply mode: small `RotateCw` icon button beside "Quick-start drafts" header, visible only when `useAuth().roles.includes('admin')`. Click → confirm dialog → call `suggestReplyDrafts({ tweetId, refresh: true })` → invalidate the react-query key.
+- No migration, no other surface changes.
 
-Each step:
-- Left: instructions + copy buttons for callback URL.
-- Right: SVG illustration component (`<PortalIllustration variant="..." />`) with footer "Illustration — the actual X Developer Portal may look different."
-- Bottom: Back / Save & exit / Next. Progress persisted on Next via `saveSetupProgress` server fn.
+## Part B — Watchlist Alerts (Phase 1)
 
-## Per-user ingestion
-
-`src/server/ingestion.server.ts` (and queue worker `process-ingest-queue`):
+### Schema (one migration)
 
 ```text
-for each job with requested_by = U:
-  creds = getActiveCredentials(U)       // decrypts via x-credentials.server
-  if creds: use OAuth1 user-context for X v2 search
-  else:
-    grace_until = profile.x_grace_until ?? created_at + 14d
-    if now < grace_until AND job is among U's top-10 most-recent subs
-       AND U has no successful ingest in last 24h:
-         use platform X_BEARER_TOKEN
-    else: mark job skipped(reason='no_credentials' | 'grace_expired' | 'rate_capped')
+user_watchlists
+  id uuid pk, user_id uuid, name text,
+  target_kind text check in ('source','group'),
+  target_source_id text null, target_group_id uuid null,
+  email_enabled bool default false,
+  quiet_hours_start smallint default 22,
+  quiet_hours_end smallint default 8,
+  max_emails_per_day int default 10,
+  is_active bool default true,
+  muted_until timestamptz null,
+  created_at, updated_at,
+  CHECK ((target_source_id is not null) <> (target_group_id is not null))
+
+user_watchlist_topics(id, watchlist_id, topic text, is_active bool, created_at)
+
+user_watchlist_matches(
+  id, watchlist_id, tweet_id, matched_topic text,
+  match_reason jsonb,           -- { kind:'keyword'|'llm', matched_topic, evidence }
+  classified_at, delivered_via text[], dismissed_at timestamptz null
+)
+
+watchlist_match_cache(
+  tweet_id text, topic_set_hash text, matches jsonb, classified_at,
+  PRIMARY KEY (tweet_id, topic_set_hash)
+)
+
+user_llm_quota(user_id pk, day date, classifications int default 0)
+
+watchlist_email_sends(   -- for daily cap + 5min coalescing
+  id, user_id, watchlist_id, sent_at, match_ids uuid[]
+)
 ```
 
-Bump per-user `read_count_today` (rolling 15-min window resets).
+RLS: owner-scoped on watchlists/topics/matches; cache + quota service-role-only writes, authenticated read of own quota.
 
-## Files
+### Server pipeline
 
-**Migrations** (single migration):
-- `alter user_x_credentials add tier, scope_read, read_count_window_start, read_count_today`
-- `create user_x_setup_progress` + RLS owner-only
-- `alter profiles add x_grace_until timestamptz` + backfill `created_at + interval '14 days'`
-- `alter ingest_queue add requested_by uuid` (only if missing)
+`src/server/watchlist-classifier.server.ts`
+- Hook called from existing ingest path after a new tweet from a tracked source is inserted.
+- For each active watchlist whose target matches the tweet's source (single SQL with `LEFT JOIN source_group_members`, `SELECT DISTINCT`):
+  1. Keyword pass (case-insensitive substring against active topics).
+  2. If no keyword hit AND user under daily LLM cap → enqueue for batched LLM pass.
+- Batch LLM pass per ingest tick: group pending tweets by `topic_set_hash`, single structured call per group ("for each tweet, which topic matches or none"). Write results to `watchlist_match_cache`. Hash = `sha256(sorted lowercase topics)`.
+- Insert `user_watchlist_matches` rows with structured `match_reason`.
+- Increment `user_llm_quota`.
 
-**Server**
-- `src/server/x-ingestion-credentials.server.ts` — resolve creds + grace policy.
-- Patch `src/server/ingestion.server.ts` to use it.
-- `src/serverFns/x-setup-progress.ts` — get/save wizard progress; `setTier`.
+### Delivery
 
-**Client**
-- `src/components/x-wizard/XConnectWizard.tsx` (Dialog host + step router)
-- `src/components/x-wizard/steps/Step1Account.tsx` … `Step8Done.tsx`
-- `src/components/x-wizard/PortalIllustration.tsx` (8 variants, inline SVG, themed)
-- `src/components/x-wizard/IllustrationFrame.tsx` (caption wrapper)
-- Hook into `XSettings.tsx`: replace raw key form with "Connect via wizard" CTA + keep advanced manual entry collapsed.
-- `OnboardingWizard.tsx`: insert "Connect X" step (skippable; sets a dismissed flag).
-- `AppShell` or top-level: show `XGracePostExpiryBanner` when `!connected && now > x_grace_until`.
+`src/server/watchlist-delivery.server.ts`
+- For each new match, schedule via existing in-app bell (always on).
+- Email path only if: `email_enabled && now() outside quiet hours in user tz && sends-today < cap && not muted_until > now()`.
+- 5-minute coalescing: before sending, check `watchlist_email_sends` for same watchlist within last 5min — if present, append `match_ids` to that record and skip a new email; otherwise send via Resend (reuse digest pipeline) listing 1..N matches with one-tap "Mute 24h" signed URL (reuse digest unsubscribe signing) and "Unsubscribe" link.
 
-## Acceptance
+### Server functions (`src/serverFns/watchlists.ts`)
 
-- Migration applies cleanly; existing connected users unaffected.
-- Wizard opens from Settings → X and onboarding; step state persists across reload.
-- Pasting valid keys returns username and writes encrypted record.
-- Ingest job for connected user uses their token (verified via `ingestion_runs` notes column carrying `auth=user`).
-- Ingest job for unconnected user within grace runs once/day on top-10 sources only.
-- After grace, unconnected user sees banner; their queued jobs are marked skipped with `grace_expired`.
+- `listMyWatchlists`, `createWatchlist`, `updateWatchlist`, `deleteWatchlist`, `setTopics`, `muteWatchlist(hours)`.
+- `listMyMatches({limit, cursor})`, `dismissMatch(id)`, `getUnreadCount`.
+- Public `muteWatchlistByToken({token})` for the email link.
 
-## Out of scope (this pass)
+### UI
 
-- Real X Developer Portal screenshots (illustrations only; slot left for later).
-- OAuth-based "one-click connect" (still manual key paste).
-- Automatic tier auto-detection (user-declared).
+- New route `src/routes/_authenticated/alerts.tsx`: list of recent matches grouped by day, with tweet card, match-reason chip ("keyword: PARP" / "semantic: olaparib"), Reply / Open on X / Dismiss. Sidebar lists user's watchlists with edit/mute/delete.
+- Notification bell in `TopBar` with unread badge from `getUnreadCount` (5min poll + realtime channel on `user_watchlist_matches`).
+- In-app banner for matches < 15 min old, dismissable, max one at a time.
+- New `WatchlistFormDialog` (create/edit): name, "Watching" picker (source or group, with avatar/icon + member count), topic chips, email toggle (default off, hint "high-signal topics only"), quiet hours, daily cap.
+- Spotlight `Set up alerts` button: enables, opens dialog pre-filled `target_kind='source'`.
+- Group detail page header: `Set up alerts for this group` button, opens dialog pre-filled `target_kind='group'`.
+
+### LLM
+
+- Use `google/gemini-2.5-flash` via Lovable AI Gateway, structured tool call returning `[{tweet_id, matched_topic|null, evidence}]`.
+- Default per-user cap 500 classifications/day; soft warn at 400 in `/alerts` UI banner.
+
+## Out of scope this turn
+
+- Per-watchlist analytics, mute rate dashboards, advanced tuning UI.
+- Cross-source aggregation, briefing generator, reply-draft analytics.
+- Admin-wide quota override controls (default cap only).

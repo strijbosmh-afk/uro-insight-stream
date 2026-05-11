@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Send, ExternalLink, AlertCircle, Sparkles, X } from "lucide-react";
+import { Loader2, Send, ExternalLink, AlertCircle, Sparkles, X, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
 import {
   Select,
   SelectContent,
@@ -68,6 +69,7 @@ interface Props {
 export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply, triggerAiSuggest }: Props) {
   const qc = useQueryClient();
   const isMobile = useIsMobile();
+  const { isAdmin } = useAuth();
   const [text, setText] = React.useState(initialText);
   const [wizardOpen, setWizardOpen] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<
@@ -148,6 +150,22 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
     staleTime: 60 * 60 * 1000,
     retry: 0,
   });
+
+  const [regenerating, setRegenerating] = React.useState(false);
+  async function handleRegenerateDrafts() {
+    if (!reply?.tweetId) return;
+    if (!window.confirm("Regenerate drafts for all users? This replaces the cached drafts.")) return;
+    setRegenerating(true);
+    try {
+      await fetchReplyDrafts({ data: { tweetId: reply.tweetId, refresh: true } });
+      await qc.invalidateQueries({ queryKey: ["reply-drafts", reply.tweetId] });
+      toast.success("Drafts regenerated");
+    } catch (e) {
+      toast.error((e as Error).message || "Failed to regenerate drafts");
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   function applyDraftText(draftText: string) {
     const mention = reply ? `@${reply.authorHandle} ` : "";
@@ -236,6 +254,21 @@ export function ComposeTweetDialog({ open, onOpenChange, initialText = "", reply
                   Quick-start drafts
                   {replyDraftsQuery.isLoading && (
                     <Loader2 className="w-3 h-3 animate-spin text-text-muted" />
+                  )}
+                  {isAdmin && replyDraftsQuery.data && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateDrafts}
+                      disabled={regenerating}
+                      title="Regenerate drafts for all users (admin)"
+                      className="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-[3px] text-text-muted hover:text-accent hover:bg-panel-elevated disabled:opacity-50"
+                    >
+                      {regenerating ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <RotateCw className="w-3 h-3" />
+                      )}
+                    </button>
                   )}
                 </div>
                 {replyDraftsQuery.isLoading ? (

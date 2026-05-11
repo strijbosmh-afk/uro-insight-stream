@@ -2008,6 +2008,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_llm_quota: {
+        Row: {
+          classifications: number
+          day: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          classifications?: number
+          day: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          classifications?: number
+          day?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_onboarding_state: {
         Row: {
           completed_at: string | null
@@ -2283,6 +2304,145 @@ export type Database = {
           },
         ]
       }
+      user_watchlist_matches: {
+        Row: {
+          classified_at: string
+          delivered_via: string[]
+          dismissed_at: string | null
+          id: string
+          match_reason: Json
+          matched_topic: string
+          tweet_id: string
+          watchlist_id: string
+        }
+        Insert: {
+          classified_at?: string
+          delivered_via?: string[]
+          dismissed_at?: string | null
+          id?: string
+          match_reason?: Json
+          matched_topic: string
+          tweet_id: string
+          watchlist_id: string
+        }
+        Update: {
+          classified_at?: string
+          delivered_via?: string[]
+          dismissed_at?: string | null
+          id?: string
+          match_reason?: Json
+          matched_topic?: string
+          tweet_id?: string
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_watchlist_matches_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_watchlist_topics: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          topic: string
+          watchlist_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          topic: string
+          watchlist_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          topic?: string
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_watchlist_topics_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_watchlists: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          id: string
+          is_active: boolean
+          max_emails_per_day: number
+          muted_until: string | null
+          name: string
+          quiet_hours_end: number
+          quiet_hours_start: number
+          target_group_id: string | null
+          target_kind: string
+          target_source_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          is_active?: boolean
+          max_emails_per_day?: number
+          muted_until?: string | null
+          name: string
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          target_group_id?: string | null
+          target_kind: string
+          target_source_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          is_active?: boolean
+          max_emails_per_day?: number
+          muted_until?: string | null
+          name?: string
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          target_group_id?: string | null
+          target_kind?: string
+          target_source_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_watchlists_target_group_id_fkey"
+            columns: ["target_group_id"]
+            isOneToOne: false
+            referencedRelation: "source_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_watchlists_target_source_id_fkey"
+            columns: ["target_source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_x_credentials: {
         Row: {
           access_token: string | null
@@ -2423,6 +2583,91 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      watchlist_email_sends: {
+        Row: {
+          id: string
+          match_ids: string[]
+          sent_at: string
+          user_id: string
+          watchlist_id: string
+        }
+        Insert: {
+          id?: string
+          match_ids?: string[]
+          sent_at?: string
+          user_id: string
+          watchlist_id: string
+        }
+        Update: {
+          id?: string
+          match_ids?: string[]
+          sent_at?: string
+          user_id?: string
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_email_sends_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watchlist_match_cache: {
+        Row: {
+          classified_at: string
+          matches: Json
+          topic_set_hash: string
+          tweet_id: string
+        }
+        Insert: {
+          classified_at?: string
+          matches?: Json
+          topic_set_hash: string
+          tweet_id: string
+        }
+        Update: {
+          classified_at?: string
+          matches?: Json
+          topic_set_hash?: string
+          tweet_id?: string
+        }
+        Relationships: []
+      }
+      watchlist_mute_tokens: {
+        Row: {
+          created_at: string
+          hours: number
+          token: string
+          used_at: string | null
+          watchlist_id: string
+        }
+        Insert: {
+          created_at?: string
+          hours?: number
+          token: string
+          used_at?: string | null
+          watchlist_id: string
+        }
+        Update: {
+          created_at?: string
+          hours?: number
+          token?: string
+          used_at?: string | null
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_mute_tokens_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
