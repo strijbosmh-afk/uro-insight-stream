@@ -210,11 +210,10 @@ function InboxTab() {
       ) : (matchesQ.data ?? []).length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="No matches yet"
-          description={
+          caption={
             includeDismissed
-              ? "Nothing here. Try changing the filter."
-              : "When tweets from sources you watch match your topics, they'll appear here in real time."
+              ? "No matches · Try changing the filter."
+              : "No matches yet · Tweets from sources you watch will appear here in real time when they hit one of your topics."
           }
         />
       ) : (
@@ -430,8 +429,8 @@ function WatchlistsTab() {
       ) : (watchlistsQ.data ?? []).length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="No watchlists yet"
-          description="Create one from a source spotlight or group page, or use 'New watchlist' above."
+          caption="No watchlists yet · Create one from a source spotlight, a group page, or with 'New watchlist' above."
+          action={{ label: "New watchlist", onClick: () => setCreateOpen(true), icon: Plus }}
         />
       ) : (
         <ul className="divide-y divide-border">
