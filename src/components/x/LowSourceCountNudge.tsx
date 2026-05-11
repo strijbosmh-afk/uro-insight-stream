@@ -59,7 +59,11 @@ export function LowSourceCountNudge() {
         size="sm"
         onClick={() => {
           setHidden(true);
-          void navigate({ search: { import: "true" }, replace: false });
+          void navigate({
+            to: "/sources",
+            search: { import: "true" },
+            replace: false,
+          });
         }}
       >
         Open import

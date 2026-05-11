@@ -242,7 +242,11 @@ function PasswordForm({
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sign-in failed";
-      toast.error(msg);
+      const friendly =
+        msg === "Failed to fetch" || msg.toLowerCase().includes("networkerror")
+          ? "Can't reach the auth server. A browser extension (uBlock, Brave Shields, AdGuard) or your network is likely blocking *.supabase.co. Try an incognito window or allowlist the domain."
+          : msg;
+      toast.error(friendly);
     } finally {
       setBusy(false);
       onBusy(false);
@@ -331,7 +335,11 @@ function MagicLinkForm({
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send link";
-      toast.error(msg);
+      const friendly =
+        msg === "Failed to fetch" || msg.toLowerCase().includes("networkerror")
+          ? "Can't reach the auth server. A browser extension or your network is likely blocking *.supabase.co. Try an incognito window or allowlist the domain."
+          : msg;
+      toast.error(friendly);
     } finally {
       setBusy(false);
       onBusy(false);
