@@ -302,7 +302,7 @@ export const Route = createFileRoute("/api/public/hooks/aggregate-source-candida
           sources_enriched: sourcesEnriched,
           enriched,
           enrich_failed: enrichFailed,
-          x_token_present: !!xToken,
+          x_token_present: !!process.env.X_BEARER_TOKEN,
         });
       },
     },
