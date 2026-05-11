@@ -42,6 +42,7 @@ import { Route as ApiSuggestCongressRouteImport } from './routes/api/suggest-con
 import { Route as ApiLookupHandleRouteImport } from './routes/api/lookup-handle'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminRecommendationsRouteImport } from './routes/admin.recommendations'
+import { Route as AdminOpsRouteImport } from './routes/admin.ops'
 import { Route as AdminIngestionRouteImport } from './routes/admin.ingestion'
 import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as AdminEmailDiagnosticsRouteImport } from './routes/admin.email-diagnostics'
@@ -231,6 +232,11 @@ const AdminRecommendationsRoute = AdminRecommendationsRouteImport.update({
   path: '/admin/recommendations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminOpsRoute = AdminOpsRouteImport.update({
+  id: '/admin/ops',
+  path: '/admin/ops',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIngestionRoute = AdminIngestionRouteImport.update({
   id: '/admin/ingestion',
   path: '/admin/ingestion',
@@ -381,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -439,6 +446,7 @@ export interface FileRoutesByTo {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   '/admin/email-diagnostics': typeof AdminEmailDiagnosticsRoute
   '/admin/groups': typeof AdminGroupsRoute
   '/admin/ingestion': typeof AdminIngestionRoute
+  '/admin/ops': typeof AdminOpsRoute
   '/admin/recommendations': typeof AdminRecommendationsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/lookup-handle': typeof ApiLookupHandleRoute
@@ -558,6 +567,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/admin/email-diagnostics'
     | '/admin/groups'
     | '/admin/ingestion'
+    | '/admin/ops'
     | '/admin/recommendations'
     | '/admin/users'
     | '/api/lookup-handle'
@@ -733,6 +745,7 @@ export interface RootRouteChildren {
   AdminEmailDiagnosticsRoute: typeof AdminEmailDiagnosticsRoute
   AdminGroupsRoute: typeof AdminGroupsRoute
   AdminIngestionRoute: typeof AdminIngestionRoute
+  AdminOpsRoute: typeof AdminOpsRoute
   AdminRecommendationsRoute: typeof AdminRecommendationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiLookupHandleRoute: typeof ApiLookupHandleRoute
@@ -998,6 +1011,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRecommendationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/ops': {
+      id: '/admin/ops'
+      path: '/admin/ops'
+      fullPath: '/admin/ops'
+      preLoaderRoute: typeof AdminOpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/ingestion': {
       id: '/admin/ingestion'
       path: '/admin/ingestion'
@@ -1226,6 +1246,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEmailDiagnosticsRoute: AdminEmailDiagnosticsRoute,
   AdminGroupsRoute: AdminGroupsRoute,
   AdminIngestionRoute: AdminIngestionRoute,
+  AdminOpsRoute: AdminOpsRoute,
   AdminRecommendationsRoute: AdminRecommendationsRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiLookupHandleRoute: ApiLookupHandleRoute,
