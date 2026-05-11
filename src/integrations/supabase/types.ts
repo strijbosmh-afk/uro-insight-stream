@@ -986,12 +986,15 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          dormant_reminder_disabled: boolean
+          dormant_reminder_last_sent_at: string | null
           email: string
           follows_import_nudge_dismissed_count: number
           follows_import_nudge_last_dismissed_at: string | null
           id: string
           is_demo: boolean
           legacy_user_import_prompt_seen_at: string | null
+          low_source_count_nudge_dismissed_at: string | null
           pending_x_connection: boolean
           updated_at: string
           x_grace_until: string | null
@@ -1001,12 +1004,15 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          dormant_reminder_disabled?: boolean
+          dormant_reminder_last_sent_at?: string | null
           email: string
           follows_import_nudge_dismissed_count?: number
           follows_import_nudge_last_dismissed_at?: string | null
           id: string
           is_demo?: boolean
           legacy_user_import_prompt_seen_at?: string | null
+          low_source_count_nudge_dismissed_at?: string | null
           pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
@@ -1016,12 +1022,15 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          dormant_reminder_disabled?: boolean
+          dormant_reminder_last_sent_at?: string | null
           email?: string
           follows_import_nudge_dismissed_count?: number
           follows_import_nudge_last_dismissed_at?: string | null
           id?: string
           is_demo?: boolean
           legacy_user_import_prompt_seen_at?: string | null
+          low_source_count_nudge_dismissed_at?: string | null
           pending_x_connection?: boolean
           updated_at?: string
           x_grace_until?: string | null
@@ -2532,7 +2541,10 @@ export type Database = {
           consumer_secret_encrypted: string | null
           created_at: string
           follows_count_at_import: number | null
+          follows_diff_dismissed_at: string | null
+          follows_diff_last_checked_at: string | null
           follows_imported_at: string | null
+          follows_new_since_last_import: number
           id: string
           is_active: boolean
           last_post_at: string | null
@@ -2558,7 +2570,10 @@ export type Database = {
           consumer_secret_encrypted?: string | null
           created_at?: string
           follows_count_at_import?: number | null
+          follows_diff_dismissed_at?: string | null
+          follows_diff_last_checked_at?: string | null
           follows_imported_at?: string | null
+          follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
           last_post_at?: string | null
@@ -2584,7 +2599,10 @@ export type Database = {
           consumer_secret_encrypted?: string | null
           created_at?: string
           follows_count_at_import?: number | null
+          follows_diff_dismissed_at?: string | null
+          follows_diff_last_checked_at?: string | null
           follows_imported_at?: string | null
+          follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
           last_post_at?: string | null
@@ -2609,6 +2627,7 @@ export type Database = {
           expires_at: string
           fetched_at: string
           follows: Json
+          previous_handles: string[] | null
           total_count: number
           user_id: string
         }
@@ -2616,6 +2635,7 @@ export type Database = {
           expires_at?: string
           fetched_at?: string
           follows: Json
+          previous_handles?: string[] | null
           total_count: number
           user_id: string
         }
@@ -2623,6 +2643,7 @@ export type Database = {
           expires_at?: string
           fetched_at?: string
           follows?: Json
+          previous_handles?: string[] | null
           total_count?: number
           user_id?: string
         }
