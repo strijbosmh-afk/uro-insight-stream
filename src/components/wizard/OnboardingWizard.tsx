@@ -666,13 +666,18 @@ function SpecialtiesStep({
   const { data: specialties = [] } = useQuery({
     queryKey: ["urology-specialties"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("urology_specialties")
-        .select("id, label, description")
-        .order("sort_order");
-      if (error) throw error;
-      return data as Specialty[];
+      try {
+        const { data, error } = await supabase
+          .from("urology_specialties")
+          .select("id, label, description")
+          .order("sort_order");
+        if (error) throw error;
+        return (data?.length ? data : FALLBACK_SPECIALTIES) as Specialty[];
+      } catch {
+        return FALLBACK_SPECIALTIES;
+      }
     },
+    retry: 1,
   });
 
   const toggle = (id: string) => {
