@@ -489,6 +489,15 @@ export const updateUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
 
+    // Super-admin guard: strijbosmh@gmail.com must always remain admin.
+    const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (
+      targetUser?.user?.email?.toLowerCase() === "strijbosmh@gmail.com" &&
+      data.role !== "admin"
+    ) {
+      throw new Error("This account is protected and must remain an admin.");
+    }
+
     // Determine current roles
     const { data: current } = await supabaseAdmin
       .from("user_roles")
