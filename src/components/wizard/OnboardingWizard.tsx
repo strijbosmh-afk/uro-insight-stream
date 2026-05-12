@@ -163,18 +163,38 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       onClose("dismissed");
       return;
     }
+    const skippedAt = new Date().toISOString();
+    // Optimistically mark the gate as skipped BEFORE closing so the
+    // AppShell auto-open effect doesn't reopen the wizard while the
+    // refetch is still in flight.
+    qc.setQueryData(["onboarding-state", user.id], (prev: unknown) => {
+      const base =
+        (prev as { state: unknown; hasSpecialty: boolean } | undefined) ?? {
+          state: null,
+          hasSpecialty: false,
+        };
+      return {
+        ...base,
+        state: {
+          current_step: stepIndex,
+          completed_at: null,
+          ...((base.state as object) ?? {}),
+          skipped_at: skippedAt,
+        },
+      };
+    });
+    onClose("skipped");
     await supabase
       .from("user_onboarding_state")
       .upsert(
         {
           user_id: user.id,
           current_step: stepIndex,
-          skipped_at: new Date().toISOString(),
+          skipped_at: skippedAt,
         },
         { onConflict: "user_id" },
       );
     qc.invalidateQueries({ queryKey: ["onboarding-state"] });
-    onClose("skipped");
   };
 
   // ---- Persistence helpers (scoped saves use these too) ----
