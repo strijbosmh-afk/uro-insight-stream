@@ -30,6 +30,7 @@ import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
 import { getXSetupProgress } from "@/serverFns/x-setup-progress";
 import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
+import { listRecommendedCongresses } from "@/lib/wizard-recommendations.functions";
 
 const STEPS = [
   "Welcome",
