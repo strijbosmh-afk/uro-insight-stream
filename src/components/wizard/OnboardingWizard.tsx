@@ -38,6 +38,21 @@ type DraftSource = {
   avatar_url?: string;
 };
 
+const FALLBACK_SPECIALTIES: Specialty[] = [
+  { id: "onco_prostate", label: "Prostate cancer", description: "Screening, localized, advanced, and survivorship care." },
+  { id: "onco_bladder", label: "Bladder cancer", description: "NMIBC, MIBC, perioperative therapy, and surveillance." },
+  { id: "onco_kidney", label: "Kidney cancer", description: "Localized and metastatic RCC, surgery, and systemic treatment." },
+  { id: "onco_testis_penile", label: "Testis & penile cancer", description: "Germ-cell tumors, penile cancer, and multidisciplinary care." },
+  { id: "andrology", label: "Andrology", description: "Men's health, fertility, sexual medicine, and testosterone care." },
+  { id: "functional", label: "Functional urology", description: "Voiding dysfunction, incontinence, neuro-urology, and LUTS." },
+  { id: "endourology", label: "Endourology & stones", description: "Stone disease, endoscopic surgery, and prevention." },
+  { id: "reconstructive", label: "Reconstructive urology", description: "Urethral, genital, and urinary tract reconstruction." },
+  { id: "pediatric", label: "Pediatric urology", description: "Congenital, functional, and oncologic pediatric conditions." },
+  { id: "female_pelvic", label: "Female & pelvic", description: "Pelvic medicine, prolapse, incontinence, and pain." },
+  { id: "robotics", label: "Robotics & technology", description: "Robotic surgery, digital health, imaging, and devices." },
+  { id: "imaging_pathology", label: "Imaging & pathology", description: "Radiology, pathology, biomarkers, and staging." },
+];
+
 export interface WizardProps {
   onClose: (reason: "completed" | "skipped" | "dismissed") => void;
   initialStep?: number; // 1..7
