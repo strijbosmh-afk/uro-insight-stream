@@ -58,9 +58,19 @@ export function AppShell() {
     return () => window.removeEventListener("urofeed:open-wizard-step", handler as EventListener);
   }, []);
 
+  // Once the wizard finishes (or we observe a completed state) in this
+  // session, never auto-open it again — even if a stale gate refetch
+  // momentarily flips shouldOpenWizard back to true.
+  const completedOnceRef = React.useRef(false);
   React.useEffect(() => {
-    if (gate.shouldOpenWizard && !wizardOpen) setWizardOpen(true);
-  }, [gate.shouldOpenWizard, wizardOpen]);
+    if (!gate.shouldOpenWizard) {
+      // gate says completed/skipped/has specialty — lock it.
+      if (!gate.loading) completedOnceRef.current = true;
+      return;
+    }
+    if (completedOnceRef.current) return;
+    if (!wizardOpen) setWizardOpen(true);
+  }, [gate.shouldOpenWizard, gate.loading, wizardOpen]);
 
   // Reflect density on <html> so global tokens / utilities can react.
   React.useEffect(() => {
@@ -127,7 +137,10 @@ export function AppShell() {
         <OnboardingWizard
           initialStep={gate.currentStep}
           scopeStep={wizardScope}
-          onClose={() => {
+          onClose={(reason) => {
+            if (reason === "completed" || reason === "skipped") {
+              completedOnceRef.current = true;
+            }
             setWizardOpen(false);
             setWizardScope(undefined);
           }}
