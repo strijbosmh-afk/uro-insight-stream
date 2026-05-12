@@ -421,14 +421,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const seedRecommendedCongresses = React.useCallback(async () => {
     if (recommendedSeededRef.current.congresses) return;
     if (selectedSpecialties.length === 0) return;
-    const { data } = await supabase
-      .from("recommended_congresses_by_specialty")
-      .select("congress_id, weight")
-      .in("specialty_id", selectedSpecialties)
-      .order("weight", { ascending: false });
-    const ids = Array.from(
-      new Set(((data ?? []) as Array<{ congress_id: string }>).map((r) => r.congress_id)),
-    );
+    let ids: string[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("recommended_congresses_by_specialty")
+        .select("congress_id, weight")
+        .in("specialty_id", selectedSpecialties)
+        .order("weight", { ascending: false });
+      if (error) throw error;
+      ids = Array.from(
+        new Set(((data ?? []) as Array<{ congress_id: string }>).map((r) => r.congress_id)),
+      );
+    } catch {
+      const rows = await listRecommendedCongresses({
+        data: { specialtyIds: selectedSpecialties },
+      });
+      ids = Array.from(new Set(rows.map((r) => r.congress_id)));
+    }
     setSelectedCongressIds((prev) => Array.from(new Set([...prev, ...ids])));
     recommendedSeededRef.current.congresses = true;
   }, [selectedSpecialties]);
