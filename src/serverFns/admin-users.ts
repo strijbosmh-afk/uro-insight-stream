@@ -489,6 +489,15 @@ export const updateUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
 
+    // Super-admin guard: strijbosmh@gmail.com must always remain admin.
+    const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (
+      targetUser?.user?.email?.toLowerCase() === "strijbosmh@gmail.com" &&
+      data.role !== "admin"
+    ) {
+      throw new Error("This account is protected and must remain an admin.");
+    }
+
     // Determine current roles
     const { data: current } = await supabaseAdmin
       .from("user_roles")
@@ -532,6 +541,10 @@ export const setUserActive = createServerFn({ method: "POST" })
     }
 
     if (!data.isActive) {
+      const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+      if (targetUser?.user?.email?.toLowerCase() === "strijbosmh@gmail.com") {
+        throw new Error("This account is protected and cannot be deactivated.");
+      }
       // If deactivating an admin, ensure at least one admin remains
       const { data: targetRoles } = await supabaseAdmin
         .from("user_roles")
@@ -584,6 +597,13 @@ export const deleteUser = createServerFn({ method: "POST" })
       throw new Error("You cannot delete your own account.");
     }
 
+    // Capture target email up front so we can enforce the super-admin guard.
+    const { data: targetLookup } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    const targetEmailEarly = targetLookup?.user?.email ?? null;
+    if (targetEmailEarly?.toLowerCase() === "strijbosmh@gmail.com") {
+      throw new Error("This account is protected and cannot be deleted.");
+    }
+
     const { data: targetRoles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -595,9 +615,7 @@ export const deleteUser = createServerFn({ method: "POST" })
       }
     }
 
-    // Capture target email for the audit trail BEFORE delete
-    const { data: target } = await supabaseAdmin.auth.admin.getUserById(data.userId);
-    const targetEmail = target?.user?.email ?? null;
+    const targetEmail = targetEmailEarly;
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
