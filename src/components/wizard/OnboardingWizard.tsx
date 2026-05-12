@@ -393,16 +393,36 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
 
   const handleProvisioningDone = async () => {
     if (!user) return;
+    const completedAt = new Date().toISOString();
+    // Optimistically mark the gate as completed BEFORE closing so the
+    // AppShell auto-open effect doesn't reopen the wizard while the
+    // refetch is still in flight (or if the direct supabase call is slow).
+    qc.setQueryData(["onboarding-state", user.id], (prev: unknown) => {
+      const base = (prev as { state: unknown; hasSpecialty: boolean } | undefined) ?? {
+        state: null,
+        hasSpecialty: true,
+      };
+      return {
+        ...base,
+        hasSpecialty: true,
+        state: {
+          ...((base.state as object) ?? {}),
+          current_step: STEPS.length,
+          completed_at: completedAt,
+          skipped_at: null,
+        },
+      };
+    });
+    onClose("completed");
     await supabase.from("user_onboarding_state").upsert(
       {
         user_id: user.id,
         current_step: STEPS.length,
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
       },
       { onConflict: "user_id" },
     );
     qc.invalidateQueries({ queryKey: ["onboarding-state"] });
-    onClose("completed");
   };
 
   const stepName = STEPS[stepIndex - 1];
