@@ -39,6 +39,9 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
   const { data: sources = [] } = useQuery({
     queryKey: ["sources"],
     queryFn: () => feedService.listSources(),
+    // Sources list rarely changes mid-session; keep the warm cache
+    // across feed remounts instead of refetching on every navigation.
+    staleTime: 5 * 60_000,
   });
   const sourcesById = React.useMemo(
     () => Object.fromEntries(sources.map((s) => [s.id, s])) as Record<string, Source>,
@@ -52,6 +55,7 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
         ? feedService.listSessions(filters.congressId)
         : Promise.resolve([] as Session[]),
     enabled: Boolean(filters.congressId),
+    staleTime: 5 * 60_000,
   });
 
   // Resolve allowed source ids for the active source list (still client-side
@@ -125,15 +129,32 @@ export function useFilteredTweets(intervalMs?: number): FeedDataset {
     });
   }, [tweetQuery.data, filters.brush, filters.language, filters.congressId, filters.sessionId, allCongressSessions]);
 
-  return {
-    tweets,
-    sources,
-    sourcesById,
-    sessions: allCongressSessions,
-    refetchAll: () => {
-      qc.invalidateQueries({ queryKey: ["live-tweets"] });
-    },
-    isFetching: tweetQuery.isFetching,
-    lastUpdatedMs: tweetQuery.dataUpdatedAt,
-  };
+  // Memoise the returned dataset so consumers (TweetStream, MobileFeedLayout,
+  // etc.) get a stable object reference between renders. Without this, every
+  // render of the parent passed a new `data` prop and forced the virtualised
+  // tweet stream to reconcile from scratch -- felt like jank on dense feeds.
+  const refetchAll = React.useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["live-tweets"] });
+  }, [qc]);
+
+  return React.useMemo(
+    () => ({
+      tweets,
+      sources,
+      sourcesById,
+      sessions: allCongressSessions,
+      refetchAll,
+      isFetching: tweetQuery.isFetching,
+      lastUpdatedMs: tweetQuery.dataUpdatedAt,
+    }),
+    [
+      tweets,
+      sources,
+      sourcesById,
+      allCongressSessions,
+      refetchAll,
+      tweetQuery.isFetching,
+      tweetQuery.dataUpdatedAt,
+    ],
+  );
 }
