@@ -22,7 +22,17 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
-  return new URL(origin).origin === new URL(request.url).origin;
+  try {
+    const originHost = new URL(origin).host;
+    const reqHost = request.headers.get("host") ?? new URL(request.url).host;
+    if (originHost === reqHost) return true;
+    // Allow lovable preview/published hosts and custom domains for this project.
+    if (/\.lovable(project)?\.app$/.test(originHost)) return true;
+    if (/\.lovableproject\.com$/.test(originHost)) return true;
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 export const Route = createFileRoute("/api/auth/password")({
