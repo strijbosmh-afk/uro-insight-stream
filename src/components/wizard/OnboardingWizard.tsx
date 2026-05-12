@@ -30,6 +30,7 @@ import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { getXConnectionStatus } from "@/serverFns/x-credentials";
 import { getXSetupProgress } from "@/serverFns/x-setup-progress";
 import { ImportFollowsPanel } from "@/components/x/ImportFollowsPanel";
+import { listRecommendedCongresses } from "@/lib/wizard-recommendations.functions";
 
 const STEPS = [
   "Welcome",
@@ -420,14 +421,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const seedRecommendedCongresses = React.useCallback(async () => {
     if (recommendedSeededRef.current.congresses) return;
     if (selectedSpecialties.length === 0) return;
-    const { data } = await supabase
-      .from("recommended_congresses_by_specialty")
-      .select("congress_id, weight")
-      .in("specialty_id", selectedSpecialties)
-      .order("weight", { ascending: false });
-    const ids = Array.from(
-      new Set(((data ?? []) as Array<{ congress_id: string }>).map((r) => r.congress_id)),
-    );
+    let ids: string[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("recommended_congresses_by_specialty")
+        .select("congress_id, weight")
+        .in("specialty_id", selectedSpecialties)
+        .order("weight", { ascending: false });
+      if (error) throw error;
+      ids = Array.from(
+        new Set(((data ?? []) as Array<{ congress_id: string }>).map((r) => r.congress_id)),
+      );
+    } catch {
+      const rows = await listRecommendedCongresses({
+        data: { specialtyIds: selectedSpecialties },
+      });
+      ids = Array.from(new Set(rows.map((r) => r.congress_id)));
+    }
     setSelectedCongressIds((prev) => Array.from(new Set([...prev, ...ids])));
     recommendedSeededRef.current.congresses = true;
   }, [selectedSpecialties]);
@@ -1408,29 +1418,50 @@ function CongressesStep({
     queryKey: ["wizard-recommended-congresses", specialtyIds.join(",")],
     enabled: specialtyIds.length > 0,
     queryFn: async () => {
-      const { data: recRows } = await supabase
-        .from("recommended_congresses_by_specialty")
-        .select("congress_id, weight, note")
-        .in("specialty_id", specialtyIds)
-        .order("weight", { ascending: false });
-      const rows = (recRows ?? []) as Array<{ congress_id: string; note: string | null }>;
-      const ids = Array.from(new Set(rows.map((r) => r.congress_id)));
-      if (ids.length === 0) return [] as Array<{ congress: CongressRow; note: string | null }>;
-      const { data: congs } = await supabase
-        .from("congresses")
-        .select("id, name, short_code, start_date, end_date, city, primary_hashtags")
-        .in("id", ids);
-      const congMap = new Map(((congs ?? []) as CongressRow[]).map((c) => [c.id, c]));
-      const seen = new Set<string>();
-      const out: Array<{ congress: CongressRow; note: string | null }> = [];
-      for (const row of rows) {
-        if (seen.has(row.congress_id)) continue;
-        const c = congMap.get(row.congress_id);
-        if (!c) continue;
-        seen.add(row.congress_id);
-        out.push({ congress: c, note: row.note });
+      const buildFromDirect = async (): Promise<
+        Array<{ congress: CongressRow; note: string | null }>
+      > => {
+        const { data: recRows, error } = await supabase
+          .from("recommended_congresses_by_specialty")
+          .select("congress_id, weight, note")
+          .in("specialty_id", specialtyIds)
+          .order("weight", { ascending: false });
+        if (error) throw error;
+        const rows = (recRows ?? []) as Array<{ congress_id: string; note: string | null }>;
+        const ids = Array.from(new Set(rows.map((r) => r.congress_id)));
+        if (ids.length === 0) return [];
+        const { data: congs, error: cErr } = await supabase
+          .from("congresses")
+          .select("id, name, short_code, start_date, end_date, city, primary_hashtags")
+          .in("id", ids);
+        if (cErr) throw cErr;
+        const congMap = new Map(((congs ?? []) as CongressRow[]).map((c) => [c.id, c]));
+        const seen = new Set<string>();
+        const out: Array<{ congress: CongressRow; note: string | null }> = [];
+        for (const row of rows) {
+          if (seen.has(row.congress_id)) continue;
+          const c = congMap.get(row.congress_id);
+          if (!c) continue;
+          seen.add(row.congress_id);
+          out.push({ congress: c, note: row.note });
+        }
+        return out;
+      };
+      try {
+        return await buildFromDirect();
+      } catch {
+        const rows = await listRecommendedCongresses({
+          data: { specialtyIds },
+        });
+        const seen = new Set<string>();
+        const out: Array<{ congress: CongressRow; note: string | null }> = [];
+        for (const r of rows) {
+          if (!r.congress || seen.has(r.congress_id)) continue;
+          seen.add(r.congress_id);
+          out.push({ congress: r.congress as CongressRow, note: r.note });
+        }
+        return out;
       }
-      return out;
     },
   });
 
