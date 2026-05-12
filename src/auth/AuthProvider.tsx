@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import "@/auth/serverFnFetchPatch";
 import { claimInvitation } from "@/serverFns/admin-users";
+import { getMyAuthContext } from "@/lib/auth-context.functions";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -139,14 +140,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [prefs?.theme_density]);
 
   const loadAux = React.useCallback(async (uid: string) => {
-    const [{ data: prof }, { data: roleRows }, { data: pref }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.from("user_preferences").select("*").eq("user_id", uid).maybeSingle(),
-    ]);
-    setProfile((prof as ProfileRow | null) ?? null);
-    setRoles(((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role));
-    setPrefs(pref ? { ...DEFAULT_PREFS, ...(pref as Partial<UserPreferences>) } : DEFAULT_PREFS);
+    // Try direct REST first. If the user's network/extension blocks
+    // *.supabase.co (uBlock, Brave Shields, corporate proxy), every
+    // direct call throws "Failed to fetch" and roles never load —
+    // making admins look like viewers. Fall back to a server function
+    // proxied through our own origin in that case.
+    try {
+      const [{ data: prof, error: profErr }, { data: roleRows, error: roleErr }, { data: pref, error: prefErr }] =
+        await Promise.all([
+          supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+          supabase.from("user_roles").select("role").eq("user_id", uid),
+          supabase.from("user_preferences").select("*").eq("user_id", uid).maybeSingle(),
+        ]);
+      if (profErr || roleErr || prefErr) throw profErr ?? roleErr ?? prefErr;
+      setProfile((prof as ProfileRow | null) ?? null);
+      setRoles(((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role));
+      setPrefs(pref ? { ...DEFAULT_PREFS, ...(pref as Partial<UserPreferences>) } : DEFAULT_PREFS);
+      return;
+    } catch (err) {
+      console.warn("[auth] direct aux load failed, trying server fallback", err);
+    }
+    try {
+      const ctx = await getMyAuthContext();
+      setProfile((ctx.profile as unknown as ProfileRow | null) ?? null);
+      setRoles((ctx.roles as AppRole[]) ?? []);
+      setPrefs(
+        ctx.prefs
+          ? { ...DEFAULT_PREFS, ...(ctx.prefs as unknown as Partial<UserPreferences>) }
+          : DEFAULT_PREFS,
+      );
+    } catch (err) {
+      console.error("[auth] server fallback for aux load failed", err);
+    }
   }, []);
 
   React.useEffect(() => {
