@@ -438,6 +438,26 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       });
       ids = Array.from(new Set(rows.map((r) => r.congress_id)));
     }
+    // Restrict pre-checks to congresses starting within the next ~year.
+    if (ids.length > 0) {
+      const { data: congs } = await supabase
+        .from("congresses")
+        .select("id, start_date, end_date")
+        .in("id", ids);
+      const allowed = new Set(
+        ((congs ?? []) as Array<{ id: string; start_date: string | null; end_date: string | null }>)
+          .filter((c) => {
+            const ref = c.start_date ?? c.end_date;
+            if (!ref) return false;
+            const t = Date.parse(ref);
+            if (Number.isNaN(t)) return false;
+            const now = Date.now();
+            return t >= now - 24 * 60 * 60 * 1000 && t <= now + 366 * 24 * 60 * 60 * 1000;
+          })
+          .map((c) => c.id),
+      );
+      ids = ids.filter((id) => allowed.has(id));
+    }
     setSelectedCongressIds((prev) => Array.from(new Set([...prev, ...ids])));
     recommendedSeededRef.current.congresses = true;
   }, [selectedSpecialties]);
