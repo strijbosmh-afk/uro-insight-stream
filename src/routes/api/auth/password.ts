@@ -19,10 +19,20 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
   });
 }
 
+function sameOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  return new URL(origin).origin === new URL(request.url).origin;
+}
+
 export const Route = createFileRoute("/api/auth/password")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (!sameOrigin(request)) {
+          return jsonResponse({ error: "Unauthorized" }, { status: 403 });
+        }
+
         let body: z.infer<typeof BodySchema>;
         try {
           body = BodySchema.parse(await request.json());
