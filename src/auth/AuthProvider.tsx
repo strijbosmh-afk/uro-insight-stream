@@ -71,7 +71,10 @@ function purgeCorruptSupabaseSession() {
         return;
       }
       const rt = (parsed as { refresh_token?: unknown })?.refresh_token;
-      if (typeof rt !== "string" || rt.length < 20) {
+      // Only purge when the refresh_token is missing or empty. Real
+      // gotrue refresh tokens can be short opaque strings (e.g. 12 chars),
+      // so a length heuristic falsely nukes valid sessions.
+      if (typeof rt !== "string" || rt.length === 0) {
         window.localStorage.removeItem(key);
         return;
       }
