@@ -48,6 +48,7 @@ import { Route as AdminGroupsRouteImport } from './routes/admin.groups'
 import { Route as AdminEmailDiagnosticsRouteImport } from './routes/admin.email-diagnostics'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicAccessRequestRouteImport } from './routes/api/public/access-request'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -262,6 +263,11 @@ const ApiPublicAccessRequestRoute = ApiPublicAccessRequestRouteImport.update({
   path: '/api/public/access-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -407,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources/$handle': typeof SourcesHandleRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -466,6 +473,7 @@ export interface FileRoutesByTo {
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources/$handle': typeof SourcesHandleRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -526,6 +534,7 @@ export interface FileRoutesById {
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources_/$handle': typeof SourcesHandleRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
   '/api/public/access-request': typeof ApiPublicAccessRequestRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/aggregate-source-candidates': typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -587,6 +596,7 @@ export interface FileRouteTypes {
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources/$handle'
+    | '/api/auth/password'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -646,6 +656,7 @@ export interface FileRouteTypes {
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources/$handle'
+    | '/api/auth/password'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -705,6 +716,7 @@ export interface FileRouteTypes {
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources_/$handle'
+    | '/api/auth/password'
     | '/api/public/access-request'
     | '/lovable/email/suppression'
     | '/api/public/hooks/aggregate-source-candidates'
@@ -756,6 +768,7 @@ export interface RootRouteChildren {
   HelpInstructionsRoute: typeof HelpInstructionsRoute
   SessionsSessionIdRoute: typeof SessionsSessionIdRoute
   SourcesHandleRoute: typeof SourcesHandleRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
   ApiPublicAccessRequestRoute: typeof ApiPublicAccessRequestRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksAggregateSourceCandidatesRoute: typeof ApiPublicHooksAggregateSourceCandidatesRoute
@@ -1053,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAccessRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1257,6 +1277,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpInstructionsRoute: HelpInstructionsRoute,
   SessionsSessionIdRoute: SessionsSessionIdRoute,
   SourcesHandleRoute: SourcesHandleRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
   ApiPublicAccessRequestRoute: ApiPublicAccessRequestRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksAggregateSourceCandidatesRoute:
