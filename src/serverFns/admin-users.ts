@@ -584,6 +584,13 @@ export const deleteUser = createServerFn({ method: "POST" })
       throw new Error("You cannot delete your own account.");
     }
 
+    // Capture target email up front so we can enforce the super-admin guard.
+    const { data: targetLookup } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    const targetEmailEarly = targetLookup?.user?.email ?? null;
+    if (targetEmailEarly?.toLowerCase() === "strijbosmh@gmail.com") {
+      throw new Error("This account is protected and cannot be deleted.");
+    }
+
     const { data: targetRoles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -595,9 +602,7 @@ export const deleteUser = createServerFn({ method: "POST" })
       }
     }
 
-    // Capture target email for the audit trail BEFORE delete
-    const { data: target } = await supabaseAdmin.auth.admin.getUserById(data.userId);
-    const targetEmail = target?.user?.email ?? null;
+    const targetEmail = targetEmailEarly;
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
