@@ -1,10 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// JSON-serialisable shapes only — TanStack server-fn return types must
+// satisfy the framework's serialisable validator.
+type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 export type AuthContextPayload = {
-  profile: Record<string, unknown> | null;
+  profile: Json;
   roles: string[];
-  prefs: Record<string, unknown> | null;
+  prefs: Json;
 };
 
 export const getMyAuthContext = createServerFn({ method: "GET" })
@@ -22,8 +25,8 @@ export const getMyAuthContext = createServerFn({ method: "GET" })
           .maybeSingle(),
       ]);
     return {
-      profile: (profile as Record<string, unknown> | null) ?? null,
+      profile: (profile as Json) ?? null,
       roles: ((roleRows ?? []) as { role: string }[]).map((r) => r.role),
-      prefs: (prefs as Record<string, unknown> | null) ?? null,
+      prefs: (prefs as Json) ?? null,
     };
   });
