@@ -23,6 +23,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { toast } from "sonner";
 
+async function signInWithPasswordResilient(email: string, password: string) {
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Sign-in failed";
+    if (msg !== "Failed to fetch" && !msg.toLowerCase().includes("networkerror")) {
+      throw err;
+    }
+  }
+
+  const res = await fetch("/api/auth/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const payload = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    session?: { access_token: string; refresh_token: string };
+  };
+  if (!res.ok || !payload.session) {
+    throw new Error(payload.error ?? "Sign-in failed");
+  }
+  const { error } = await supabase.auth.setSession({
+    access_token: payload.session.access_token,
+    refresh_token: payload.session.refresh_token,
+  });
+  if (error) throw error;
+}
+
 interface AuthSearch {
   redirect?: string;
   invite?: string;
@@ -229,11 +260,7 @@ function PasswordForm({
     setBusy(true);
     onBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
+      await signInWithPasswordResilient(email, password);
       toast.success("Signed in");
       if (redirect && redirect.startsWith("/")) {
         window.location.replace(redirect);
