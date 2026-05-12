@@ -2,8 +2,9 @@ import * as React from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { listMyFollowedSources } from "@/lib/me-following.functions";
 import { MobileSubPage } from "@/components/shell/MobileSubPage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,16 +70,23 @@ function MeFollowingPage() {
     retry: 2,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_subscribed_sources")
-        .select(
-          "source_id, sources(id, handle, display_name, avatar_url, verified, role)",
-        )
-        .eq("user_id", user!.id);
-      if (error) throw error;
-      return (data ?? [])
-        .map((r: any) => r.sources as Source)
-        .filter(Boolean);
+      // Try direct REST first; fall back to a same-origin server fn
+      // when the user's network/extension blocks *.supabase.co.
+      try {
+        const { data, error } = await supabase
+          .from("user_subscribed_sources")
+          .select(
+            "source_id, sources(id, handle, display_name, avatar_url, verified, role)",
+          )
+          .eq("user_id", user!.id);
+        if (error) throw error;
+        return (data ?? [])
+          .map((r: any) => r.sources as Source)
+          .filter(Boolean);
+      } catch {
+        const rows = await listMyFollowedSources();
+        return rows as Source[];
+      }
     },
   });
 
