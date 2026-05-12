@@ -8,6 +8,7 @@ export type OnboardingStatus = {
   shouldOpenWizard: boolean;
   needsResumeBanner: boolean;
   currentStep: number;
+  finished: boolean;
 };
 
 /**
@@ -52,7 +53,7 @@ export function useOnboardingGate(): OnboardingStatus {
 
   return React.useMemo(() => {
     if (authLoading || isLoading || !user) {
-      return { loading: true, shouldOpenWizard: false, needsResumeBanner: false, currentStep: 1 };
+      return { loading: true, shouldOpenWizard: false, needsResumeBanner: false, currentStep: 1, finished: false };
     }
     const state = data?.state;
     const hasSpec = data?.hasSpecialty ?? false;
@@ -61,6 +62,6 @@ export function useOnboardingGate(): OnboardingStatus {
     const currentStep = state?.current_step ?? 1;
     const shouldOpenWizard = !completed && !skipped && !hasSpec;
     const needsResumeBanner = !completed && (skipped || (!!state && currentStep > 1));
-    return { loading: false, shouldOpenWizard, needsResumeBanner, currentStep };
+    return { loading: false, shouldOpenWizard, needsResumeBanner, currentStep, finished: completed || skipped };
   }, [authLoading, isLoading, data, user]);
 }
