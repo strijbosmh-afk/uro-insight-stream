@@ -77,8 +77,8 @@ export function AppShell() {
   React.useEffect(() => {
     if (wizardLocked) return;
     if (!gate.shouldOpenWizard) {
-      // gate says completed/skipped/has specialty — lock it.
-      if (!gate.loading) {
+      // The persisted onboarding state says the user finished/skipped it — lock it.
+      if (!gate.loading && gate.finished) {
         completedOnceRef.current = true;
         setWizardLocked(true);
         if (wizardLockKey && typeof window !== "undefined") {
@@ -89,7 +89,7 @@ export function AppShell() {
     }
     if (completedOnceRef.current) return;
     if (!wizardOpen) setWizardOpen(true);
-  }, [gate.shouldOpenWizard, gate.loading, wizardOpen, wizardLocked]);
+  }, [gate.shouldOpenWizard, gate.loading, gate.finished, wizardOpen, wizardLocked, wizardLockKey]);
 
   // Reflect density on <html> so global tokens / utilities can react.
   React.useEffect(() => {
