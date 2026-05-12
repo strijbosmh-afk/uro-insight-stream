@@ -59,7 +59,23 @@ export const getRouter = () => {
   // Fresh QueryClient per request — avoids leaking data across SSR requests.
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { staleTime: 15_000, refetchOnWindowFocus: false },
+      queries: {
+        // Bumped from 15s -> 60s. The vast majority of reference data
+        // (sources, congresses, summaries, sessions) doesn't change in
+        // seconds, and a tighter staleTime caused remount-refetch storms
+        // on every navigation. Live data (`live-tweets`, `live-kpis`)
+        // sets its own refetchInterval and is unaffected.
+        staleTime: 60_000,
+        // Stop garbage-collecting cached query data the instant the
+        // last consumer unmounts -- keeps cross-route caches warm so
+        // returning to /dashboard or /feed feels instant.
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        // Avoid re-running queries every time a component remounts
+        // (e.g. when the user toggles density/density-driven layouts).
+        refetchOnMount: false,
+        retry: 1,
+      },
     },
   });
 
@@ -67,7 +83,10 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // Treat preloaded loader data as fresh for 30s. The previous value
+    // (0) meant every link hover re-ran loaders for the target route,
+    // pegging the network on dense pages like the sidebar/topbar.
+    defaultPreloadStaleTime: 30_000,
     defaultErrorComponent: DefaultErrorComponent,
   });
 

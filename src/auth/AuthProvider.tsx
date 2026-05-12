@@ -179,7 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // listener so gotrue doesn't immediately try to refresh a bad token.
     purgeCorruptSupabaseSession();
     // 1. Subscribe FIRST, then 2. fetch existing session.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    let lastLoadedUid: string | null = null;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (typeof window !== "undefined") {
@@ -187,12 +188,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           s?.access_token ?? null;
       }
       if (s?.user) {
+        // Skip the aux reload on TOKEN_REFRESHED / USER_UPDATED for an
+        // already-loaded user. Gotrue fires TOKEN_REFRESHED ~every hour
+        // (and on tab visibility) -- re-running 3 supabase queries plus
+        // re-rendering the whole tree on each fire made the app feel
+        // janky for no reason. The auxiliary data hasn't changed; only
+        // the access token rotated.
+        const isRefresh =
+          (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
+          lastLoadedUid === s.user.id;
+        if (isRefresh) return;
+        lastLoadedUid = s.user.id;
         // Defer to avoid recursion in the auth callback.
         setTimeout(() => {
           void loadAux(s.user.id);
           void maybeClaimInvitation(s.user, () => loadAux(s.user.id));
         }, 0);
       } else {
+        lastLoadedUid = null;
         setProfile(null);
         setRoles([]);
         setPrefs(null);

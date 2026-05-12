@@ -19,14 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/shell/Panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as ReTooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
   Tooltip,
   TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -52,6 +44,15 @@ import {
 } from "@/hooks/useHandleActions";
 import { useCanAdmin } from "@/auth/permissions";
 import type { Source as DomainSource, Tweet as DomainTweet } from "@/types";
+
+// Recharts (~90 KB gzipped) is loaded lazily so it doesn't bloat this
+// route's main chunk. The rhythm panel below the fold is the only
+// consumer of recharts on this page.
+const RhythmCharts = React.lazy(() =>
+  import("@/components/sources/RhythmCharts").then((m) => ({
+    default: m.RhythmCharts,
+  })),
+);
 
 export const Route = createFileRoute("/sources_/$handle")({
   head: ({ params }) => ({
@@ -655,66 +656,16 @@ function RhythmPanel({ handle }: { handle: string }) {
         <p className="py-4 text-[12px] text-text-muted">No posts in the last 30 days.</p>
       ) : (
         <div className="py-2 space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-                Hour of day (UTC)
+          <React.Suspense
+            fallback={
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="h-28 rounded-[3px] bg-panel-muted animate-pulse" />
+                <div className="h-28 rounded-[3px] bg-panel-muted animate-pulse" />
               </div>
-              <div className="h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hourlyData}>
-                    <XAxis
-                      dataKey="hour"
-                      tick={{ fontSize: 9, fill: "currentColor" }}
-                      tickLine={false}
-                      axisLine={false}
-                      interval={3}
-                    />
-                    <YAxis hide />
-                    <ReTooltip
-                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                      contentStyle={{
-                        background: "hsl(var(--panel))",
-                        border: "1px solid hsl(var(--border))",
-                        fontSize: 11,
-                      }}
-                      formatter={(v: number) => [`${v} posts`, ""]}
-                      labelFormatter={(h: number) => `${String(h).padStart(2, "0")}:00 UTC`}
-                    />
-                    <Bar dataKey="count" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">
-                Day of week
-              </div>
-              <div className="h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dowData}>
-                    <XAxis
-                      dataKey="day"
-                      tick={{ fontSize: 9, fill: "currentColor" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis hide />
-                    <ReTooltip
-                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                      contentStyle={{
-                        background: "hsl(var(--panel))",
-                        border: "1px solid hsl(var(--border))",
-                        fontSize: 11,
-                      }}
-                      formatter={(v: number) => [`${v} posts`, ""]}
-                    />
-                    <Bar dataKey="count" fill="hsl(var(--accent))" radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
+            }
+          >
+            <RhythmCharts hourlyData={hourlyData} dowData={dowData} />
+          </React.Suspense>
           <p className="text-[11px] text-text-muted">
             Most active <span className="text-text-primary">{DOW_LABELS[data.peak_dow]}s</span>{" "}
             around{" "}

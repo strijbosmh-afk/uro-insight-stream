@@ -82,14 +82,21 @@ export function Dashboard() {
   const { data: congresses = [] } = useQuery({
     queryKey: ["congresses"],
     queryFn: () => feedService.listCongresses(),
+    // Congress list is effectively static during a session.
+    staleTime: 5 * 60_000,
   });
   const { data: sources = [] } = useQuery({
     queryKey: ["sources"],
     queryFn: () => feedService.listSources(),
+    staleTime: 5 * 60_000,
   });
   const { data: allTweets = [] } = useQuery({
     queryKey: ["dashboard-tweets"],
     queryFn: () => feedService.listTweets({ limit: 250 }),
+    // The live-feed has its own poll; the dashboard summary doesn't
+    // need second-by-second freshness.
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   const { data: cronHealth = [] } = useQuery({
     queryKey: ["ingestion-cron-health"],
@@ -99,9 +106,21 @@ export function Dashboard() {
     refetchInterval: 30_000,
   });
 
+  // Stable join key for the cross-congress sessions query: avoids busting
+  // the cache when the underlying congresses array reference changes but
+  // the IDs are the same.
+  const congressIdsKey = React.useMemo(
+    () =>
+      congresses
+        .map((c) => c.id)
+        .sort()
+        .join(","),
+    [congresses],
+  );
+
   // Sessions across all congresses
   const sessionQueries = useQuery({
-    queryKey: ["dashboard-sessions", congresses.map((c) => c.id).join(",")],
+    queryKey: ["dashboard-sessions", congressIdsKey],
     enabled: congresses.length > 0,
     queryFn: async () => {
       const lists = await Promise.all(
@@ -109,6 +128,7 @@ export function Dashboard() {
       );
       return lists.flat();
     },
+    staleTime: 5 * 60_000,
   });
   const sessions = sessionQueries.data ?? [];
 
@@ -144,6 +164,7 @@ export function Dashboard() {
   const { data: allSummaries = [] } = useQuery({
     queryKey: ["all-summaries"],
     queryFn: () => feedService.listSummaries(),
+    staleTime: 2 * 60_000,
   });
   const summariesToday = allSummaries.filter(
     (s) => new Date(s.generatedAt).getTime() >= oneDayAgo,
@@ -158,16 +179,22 @@ export function Dashboard() {
     })
     .slice(0, 6);
 
-  // Most discussed last 24h
+  // Most discussed last 24h.
+  // `oneDayAgo` is derived from `feedNowMs()` which advances on every
+  // render, so passing it in deps used to bust this useMemo on every
+  // render -- defeating the point. Bucket the cutoff to the nearest
+  // minute so the memo only recomputes ~once a minute, not 60x/sec.
+  const oneDayAgoBucket = Math.floor(oneDayAgo / 60_000);
   const tweetsBySession = React.useMemo(() => {
+    const cutoff = oneDayAgoBucket * 60_000;
     const c = new Map<string, number>();
     allTweets.forEach((t) => {
       if (!t.sessionId) return;
-      if (new Date(t.createdAt).getTime() < oneDayAgo) return;
+      if (new Date(t.createdAt).getTime() < cutoff) return;
       c.set(t.sessionId, (c.get(t.sessionId) ?? 0) + 1);
     });
     return c;
-  }, [allTweets, oneDayAgo]);
+  }, [allTweets, oneDayAgoBucket]);
 
   const mostDiscussed = React.useMemo(() => {
     return Array.from(tweetsBySession.entries())

@@ -80,9 +80,13 @@ function DateField({
 export function FilterBar() {
   const { filters, patch, reset } = useFeedFilters();
 
+  // All of the FilterBar's reference lists are session-static.
+  // Letting them inherit the 60s default staleTime caused a refetch
+  // every time the user opened a select dropdown or toggled the bar.
   const { data: congresses = [] } = useQuery({
     queryKey: ["congresses"],
     queryFn: () => feedService.listCongresses(),
+    staleTime: 5 * 60_000,
   });
   const { data: sessions = [] } = useQuery({
     queryKey: ["congress-sessions", filters.congressId ?? "__none__"],
@@ -91,14 +95,17 @@ export function FilterBar() {
         ? feedService.listSessions(filters.congressId)
         : Promise.resolve([]),
     enabled: Boolean(filters.congressId),
+    staleTime: 5 * 60_000,
   });
   const { data: lists = [] } = useQuery({
     queryKey: ["source-lists"],
     queryFn: () => feedService.listSourceLists(),
+    staleTime: 5 * 60_000,
   });
   const { data: hashtags = [] } = useQuery({
     queryKey: ["hashtags"],
     queryFn: () => feedService.listHashtags(),
+    staleTime: 5 * 60_000,
   });
 
   const activeCount =

@@ -68,16 +68,27 @@ export function AppShell() {
     document.documentElement.dataset.density = density;
   }, [density]);
 
+  // Stable style object -- a fresh object literal here used to break
+  // React's prop-equality fast path on the root wrapper every render.
+  const rootStyle = React.useMemo(
+    () => ({ fontSize: density === "compact" ? "13px" : "14px" }),
+    [density],
+  );
+  const toggleCollapsed = React.useCallback(
+    () => setCollapsed((c) => !c),
+    [],
+  );
+
   return (
     <div
       className="h-[100dvh] w-screen flex flex-col bg-bg text-text-primary overflow-hidden safe-pl safe-pr"
       data-density={density}
-      style={{ fontSize: density === "compact" ? "13px" : "14px" }}
+      style={rootStyle}
     >
       <div className="flex-1 flex min-h-0">
         {/* Desktop sidebar */}
         {!isMobile && (
-          <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+          <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
         )}
 
         {/* Phones use BottomTabBar — no hamburger drawer. */}
