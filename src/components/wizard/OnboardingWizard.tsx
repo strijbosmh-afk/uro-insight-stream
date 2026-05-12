@@ -1001,9 +1001,14 @@ function ReviewStep({
   const { data: specs = [] } = useQuery({
     queryKey: ["urology-specialties"],
     queryFn: async () => {
-      const { data } = await supabase.from("urology_specialties").select("id, label");
-      return (data ?? []) as Array<{ id: string; label: string }>;
+      try {
+        const { data } = await supabase.from("urology_specialties").select("id, label");
+        return (data?.length ? data : FALLBACK_SPECIALTIES) as Array<{ id: string; label: string }>;
+      } catch {
+        return FALLBACK_SPECIALTIES;
+      }
     },
+    retry: 1,
   });
   const { data: congs = [] } = useQuery({
     queryKey: ["wizard-review-congresses", congressIds.join(",")],
