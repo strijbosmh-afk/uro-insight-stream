@@ -1,6 +1,16 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check, X, ArrowRight, ArrowLeft, Sparkles, AlertTriangle, Calendar, MapPin } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  AlertTriangle,
+  Calendar,
+  MapPin,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -8,7 +18,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { enqueueUserSources, getUserIngestStatus, processUserIngestQueue } from "@/serverFns/onboarding";
+import {
+  enqueueUserSources,
+  getUserIngestStatus,
+  processUserIngestQueue,
+} from "@/serverFns/onboarding";
 import { Link } from "@tanstack/react-router";
 import { useCongressSuggest, type CongressSuggestion } from "@/hooks/useCongressSuggest";
 import { feedService } from "@/services/feedService";
@@ -37,6 +51,69 @@ type DraftSource = {
   display_name?: string;
   avatar_url?: string;
 };
+
+const FALLBACK_SPECIALTIES: Specialty[] = [
+  {
+    id: "onco_prostate",
+    label: "Prostate cancer",
+    description: "Screening, localized, advanced, and survivorship care.",
+  },
+  {
+    id: "onco_bladder",
+    label: "Bladder cancer",
+    description: "NMIBC, MIBC, perioperative therapy, and surveillance.",
+  },
+  {
+    id: "onco_kidney",
+    label: "Kidney cancer",
+    description: "Localized and metastatic RCC, surgery, and systemic treatment.",
+  },
+  {
+    id: "onco_testis_penile",
+    label: "Testis & penile cancer",
+    description: "Germ-cell tumors, penile cancer, and multidisciplinary care.",
+  },
+  {
+    id: "andrology",
+    label: "Andrology",
+    description: "Men's health, fertility, sexual medicine, and testosterone care.",
+  },
+  {
+    id: "functional",
+    label: "Functional urology",
+    description: "Voiding dysfunction, incontinence, neuro-urology, and LUTS.",
+  },
+  {
+    id: "endourology",
+    label: "Endourology & stones",
+    description: "Stone disease, endoscopic surgery, and prevention.",
+  },
+  {
+    id: "reconstructive",
+    label: "Reconstructive urology",
+    description: "Urethral, genital, and urinary tract reconstruction.",
+  },
+  {
+    id: "pediatric",
+    label: "Pediatric urology",
+    description: "Congenital, functional, and oncologic pediatric conditions.",
+  },
+  {
+    id: "female_pelvic",
+    label: "Female & pelvic",
+    description: "Pelvic medicine, prolapse, incontinence, and pain.",
+  },
+  {
+    id: "robotics",
+    label: "Robotics & technology",
+    description: "Robotic surgery, digital health, imaging, and devices.",
+  },
+  {
+    id: "imaging_pathology",
+    label: "Imaging & pathology",
+    description: "Radiology, pathology, biomarkers, and staging.",
+  },
+];
 
 export interface WizardProps {
   onClose: (reason: "completed" | "skipped" | "dismissed") => void;
@@ -81,14 +158,8 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
     let cancelled = false;
     (async () => {
       const [specsRes, congRes, hashRes, subSrcRes] = await Promise.all([
-        supabase
-          .from("user_specialties")
-          .select("specialty_id, is_primary")
-          .eq("user_id", user.id),
-        supabase
-          .from("user_subscribed_congresses")
-          .select("congress_id")
-          .eq("user_id", user.id),
+        supabase.from("user_specialties").select("specialty_id, is_primary").eq("user_id", user.id),
+        supabase.from("user_subscribed_congresses").select("congress_id").eq("user_id", user.id),
         supabase
           .from("user_subscribed_hashtags")
           .select("hashtag_id, hashtags(tag)")
@@ -104,7 +175,9 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
         setSelectedSpecialties(specs.map((s) => s.specialty_id));
         setPrimarySpecialty(specs.find((s) => s.is_primary)?.specialty_id ?? specs[0].specialty_id);
       }
-      setSelectedCongressIds((congRes.data ?? []).map((c: { congress_id: string }) => c.congress_id));
+      setSelectedCongressIds(
+        (congRes.data ?? []).map((c: { congress_id: string }) => c.congress_id),
+      );
       const tags = ((hashRes.data ?? []) as Array<{ hashtags: { tag: string } | null }>)
         .map((r) => r.hashtags?.tag)
         .filter((t): t is string => !!t);
@@ -115,12 +188,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       }>;
       if (srcRows.length > 0) {
         setDraftSources(
-          srcRows.map((r): DraftSource => ({
-            handle: r.sources?.handle ?? r.source_id,
-            status: "found",
-            display_name: r.sources?.display_name,
-            avatar_url: r.sources?.avatar_url,
-          })),
+          srcRows.map(
+            (r): DraftSource => ({
+              handle: r.sources?.handle ?? r.source_id,
+              status: "found",
+              display_name: r.sources?.display_name,
+              avatar_url: r.sources?.avatar_url,
+            }),
+          ),
         );
       }
     })();
@@ -132,16 +207,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
   const persistStep = React.useCallback(
     async (next: number) => {
       if (!user || scopeStep) return; // partial re-runs don't touch onboarding state
-      await supabase
-        .from("user_onboarding_state")
-        .upsert(
-          {
-            user_id: user.id,
-            current_step: next,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" },
-        );
+      await supabase.from("user_onboarding_state").upsert(
+        {
+          user_id: user.id,
+          current_step: next,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
     },
     [user, scopeStep],
   );
@@ -168,11 +241,10 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
     // AppShell auto-open effect doesn't reopen the wizard while the
     // refetch is still in flight.
     qc.setQueryData(["onboarding-state", user.id], (prev: unknown) => {
-      const base =
-        (prev as { state: unknown; hasSpecialty: boolean } | undefined) ?? {
-          state: null,
-          hasSpecialty: false,
-        };
+      const base = (prev as { state: unknown; hasSpecialty: boolean } | undefined) ?? {
+        state: null,
+        hasSpecialty: false,
+      };
       return {
         ...base,
         state: {
@@ -184,9 +256,8 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       };
     });
     onClose("skipped");
-    await supabase
-      .from("user_onboarding_state")
-      .upsert(
+    try {
+      const { error } = await supabase.from("user_onboarding_state").upsert(
         {
           user_id: user.id,
           current_step: stepIndex,
@@ -194,7 +265,12 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
         },
         { onConflict: "user_id" },
       );
-    qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+    } catch {
+      // Keep the optimistic skip in place for this session even if the direct
+      // backend request is temporarily blocked, so users are not trapped.
+    }
   };
 
   // ---- Persistence helpers (scoped saves use these too) ----
@@ -226,10 +302,7 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
     if (!user || acceptedHashtags.length === 0) return;
     // Lowercase normalisation; insert into global hashtags then subscribe.
     const lc = Array.from(new Set(acceptedHashtags.map((t) => t.toLowerCase())));
-    const { data: existing } = await supabase
-      .from("hashtags")
-      .select("id, tag")
-      .in("tag", lc);
+    const { data: existing } = await supabase.from("hashtags").select("id, tag").in("tag", lc);
     const existingByTag = new Map(
       ((existing ?? []) as Array<{ id: string; tag: string }>).map((h) => [
         h.tag.toLowerCase(),
@@ -319,16 +392,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
 
   const handleProvisioningDone = async () => {
     if (!user) return;
-    await supabase
-      .from("user_onboarding_state")
-      .upsert(
-        {
-          user_id: user.id,
-          current_step: STEPS.length,
-          completed_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
+    await supabase.from("user_onboarding_state").upsert(
+      {
+        user_id: user.id,
+        current_step: STEPS.length,
+        completed_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
     qc.invalidateQueries({ queryKey: ["onboarding-state"] });
     onClose("completed");
   };
@@ -406,13 +477,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
         }}
       >
         {/* Cyan accent stripe */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "var(--accent)" }} />
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: "var(--accent)" }}
+        />
 
         {/* Body */}
         <div className="flex-1 overflow-auto p-10">
-          {stepName === "Welcome" && (
-            <WelcomeStep onSkip={handleSkip} />
-          )}
+          {stepName === "Welcome" && <WelcomeStep onSkip={handleSkip} />}
           {stepName === "Specialties" && (
             <SpecialtiesStep
               selected={selectedSpecialties}
@@ -456,18 +528,13 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
           {stepName === "ImportFollows" && (
             <>
               {xStatus ? (
-                <ImportFollowsPanel
-                  onDone={() => void goNext()}
-                  onSkip={() => void goNext()}
-                />
+                <ImportFollowsPanel onDone={() => void goNext()} onSkip={() => void goNext()} />
               ) : (
                 <div className="space-y-4 max-w-xl">
-                  <h2 className="text-xl font-semibold text-text-primary">
-                    Import your X follows
-                  </h2>
+                  <h2 className="text-xl font-semibold text-text-primary">Import your X follows</h2>
                   <p className="text-sm text-text-secondary">
-                    Skipped because X isn't connected — you can import your
-                    follows anytime from the Sources page after connecting.
+                    Skipped because X isn't connected — you can import your follows anytime from the
+                    Sources page after connecting.
                   </p>
                   <Button size="sm" onClick={() => void goNext()}>
                     Continue <ArrowRight className="h-4 w-4 ml-1" />
@@ -522,11 +589,14 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
                 Skip — I'll set this up later
               </Button>
             )}
-            {!scopeStep && stepIndex > 1 && stepName !== "Provisioning" && stepName !== "Review" && (
-              <Button variant="outline" size="sm" onClick={goBack}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Back
-              </Button>
-            )}
+            {!scopeStep &&
+              stepIndex > 1 &&
+              stepName !== "Provisioning" &&
+              stepName !== "Review" && (
+                <Button variant="outline" size="sm" onClick={goBack}>
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                </Button>
+              )}
             {scopeStep && (
               <>
                 <Button variant="ghost" size="sm" onClick={() => onClose("dismissed")}>
@@ -543,14 +613,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
                 Get started <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             )}
-            {!scopeStep && (stepName === "Specialties" || stepName === "Congresses" || stepName === "Sources" || stepName === "Hashtags" || stepName === "ImportFollows") && (
-              <Button size="sm" onClick={goNext} disabled={!canContinue}>
-                Continue <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            )}
+            {!scopeStep &&
+              (stepName === "Specialties" ||
+                stepName === "Congresses" ||
+                stepName === "Sources" ||
+                stepName === "Hashtags" ||
+                stepName === "ImportFollows") && (
+                <Button size="sm" onClick={goNext} disabled={!canContinue}>
+                  Continue <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
             {!scopeStep && stepName === "Review" && (
               <Button size="sm" onClick={handleFinish} disabled={submitting}>
-                {submitting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1" />
+                )}
                 Confirm and provision
               </Button>
             )}
@@ -651,19 +730,24 @@ function SpecialtiesStep({
   const { data: specialties = [] } = useQuery({
     queryKey: ["urology-specialties"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("urology_specialties")
-        .select("id, label, description")
-        .order("sort_order");
-      if (error) throw error;
-      return data as Specialty[];
+      try {
+        const { data, error } = await supabase
+          .from("urology_specialties")
+          .select("id, label, description")
+          .order("sort_order");
+        if (error) throw error;
+        return (data?.length ? data : FALLBACK_SPECIALTIES) as Specialty[];
+      } catch {
+        return FALLBACK_SPECIALTIES;
+      }
     },
+    retry: 1,
   });
 
   const toggle = (id: string) => {
     if (selected.includes(id)) {
       const next = selected.filter((s) => s !== id);
-      const newPrimary = primary === id ? next[0] ?? null : primary;
+      const newPrimary = primary === id ? (next[0] ?? null) : primary;
       onChange(next, newPrimary);
     } else {
       if (selected.length >= 3) return;
@@ -750,14 +834,11 @@ function ConnectXStep({
   return (
     <div className="space-y-5 max-w-xl">
       <div>
-        <h2 className="text-xl font-semibold text-text-primary">
-          Connect your X (Twitter) API
-        </h2>
+        <h2 className="text-xl font-semibold text-text-primary">Connect your X (Twitter) API</h2>
         <p className="mt-2 text-sm text-text-secondary">
-          UroFeed runs ingestion and posting through <b>your</b> X developer
-          credentials so the platform doesn't share a single quota across
-          everyone. The setup wizard walks you through the X Developer Portal
-          in 8 illustrated steps — about 5 minutes.
+          UroFeed runs ingestion and posting through <b>your</b> X developer credentials so the
+          platform doesn't share a single quota across everyone. The setup wizard walks you through
+          the X Developer Portal in 8 illustrated steps — about 5 minutes.
         </p>
       </div>
       {connected ? (
@@ -767,9 +848,9 @@ function ConnectXStep({
         </div>
       ) : (
         <div className="border border-border rounded-[3px] p-3 text-xs text-text-muted bg-panel-elevated">
-          You have a 14-day grace window: ingestion runs once daily on up to
-          10 sources using a shared platform token while you set this up.
-          After that, ingestion pauses until you connect.
+          You have a 14-day grace window: ingestion runs once daily on up to 10 sources using a
+          shared platform token while you set this up. After that, ingestion pauses until you
+          connect.
         </div>
       )}
       <div className="flex flex-wrap gap-2">
@@ -798,7 +879,10 @@ function SourcesStep({
   token: string | null;
 }) {
   const [input, setInput] = React.useState("");
-  const [warning, setWarning] = React.useState<{ kind: "user" | "global"; resetsIn: number } | null>(null);
+  const [warning, setWarning] = React.useState<{
+    kind: "user" | "global";
+    resetsIn: number;
+  } | null>(null);
 
   const addHandles = async () => {
     if (!input.trim()) return;
@@ -813,7 +897,10 @@ function SourcesStep({
       return;
     }
     // Optimistically add as looking-up
-    const next = [...draft, ...fresh.map((h): DraftSource => ({ handle: h, status: "looking-up" }))];
+    const next = [
+      ...draft,
+      ...fresh.map((h): DraftSource => ({ handle: h, status: "looking-up" })),
+    ];
     onChange(next);
     setInput("");
 
@@ -834,7 +921,9 @@ function SourcesStep({
         const kind = body.error === "global_rate_limit" ? "global" : "user";
         setWarning({ kind, resetsIn: body.resets_in_seconds ?? 60 });
         // Mark as rate-limited so user can retry
-        onChange(next.map((d) => (fresh.includes(d.handle) ? { ...d, status: "rate-limited" } : d)));
+        onChange(
+          next.map((d) => (fresh.includes(d.handle) ? { ...d, status: "rate-limited" } : d)),
+        );
         return;
       }
       if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
@@ -884,7 +973,10 @@ function SourcesStep({
         <div
           className="flex items-start gap-2 p-3 text-xs"
           style={{
-            background: warning.kind === "user" ? "color-mix(in oklab, #FBBF24 12%, var(--panel))" : "color-mix(in oklab, #F59E0B 12%, var(--panel))",
+            background:
+              warning.kind === "user"
+                ? "color-mix(in oklab, #FBBF24 12%, var(--panel))"
+                : "color-mix(in oklab, #F59E0B 12%, var(--panel))",
             border: `1px solid ${warning.kind === "user" ? "#FBBF24" : "#F59E0B"}`,
             color: "var(--text-primary)",
           }}
@@ -894,7 +986,10 @@ function SourcesStep({
             {warning.kind === "user" ? (
               <>Slow down — added handles will resolve in ~{warning.resetsIn}s.</>
             ) : (
-              <>System is busy — your handles will resolve when the queue clears (~{warning.resetsIn}s). You can continue.</>
+              <>
+                System is busy — your handles will resolve when the queue clears (~
+                {warning.resetsIn}s). You can continue.
+              </>
             )}
           </div>
         </div>
@@ -912,7 +1007,9 @@ function SourcesStep({
             }
           }}
         />
-        <Button onClick={addHandles} disabled={!input.trim()}>Add</Button>
+        <Button onClick={addHandles} disabled={!input.trim()}>
+          Add
+        </Button>
       </div>
 
       <div className="space-y-1.5 max-h-[280px] overflow-auto">
@@ -939,7 +1036,9 @@ function SourcesStep({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {d.status === "looking-up" && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-secondary" />}
+              {d.status === "looking-up" && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-text-secondary" />
+              )}
               {d.status === "found" && <Check className="h-3.5 w-3.5 text-accent" />}
               {d.status === "not-found" && (
                 <span className="font-mono text-[10px] text-red-400 uppercase">Not found</span>
@@ -947,7 +1046,10 @@ function SourcesStep({
               {d.status === "rate-limited" && (
                 <span className="font-mono text-[10px] text-yellow-400 uppercase">Queued</span>
               )}
-              <button onClick={() => removeHandle(d.handle)} className="text-text-muted hover:text-text-primary">
+              <button
+                onClick={() => removeHandle(d.handle)}
+                className="text-text-muted hover:text-text-primary"
+              >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -975,9 +1077,14 @@ function ReviewStep({
   const { data: specs = [] } = useQuery({
     queryKey: ["urology-specialties"],
     queryFn: async () => {
-      const { data } = await supabase.from("urology_specialties").select("id, label");
-      return (data ?? []) as Array<{ id: string; label: string }>;
+      try {
+        const { data } = await supabase.from("urology_specialties").select("id, label");
+        return (data?.length ? data : FALLBACK_SPECIALTIES) as Array<{ id: string; label: string }>;
+      } catch {
+        return FALLBACK_SPECIALTIES;
+      }
     },
+    retry: 1,
   });
   const { data: congs = [] } = useQuery({
     queryKey: ["wizard-review-congresses", congressIds.join(",")],
@@ -1066,9 +1173,7 @@ function ReviewStep({
               #{t}
             </span>
           ))}
-          {hashtags.length === 0 && (
-            <p className="text-xs text-text-muted italic">None added.</p>
-          )}
+          {hashtags.length === 0 && <p className="text-xs text-text-muted italic">None added.</p>}
         </div>
       </Section>
     </div>
@@ -1122,7 +1227,8 @@ function ProvisioningStep({
     },
   });
 
-  const total = (data?.queued ?? 0) + (data?.processing ?? 0) + (data?.completed ?? 0) + (data?.failed ?? 0);
+  const total =
+    (data?.queued ?? 0) + (data?.processing ?? 0) + (data?.completed ?? 0) + (data?.failed ?? 0);
   const done = (data?.completed ?? 0) + (data?.failed ?? 0);
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
   const allDone = total > 0 && done === total;
@@ -1136,7 +1242,8 @@ function ProvisioningStep({
   }, [allDone, onDone]);
 
   React.useEffect(() => {
-    if (!data || allDone || nothingToDo || (data.processing ?? 0) > 0 || (data.queued ?? 0) === 0) return;
+    if (!data || allDone || nothingToDo || (data.processing ?? 0) > 0 || (data.queued ?? 0) === 0)
+      return;
     let cancelled = false;
     const t = setTimeout(async () => {
       if (cancelled) return;
@@ -1193,12 +1300,10 @@ function ProvisioningStep({
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-accent mt-0.5 shrink-0" />
             <div className="space-y-1">
-              <h3 className="text-sm font-medium text-text-primary">
-                No sources to provision
-              </h3>
+              <h3 className="text-sm font-medium text-text-primary">No sources to provision</h3>
               <p className="text-xs text-text-secondary">
-                You haven't subscribed to any sources yet. Restart the wizard
-                to pick some, or add them later from the Sources page.
+                You haven't subscribed to any sources yet. Restart the wizard to pick some, or add
+                them later from the Sources page.
               </p>
             </div>
           </div>
@@ -1247,8 +1352,8 @@ function ProvisioningStep({
             Configure recommendations before regular users sign up.
           </h3>
           <p className="mt-1 text-xs text-text-secondary">
-            Recommendation matrices are empty. New users won't see pre-checked
-            congresses or sources until you populate them.
+            Recommendation matrices are empty. New users won't see pre-checked congresses or sources
+            until you populate them.
           </p>
           <Link
             to="/admin/recommendations"
@@ -1267,8 +1372,13 @@ function ProvisioningStep({
 
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className="p-3" style={{ background: "var(--panel-elevated)", border: "1px solid var(--border)" }}>
-      <div className={cn("font-mono text-2xl", accent ? "text-accent" : "text-text-primary")}>{value}</div>
+    <div
+      className="p-3"
+      style={{ background: "var(--panel-elevated)", border: "1px solid var(--border)" }}
+    >
+      <div className={cn("font-mono text-2xl", accent ? "text-accent" : "text-text-primary")}>
+        {value}
+      </div>
       <div className="font-mono text-[10px] uppercase text-text-secondary mt-1">{label}</div>
     </div>
   );
@@ -1461,8 +1571,9 @@ function CongressTypeahead({
         .select("id, name, short_code, city")
         .or(`name.ilike.%${q}%,short_code.ilike.%${q}%`)
         .limit(10);
-      return ((data ?? []) as Array<{ id: string; name: string; short_code: string; city: string | null }>)
-        .filter((r) => !excludeIds.includes(r.id));
+      return (
+        (data ?? []) as Array<{ id: string; name: string; short_code: string; city: string | null }>
+      ).filter((r) => !excludeIds.includes(r.id));
     },
   });
   const { data: suggest, isFetching } = useCongressSuggest(query);
