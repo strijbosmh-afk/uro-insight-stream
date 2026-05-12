@@ -22,11 +22,12 @@ import { useWatchlistRealtime } from "@/hooks/useWatchlistRealtime";
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
   const isMobile = useIsMobile();
-  const { prefs } = useAuth();
+  const { prefs, user } = useAuth();
   useWatchlistRealtime();
   const density = prefs?.theme_density ?? "comfortable";
   const gate = useOnboardingGate();
   const [wizardOpen, setWizardOpen] = React.useState(false);
+  const [wizardLocked, setWizardLocked] = React.useState(false);
   const [wizardScope, setWizardScope] = React.useState<
     "Specialties" | "Congresses" | "Sources" | "Hashtags" | undefined
   >(undefined);
@@ -36,6 +37,10 @@ export function AppShell() {
   // <768px → phone. 768–1023 already shows the full sidebar (useIsMobile=false).
   const isPhone = isMobile;
   const showFab = useShouldShowComposeFab(pathname, { wizardOpen });
+
+  const wizardLockKey = React.useMemo(() => {
+    return user ? `urofeed:onboarding-closed:${user.id}` : null;
+  }, [user]);
 
   // Mobile redirect: admin routes are desktop-only.
   React.useEffect(() => {
@@ -63,14 +68,28 @@ export function AppShell() {
   // momentarily flips shouldOpenWizard back to true.
   const completedOnceRef = React.useRef(false);
   React.useEffect(() => {
+    if (!wizardLockKey || typeof window === "undefined") return;
+    const locked = window.localStorage.getItem(wizardLockKey) === "1";
+    completedOnceRef.current = locked;
+    setWizardLocked(locked);
+  }, [wizardLockKey]);
+
+  React.useEffect(() => {
+    if (wizardLocked) return;
     if (!gate.shouldOpenWizard) {
-      // gate says completed/skipped/has specialty — lock it.
-      if (!gate.loading) completedOnceRef.current = true;
+      // The persisted onboarding state says the user finished/skipped it — lock it.
+      if (!gate.loading && gate.finished) {
+        completedOnceRef.current = true;
+        setWizardLocked(true);
+        if (wizardLockKey && typeof window !== "undefined") {
+          window.localStorage.setItem(wizardLockKey, "1");
+        }
+      }
       return;
     }
     if (completedOnceRef.current) return;
     if (!wizardOpen) setWizardOpen(true);
-  }, [gate.shouldOpenWizard, gate.loading, wizardOpen]);
+  }, [gate.shouldOpenWizard, gate.loading, gate.finished, wizardOpen, wizardLocked, wizardLockKey]);
 
   // Reflect density on <html> so global tokens / utilities can react.
   React.useEffect(() => {
@@ -140,6 +159,10 @@ export function AppShell() {
           onClose={(reason) => {
             if (reason === "completed" || reason === "skipped") {
               completedOnceRef.current = true;
+              setWizardLocked(true);
+              if (wizardLockKey && typeof window !== "undefined") {
+                window.localStorage.setItem(wizardLockKey, "1");
+              }
             }
             setWizardOpen(false);
             setWizardScope(undefined);
