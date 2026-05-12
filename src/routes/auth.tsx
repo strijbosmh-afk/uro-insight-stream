@@ -23,6 +23,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { toast } from "sonner";
 
+function persistSupabaseSession(session: { access_token: string; refresh_token: string }) {
+  if (typeof window === "undefined") return;
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!rawUrl) throw new Error("Auth is temporarily unavailable");
+  const projectRef = new URL(rawUrl).hostname.split(".")[0];
+  window.localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify(session));
+  (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
+    session.access_token;
+}
+
 async function signInWithPasswordResilient(email: string, password: string) {
   try {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -47,11 +57,7 @@ async function signInWithPasswordResilient(email: string, password: string) {
   if (!res.ok || !payload.session) {
     throw new Error(payload.error ?? "Sign-in failed");
   }
-  const { error } = await supabase.auth.setSession({
-    access_token: payload.session.access_token,
-    refresh_token: payload.session.refresh_token,
-  });
-  if (error) throw error;
+  persistSupabaseSession(payload.session);
 }
 
 interface AuthSearch {
@@ -253,7 +259,6 @@ function PasswordForm({
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
-  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,7 +270,7 @@ function PasswordForm({
       if (redirect && redirect.startsWith("/")) {
         window.location.replace(redirect);
       } else {
-        void navigate({ to: "/dashboard", replace: true });
+        window.location.replace("/dashboard");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sign-in failed";
