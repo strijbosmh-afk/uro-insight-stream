@@ -199,17 +199,23 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       };
     });
     onClose("skipped");
-    await supabase
-      .from("user_onboarding_state")
-      .upsert(
-        {
-          user_id: user.id,
-          current_step: stepIndex,
-          skipped_at: skippedAt,
-        },
-        { onConflict: "user_id" },
-      );
-    qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+    try {
+      const { error } = await supabase
+        .from("user_onboarding_state")
+        .upsert(
+          {
+            user_id: user.id,
+            current_step: stepIndex,
+            skipped_at: skippedAt,
+          },
+          { onConflict: "user_id" },
+        );
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+    } catch {
+      // Keep the optimistic skip in place for this session even if the direct
+      // backend request is temporarily blocked, so users are not trapped.
+    }
   };
 
   // ---- Persistence helpers (scoped saves use these too) ----
