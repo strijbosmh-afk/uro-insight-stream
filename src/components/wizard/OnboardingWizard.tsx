@@ -1407,6 +1407,18 @@ type CongressRow = {
   primary_hashtags: string[];
 };
 
+// Only include congresses that start between today and ~1 year from now.
+// End_date is used as a fallback when start_date is missing.
+function isUpcomingWithinOneYear(c: { start_date: string | null; end_date: string | null }): boolean {
+  const ref = c.start_date ?? c.end_date;
+  if (!ref) return false;
+  const t = Date.parse(ref);
+  if (Number.isNaN(t)) return false;
+  const now = Date.now();
+  const oneYear = now + 366 * 24 * 60 * 60 * 1000;
+  return t >= now - 24 * 60 * 60 * 1000 && t <= oneYear;
+}
+
 function CongressesStep({
   specialtyIds,
   selected,
