@@ -541,6 +541,10 @@ export const setUserActive = createServerFn({ method: "POST" })
     }
 
     if (!data.isActive) {
+      const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+      if (targetUser?.user?.email?.toLowerCase() === "strijbosmh@gmail.com") {
+        throw new Error("This account is protected and cannot be deactivated.");
+      }
       // If deactivating an admin, ensure at least one admin remains
       const { data: targetRoles } = await supabaseAdmin
         .from("user_roles")
