@@ -438,6 +438,26 @@ export function OnboardingWizard({ onClose, initialStep = 1, scopeStep }: Wizard
       });
       ids = Array.from(new Set(rows.map((r) => r.congress_id)));
     }
+    // Restrict pre-checks to congresses starting within the next ~year.
+    if (ids.length > 0) {
+      const { data: congs } = await supabase
+        .from("congresses")
+        .select("id, start_date, end_date")
+        .in("id", ids);
+      const allowed = new Set(
+        ((congs ?? []) as Array<{ id: string; start_date: string | null; end_date: string | null }>)
+          .filter((c) => {
+            const ref = c.start_date ?? c.end_date;
+            if (!ref) return false;
+            const t = Date.parse(ref);
+            if (Number.isNaN(t)) return false;
+            const now = Date.now();
+            return t >= now - 24 * 60 * 60 * 1000 && t <= now + 366 * 24 * 60 * 60 * 1000;
+          })
+          .map((c) => c.id),
+      );
+      ids = ids.filter((id) => allowed.has(id));
+    }
     setSelectedCongressIds((prev) => Array.from(new Set([...prev, ...ids])));
     recommendedSeededRef.current.congresses = true;
   }, [selectedSpecialties]);
@@ -1407,6 +1427,18 @@ type CongressRow = {
   primary_hashtags: string[];
 };
 
+// Only include congresses that start between today and ~1 year from now.
+// End_date is used as a fallback when start_date is missing.
+function isUpcomingWithinOneYear(c: { start_date: string | null; end_date: string | null }): boolean {
+  const ref = c.start_date ?? c.end_date;
+  if (!ref) return false;
+  const t = Date.parse(ref);
+  if (Number.isNaN(t)) return false;
+  const now = Date.now();
+  const oneYear = now + 366 * 24 * 60 * 60 * 1000;
+  return t >= now - 24 * 60 * 60 * 1000 && t <= oneYear;
+}
+
 function CongressesStep({
   specialtyIds,
   selected,
@@ -1474,6 +1506,16 @@ function CongressesStep({
     else onChange([...selected, id]);
   };
 
+  const visible = React.useMemo(() => {
+    return recommended
+      .filter(({ congress }) => isUpcomingWithinOneYear(congress))
+      .sort((a, b) => {
+        const ta = Date.parse(a.congress.start_date ?? a.congress.end_date ?? "") || 0;
+        const tb = Date.parse(b.congress.start_date ?? b.congress.end_date ?? "") || 0;
+        return ta - tb;
+      });
+  }, [recommended]);
+
   return (
     <div className="space-y-5">
       <div>
@@ -1490,7 +1532,7 @@ function CongressesStep({
       )}
 
       <div className="space-y-2">
-        {recommended.map(({ congress, note }) => {
+        {visible.map(({ congress, note }) => {
           const isSelected = selected.includes(congress.id);
           return (
             <button
