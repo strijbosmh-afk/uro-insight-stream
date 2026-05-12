@@ -83,6 +83,25 @@ export function ImportFollowsPanel({
       toast.error(e instanceof Error ? e.message : "Subscribe failed"),
   });
 
+  const selectAllAccounts = (includeOther: boolean) => {
+    if (!data || !("ok" in data) || !data.ok) return;
+    setSelected(() => {
+      const next = new Set<string>();
+      for (const it of data.suggested) {
+        const h = it.handle.toLowerCase();
+        if (!subbed.has(h)) next.add(h);
+      }
+      if (includeOther) {
+        for (const it of data.other) {
+          const h = it.handle.toLowerCase();
+          if (!subbed.has(h)) next.add(h);
+        }
+      }
+      return next;
+    });
+    if (includeOther) setShowOther(true);
+  };
+
   // Landing pitch
   if (!started) {
     return (
@@ -97,14 +116,25 @@ export function ImportFollowsPanel({
             and let you uncheck anything before subscribing.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setStarted(true)}>Import now</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setStarted(true)}>
+            Import urology-relevant
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setStarted(true)}
+          >
+            Import all follows
+          </Button>
           {onSkip && (
             <Button variant="ghost" onClick={onSkip}>
               Skip for now
             </Button>
           )}
         </div>
+        <p className="text-xs text-text-muted">
+          You can still adjust the selection before subscribing.
+        </p>
       </div>
     );
   }
