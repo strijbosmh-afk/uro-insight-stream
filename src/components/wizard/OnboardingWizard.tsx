@@ -697,7 +697,7 @@ function stepValidates(
 ) {
   if (name === "Specialties") return state.selectedSpecialties.length >= 1;
   if (name === "Congresses") return true; // optional, but pre-checked
-  if (name === "Sources") return state.draftSources.filter((s) => s.status === "found").length >= 1;
+  if (name === "Sources") return true; // optional — users can add later
   if (name === "Hashtags") return true; // optional
   return true;
 }
