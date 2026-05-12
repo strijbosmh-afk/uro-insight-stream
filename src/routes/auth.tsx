@@ -23,12 +23,32 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { toast } from "sonner";
 
-function persistSupabaseSession(session: { access_token: string; refresh_token: string }) {
+function persistSupabaseSession(session: {
+  access_token: string;
+  refresh_token: string;
+  expires_in?: number;
+  expires_at?: number;
+  token_type?: string;
+  user?: unknown;
+}) {
   if (typeof window === "undefined") return;
   const rawUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   if (!rawUrl) throw new Error("Auth is temporarily unavailable");
   const projectRef = new URL(rawUrl).hostname.split(".")[0];
-  window.localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify(session));
+  // gotrue-js expects the FULL session object (access_token, refresh_token,
+  // expires_at, expires_in, token_type, user). Persisting only the two
+  // tokens caused getSession() to return null after reload, kicking the
+  // user back to /auth.
+  const full = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_in: session.expires_in ?? 3600,
+    expires_at:
+      session.expires_at ?? Math.floor(Date.now() / 1000) + (session.expires_in ?? 3600),
+    token_type: session.token_type ?? "bearer",
+    user: session.user ?? null,
+  };
+  window.localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify(full));
   (window as unknown as { __SB_ACCESS_TOKEN__?: string | null }).__SB_ACCESS_TOKEN__ =
     session.access_token;
 }
@@ -52,7 +72,14 @@ async function signInWithPasswordResilient(email: string, password: string) {
   });
   const payload = (await res.json().catch(() => ({}))) as {
     error?: string;
-    session?: { access_token: string; refresh_token: string };
+    session?: {
+      access_token: string;
+      refresh_token: string;
+      expires_in?: number;
+      expires_at?: number;
+      token_type?: string;
+      user?: unknown;
+    };
   };
   if (!res.ok || !payload.session) {
     throw new Error(payload.error ?? "Sign-in failed");
