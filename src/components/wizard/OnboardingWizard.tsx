@@ -1486,6 +1486,16 @@ function CongressesStep({
     else onChange([...selected, id]);
   };
 
+  const visible = React.useMemo(() => {
+    return recommended
+      .filter(({ congress }) => isUpcomingWithinOneYear(congress))
+      .sort((a, b) => {
+        const ta = Date.parse(a.congress.start_date ?? a.congress.end_date ?? "") || 0;
+        const tb = Date.parse(b.congress.start_date ?? b.congress.end_date ?? "") || 0;
+        return ta - tb;
+      });
+  }, [recommended]);
+
   return (
     <div className="space-y-5">
       <div>
@@ -1502,7 +1512,7 @@ function CongressesStep({
       )}
 
       <div className="space-y-2">
-        {recommended.map(({ congress, note }) => {
+        {visible.map(({ congress, note }) => {
           const isSelected = selected.includes(congress.id);
           return (
             <button
