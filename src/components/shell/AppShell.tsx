@@ -22,7 +22,7 @@ import { useWatchlistRealtime } from "@/hooks/useWatchlistRealtime";
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
   const isMobile = useIsMobile();
-  const { prefs } = useAuth();
+  const { prefs, user } = useAuth();
   useWatchlistRealtime();
   const density = prefs?.theme_density ?? "comfortable";
   const gate = useOnboardingGate();
@@ -39,8 +39,8 @@ export function AppShell() {
   const showFab = useShouldShowComposeFab(pathname, { wizardOpen });
 
   const wizardLockKey = React.useMemo(() => {
-    return gate.loading ? null : `urofeed:onboarding-closed:${prefs ? "loaded" : "guest"}`;
-  }, [gate.loading, prefs]);
+    return user ? `urofeed:onboarding-closed:${user.id}` : null;
+  }, [user]);
 
   // Mobile redirect: admin routes are desktop-only.
   React.useEffect(() => {
@@ -81,6 +81,9 @@ export function AppShell() {
       if (!gate.loading) {
         completedOnceRef.current = true;
         setWizardLocked(true);
+        if (wizardLockKey && typeof window !== "undefined") {
+          window.localStorage.setItem(wizardLockKey, "1");
+        }
       }
       return;
     }
@@ -156,6 +159,10 @@ export function AppShell() {
           onClose={(reason) => {
             if (reason === "completed" || reason === "skipped") {
               completedOnceRef.current = true;
+              setWizardLocked(true);
+              if (wizardLockKey && typeof window !== "undefined") {
+                window.localStorage.setItem(wizardLockKey, "1");
+              }
             }
             setWizardOpen(false);
             setWizardScope(undefined);
