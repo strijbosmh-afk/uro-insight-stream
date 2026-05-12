@@ -35,6 +35,9 @@ export function ImportFollowsPanel({
 }) {
   const qc = useQueryClient();
   const [started, setStarted] = React.useState(mode === "diff");
+  const [initialScope, setInitialScope] = React.useState<"suggested" | "all">(
+    "suggested",
+  );
   const [filter, setFilter] = React.useState("");
   const [showOther, setShowOther] = React.useState(false);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -60,9 +63,15 @@ export function ImportFollowsPanel({
         const h = it.handle.toLowerCase();
         if (!subbed.has(h)) next.add(h);
       }
+      if (initialScope === "all") {
+        for (const it of data.other) {
+          const h = it.handle.toLowerCase();
+          if (!subbed.has(h)) next.add(h);
+        }
+      }
       return next;
     });
-  }, [data]);
+  }, [data, initialScope]);
 
   const subscribeMut = useMutation({
     mutationFn: (handles: string[]) => subscribeFn({ data: { handles } }),
@@ -83,6 +92,25 @@ export function ImportFollowsPanel({
       toast.error(e instanceof Error ? e.message : "Subscribe failed"),
   });
 
+  const selectAllAccounts = (includeOther: boolean) => {
+    if (!data || !("ok" in data) || !data.ok) return;
+    setSelected(() => {
+      const next = new Set<string>();
+      for (const it of data.suggested) {
+        const h = it.handle.toLowerCase();
+        if (!subbed.has(h)) next.add(h);
+      }
+      if (includeOther) {
+        for (const it of data.other) {
+          const h = it.handle.toLowerCase();
+          if (!subbed.has(h)) next.add(h);
+        }
+      }
+      return next;
+    });
+    if (includeOther) setShowOther(true);
+  };
+
   // Landing pitch
   if (!started) {
     return (
@@ -97,14 +125,34 @@ export function ImportFollowsPanel({
             and let you uncheck anything before subscribing.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setStarted(true)}>Import now</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              setInitialScope("suggested");
+              setStarted(true);
+            }}
+          >
+            Import urology-relevant
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setInitialScope("all");
+              setShowOther(true);
+              setStarted(true);
+            }}
+          >
+            Import all follows
+          </Button>
           {onSkip && (
             <Button variant="ghost" onClick={onSkip}>
               Skip for now
             </Button>
           )}
         </div>
+        <p className="text-xs text-text-muted">
+          You can still adjust the selection before subscribing.
+        </p>
       </div>
     );
   }
@@ -313,6 +361,13 @@ export function ImportFollowsPanel({
         </div>
         <Button size="sm" variant="outline" onClick={selectAllSuggested}>
           Select all suggested
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => selectAllAccounts(true)}
+        >
+          Select all follows
         </Button>
         <Button size="sm" variant="ghost" onClick={deselectAll}>
           Deselect all
