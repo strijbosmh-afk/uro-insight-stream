@@ -752,6 +752,8 @@ function SpecialtiesStep({
       }
     },
     retry: 1,
+    placeholderData: FALLBACK_SPECIALTIES,
+    staleTime: 5 * 60 * 1000,
   });
 
   const toggle = (id: string) => {
