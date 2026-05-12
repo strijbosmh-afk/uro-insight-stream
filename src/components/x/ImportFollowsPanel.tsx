@@ -344,6 +344,13 @@ export function ImportFollowsPanel({
         <Button size="sm" variant="outline" onClick={selectAllSuggested}>
           Select all suggested
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => selectAllAccounts(true)}
+        >
+          Select all follows
+        </Button>
         <Button size="sm" variant="ghost" onClick={deselectAll}>
           Deselect all
         </Button>
