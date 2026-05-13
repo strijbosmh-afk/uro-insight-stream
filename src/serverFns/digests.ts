@@ -173,6 +173,17 @@ export const updateDigest = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => UpdateSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    // B6: confirm ownership BEFORE any writes — otherwise the unconditional
+    // child-row deletes below would let any authed user wipe another user's
+    // digest sources/recipients by passing their digest id.
+    const { data: owned } = await supabaseAdmin
+      .from("digest_subscriptions")
+      .select("id")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!owned) throw new Error("Digest not found");
+
     const nextSend = computeNextSendAt({
       frequency: data.frequency,
       dayOfWeek: data.day_of_week ?? null,

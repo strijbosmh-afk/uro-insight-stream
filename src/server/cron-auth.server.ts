@@ -10,6 +10,7 @@
 // to Lovable secrets. The whole drift-prone path is intentionally gone.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { timingSafeEqual } from "crypto";
 
 const CACHE_TTL_MS = 60_000;
 let cachedSecret: { value: string; expiresAt: number } | null = null;
@@ -52,7 +53,11 @@ export async function requireCronAuth(request: Request): Promise<Response | null
       { status: 503, headers: { "Content-Type": "application/json" } },
     );
   }
-  if (got !== expected) {
+  // B13: constant-time compare to avoid a network-observable timing oracle.
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+  const equal = a.length === b.length && timingSafeEqual(a, b);
+  if (!equal) {
     return new Response(
       JSON.stringify({ ok: false, error: "unauthorized" }),
       { status: 401, headers: { "Content-Type": "application/json" } },

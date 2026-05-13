@@ -17,6 +17,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +47,15 @@ export function SourceBriefingDialog({ handle, displayName, avatarUrl, trigger }
         className="max-w-3xl w-full p-0 gap-0 overflow-hidden print:max-w-full print:shadow-none print:border-0"
         // Disable Radix's built-in close button so we control header chrome.
       >
+        {/* B9: Radix requires a DialogTitle/Description for screen readers.
+            The visible header has its own styled heading, so we expose the
+            accessible name/description via the sr-only utility class. */}
+        <DialogTitle className="sr-only">
+          Briefing — {displayName || `@${handle}`}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          AI-generated weekly briefing for @{handle}.
+        </DialogDescription>
         <BriefingBody
           handle={handle}
           displayName={displayName}

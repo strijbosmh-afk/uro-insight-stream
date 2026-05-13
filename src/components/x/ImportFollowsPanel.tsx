@@ -94,6 +94,7 @@ export function ImportFollowsPanel({
 
   const selectAllAccounts = (includeOther: boolean) => {
     if (!data || !("ok" in data) || !data.ok) return;
+    const subbed = new Set(data.already_subscribed);
     setSelected(() => {
       const next = new Set<string>();
       for (const it of data.suggested) {

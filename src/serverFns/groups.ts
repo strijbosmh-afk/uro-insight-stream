@@ -128,7 +128,13 @@ export const listGroups = createServerFn({ method: "POST" })
     if (!data.includeArchived) q = q.eq("is_archived", false);
     if (groupIdFilter) q = q.in("id", groupIdFilter);
     if (data.visibility && data.visibility !== "any") {
-      q = q.eq("visibility", data.visibility);
+      // B7: never let an authenticated user enumerate every private group;
+      // when filtering for private, restrict to groups the caller created.
+      if (data.visibility === "private") {
+        q = q.eq("visibility", "private").eq("created_by", userId);
+      } else {
+        q = q.eq("visibility", data.visibility);
+      }
     } else {
       // Default visibility scope: official + public + own private
       q = q.or(`visibility.in.(official,public),created_by.eq.${userId}`);

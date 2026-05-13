@@ -2098,18 +2098,21 @@ export type Database = {
         Row: {
           classifications: number
           day: string
+          expensive_calls: number
           updated_at: string
           user_id: string
         }
         Insert: {
           classifications?: number
           day: string
+          expensive_calls?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           classifications?: number
           day?: string
+          expensive_calls?: number
           updated_at?: string
           user_id?: string
         }
@@ -2547,6 +2550,7 @@ export type Database = {
           follows_new_since_last_import: number
           id: string
           is_active: boolean
+          key_id: number
           last_post_at: string | null
           last_verified_at: string | null
           post_count_today: number
@@ -2576,6 +2580,7 @@ export type Database = {
           follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
+          key_id?: number
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
@@ -2605,6 +2610,7 @@ export type Database = {
           follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
+          key_id?: number
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
@@ -2867,6 +2873,10 @@ export type Database = {
       }
     }
     Functions: {
+      bump_user_llm_quota: {
+        Args: { _day: string; _kind: string; _n: number; _user_id: string }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2915,8 +2925,13 @@ export type Database = {
       }
       release_ingest_queue_lock: { Args: never; Returns: boolean }
       release_tweet_matcher_lock: { Args: never; Returns: boolean }
+      release_x_post_slot: { Args: { _user_id: string }; Returns: undefined }
       sync_cron_job_secret: { Args: { _secret: string }; Returns: boolean }
       try_ingest_queue_lock: { Args: never; Returns: boolean }
+      try_reserve_x_post_slot: {
+        Args: { _cap: number; _user_id: string; _window_seconds: number }
+        Returns: boolean
+      }
       try_tweet_matcher_lock: { Args: never; Returns: boolean }
     }
     Enums: {
