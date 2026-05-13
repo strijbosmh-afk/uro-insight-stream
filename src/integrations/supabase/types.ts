@@ -2876,9 +2876,27 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_user_role: {
+        Args: {
+          _granted_by: string
+          _new_role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
       bump_user_llm_quota: {
         Args: { _day: string; _kind: string; _n: number; _user_id: string }
         Returns: number
+      }
+      claim_user_invitation: {
+        Args: { _token: string; _user_id: string }
+        Returns: {
+          display_name: string
+          email: string
+          id: string
+          invited_by: string
+          role: string
+        }[]
       }
       cleanup_watchlist_mute_tokens: { Args: never; Returns: number }
       delete_email: {
