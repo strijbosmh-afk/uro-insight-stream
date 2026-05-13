@@ -161,6 +161,8 @@ const ListAuditSchema = z
     target: z.string().uuid().optional(),
     action: z.string().max(80).optional(),
     limit: z.number().int().min(1).max(200).optional(),
+    // Composite cursor: "<created_at_iso>|<row_id>" for stable pagination
+    // when multiple audit rows share a created_at value.
     cursor: z.string().optional(),
   })
   .default({});
