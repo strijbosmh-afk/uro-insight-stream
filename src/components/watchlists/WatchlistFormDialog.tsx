@@ -184,12 +184,30 @@ export function WatchlistFormDialog({
   };
 
   const onTopicKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
+    // Accept Enter, comma, semicolon, or Tab as commit delimiters so the
+    // chip-input behaves like every other tags field users have seen.
+    // Tab still moves focus forward — only intercept it when there's a
+    // pending value to commit.
+    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addTopic(topicInput);
+    } else if (e.key === "Tab" && topicInput.trim()) {
       e.preventDefault();
       addTopic(topicInput);
     } else if (e.key === "Backspace" && !topicInput && topics.length > 0) {
       setTopics(topics.slice(0, -1));
     }
+  };
+
+  const onTopicPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!/[,;\n\t]/.test(text)) return;
+    e.preventDefault();
+    text
+      .split(/[,;\n\t]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((s) => addTopic(s));
   };
 
   const validate = (): boolean => {
