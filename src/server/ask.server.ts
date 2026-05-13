@@ -161,26 +161,103 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
   const sourceIds = await resolveScopeSourceIds(input.scope, input.user_id);
   if (sourceIds !== null && sourceIds.length === 0) return [];
 
-  let q = supabaseAdmin
-    .from("tweets")
-    .select(
-      "id, source_id, author_handle, author_display_name, text, created_at, like_count, retweet_count, reply_count, hashtags",
+  const cap = Math.min(input.max_sources, 50);
+  const cols =
+    "id, source_id, author_handle, author_display_name, text, created_at, like_count, retweet_count, reply_count, hashtags";
+
+  const applyScope = <T extends { gte: Function; in: Function }>(qb: T): T => {
+    let next: any = qb.gte("created_at", since);
+    if (sourceIds !== null) next = next.in("source_id", sourceIds);
+    return next as T;
+  };
+
+  // 1) Author-intent retrieval: pick out @handles and Capitalised name tokens
+  //    (e.g. "Piet Ost") so questions like "latest post from X" actually work.
+  const authorTokens = extractAuthorTokens(input.query);
+  const authorResults: AskTweet[] = [];
+  if (authorTokens.length > 0) {
+    const orParts: string[] = [];
+    for (const tok of authorTokens) {
+      const safe = tok.replace(/[%,()*]/g, " ").trim();
+      if (!safe) continue;
+      orParts.push(`author_handle.ilike.%${safe}%`);
+      orParts.push(`author_display_name.ilike.%${safe}%`);
+    }
+    if (orParts.length > 0) {
+      const { data } = await applyScope(
+        supabaseAdmin.from("tweets").select(cols),
+      )
+        .or(orParts.join(","))
+        .order("created_at", { ascending: false })
+        .limit(cap);
+      if (data) authorResults.push(...((data as AskTweet[]) ?? []));
+    }
+  }
+
+  // 2) Full-text search on the question itself.
+  const ftsResults: AskTweet[] = [];
+  try {
+    const { data, error } = await applyScope(
+      supabaseAdmin.from("tweets").select(cols),
     )
-    .gte("created_at", since)
-    .textSearch("text", input.query, { config: "english", type: "websearch" })
-    .order("created_at", { ascending: false })
-    .limit(Math.min(input.max_sources, 50));
-
-  if (sourceIds !== null) {
-    q = q.in("source_id", sourceIds);
+      .textSearch("text", input.query, { config: "english", type: "websearch" })
+      .order("created_at", { ascending: false })
+      .limit(cap);
+    if (error) {
+      console.error("[ask] fts error", error);
+    } else if (data) {
+      ftsResults.push(...((data as AskTweet[]) ?? []));
+    }
+  } catch (e) {
+    console.error("[ask] fts threw", e);
   }
 
-  const { data, error } = await q;
-  if (error) {
-    console.error("[ask] retrieval error", error);
-    return [];
+  // 3) Merge unique by id, author matches first (more relevant for "from X" intents).
+  const merged = new Map<string, AskTweet>();
+  for (const t of [...authorResults, ...ftsResults]) {
+    if (!merged.has(t.id)) merged.set(t.id, t);
   }
-  return (data ?? []) as AskTweet[];
+
+  // 4) Fallback: if nothing matched, hand the LLM the most recent N tweets in
+  //    scope so it can still answer "what's new / latest" style questions
+  //    instead of bailing with "insufficient_data".
+  if (merged.size === 0) {
+    const { data } = await applyScope(
+      supabaseAdmin.from("tweets").select(cols),
+    )
+      .order("created_at", { ascending: false })
+      .limit(Math.min(cap, 20));
+    for (const t of ((data ?? []) as AskTweet[])) {
+      if (!merged.has(t.id)) merged.set(t.id, t);
+    }
+  }
+
+  return Array.from(merged.values()).slice(0, cap);
+}
+
+/** Extract likely author references from a free-text question. */
+function extractAuthorTokens(query: string): string[] {
+  const tokens = new Set<string>();
+
+  // @handles
+  for (const m of query.matchAll(/@([A-Za-z0-9_]{2,30})/g)) {
+    tokens.add(m[1]);
+  }
+
+  // Capitalised name sequences (e.g. "Piet Ost", "Karim Fizazi"), excluding
+  // sentence-start words by requiring two adjacent capitalised tokens OR a
+  // capitalised token directly after "from"/"by"/"of".
+  const pairRe = /\b([A-Z][a-zà-ÿ'’\-]{1,})\s+([A-Z][a-zà-ÿ'’\-]{1,})\b/g;
+  for (const m of query.matchAll(pairRe)) {
+    tokens.add(`${m[1]} ${m[2]}`);
+    tokens.add(m[2]);
+  }
+  const afterRe = /\b(?:from|by|of|about)\s+([A-Z][a-zà-ÿ'’\-]{1,})\b/g;
+  for (const m of query.matchAll(afterRe)) {
+    tokens.add(m[1]);
+  }
+
+  return Array.from(tokens).filter((t) => t.length >= 2 && t.length <= 60);
 }
 
 /* ----------------------------- LLM ----------------------------- */
