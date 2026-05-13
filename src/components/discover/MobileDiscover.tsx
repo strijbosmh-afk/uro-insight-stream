@@ -769,6 +769,14 @@ function MobileGroupCard({
         >
           <Check className="w-4 h-4" /> Subscribed
         </button>
+      ) : group.is_archived ? (
+        <button
+          type="button"
+          disabled
+          className="w-full h-11 rounded-[3px] border border-border bg-panel-elevated text-text-muted text-[14px] font-medium inline-flex items-center justify-center gap-1.5 opacity-60"
+        >
+          Archived
+        </button>
       ) : (
         <button
           type="button"
