@@ -330,14 +330,14 @@ export async function computeDigestPreview(
   await supabaseAdmin
     .from("digest_preview_cache")
     .upsert(
-      {
+      [{
         fingerprint: fp,
         rendered: rendered as unknown as Record<string, unknown>,
         tweet_count: tweets.length,
         llm_tokens_used: llm.tokens,
         hit_count: 0,
         created_at: new Date().toISOString(),
-      },
+      }],
       { onConflict: "fingerprint" },
     );
 
@@ -367,12 +367,12 @@ export async function consumePreviewRateLimit(userId: string, max = 20): Promise
   await supabaseAdmin
     .from("rate_limit_preview")
     .upsert(
-      {
+      [{
         user_id: userId,
         window_start: windowKey,
         count: current + 1,
         updated_at: now.toISOString(),
-      },
+      }],
       { onConflict: "user_id,window_start" },
     );
   return true;
