@@ -259,13 +259,16 @@ export const subscribeToGroup = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => IdSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    // Use the user-context client so RLS enforces visibility/archived rules.
+    // Use the user-context client so RLS enforces visibility/archived
+    // rules. ignoreDuplicates makes this idempotent without parsing
+    // error.message strings.
     const { error } = await context.supabase
       .from("user_subscribed_groups")
-      .insert({ user_id: userId, group_id: data.id });
-    if (error && !/duplicate key/i.test(error.message)) {
-      throw new Error(error.message);
-    }
+      .upsert(
+        { user_id: userId, group_id: data.id },
+        { onConflict: "user_id,group_id", ignoreDuplicates: true },
+      );
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 

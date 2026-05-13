@@ -193,7 +193,15 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
   const text = await res.text();
   if (!res.ok) {
     let errCode = "x_api_error";
-    let errMsg = `X API error ${res.status}: ${text.slice(0, 500)}`;
+    // Generic friendly fallback. We log the raw body server-side but never
+    // surface raw X API content to the client — it can include rate-limit
+    // reset headers / internal codes.
+    console.error(
+      "[x-posting] X API error",
+      res.status,
+      text.slice(0, 200),
+    );
+    let errMsg = `X couldn't post that tweet (status ${res.status}). Please try again.`;
     // Release the slot for any failure that isn't "X is rate-limiting us".
     // A 429 from X means our user genuinely consumed a slot upstream; for
     // every other failure mode the post never happened, so the slot must

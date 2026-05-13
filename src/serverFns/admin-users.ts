@@ -161,6 +161,8 @@ const ListAuditSchema = z
     target: z.string().uuid().optional(),
     action: z.string().max(80).optional(),
     limit: z.number().int().min(1).max(200).optional(),
+    // Composite cursor: "<created_at_iso>|<row_id>" for stable pagination
+    // when multiple audit rows share a created_at value.
     cursor: z.string().optional(),
   })
   .default({});
@@ -455,7 +457,8 @@ export const listInvitations = createServerFn({ method: "GET" })
       .limit(200);
     if (error) throw new Error(error.message);
 
-    // Resolve invited_by emails
+    // Resolve invited_by emails — batch the auth.admin.getUserById calls in
+    // parallel rather than awaiting them serially (was N+1 sequential).
     const inviterIds = Array.from(
       new Set(
         (data ?? [])
@@ -464,9 +467,15 @@ export const listInvitations = createServerFn({ method: "GET" })
       ),
     );
     const inviterEmails = new Map<string, string>();
-    for (const id of inviterIds) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
-      if (u?.user?.email) inviterEmails.set(id, u.user.email);
+    const inviterLookups = await Promise.all(
+      inviterIds.map((id) =>
+        supabaseAdmin.auth.admin
+          .getUserById(id)
+          .then((r) => ({ id, email: r.data?.user?.email ?? null })),
+      ),
+    );
+    for (const r of inviterLookups) {
+      if (r.email) inviterEmails.set(r.id, r.email);
     }
 
     return (data ?? []).map((row: any): PendingInvitation => ({
@@ -498,28 +507,24 @@ export const updateUserRole = createServerFn({ method: "POST" })
       throw new Error("This account is protected and must remain an admin.");
     }
 
-    // Determine current roles
-    const { data: current } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.userId);
-    const currentRoles = ((current ?? []) as Array<{ role: AppRole }>).map((r) => r.role);
-    const wasAdmin = currentRoles.includes("admin");
-    const willBeAdmin = data.role === "admin";
-
-    if (wasAdmin && !willBeAdmin) {
-      const adminCount = await countAdmins();
-      if (adminCount <= 1) {
+    // Atomic, race-safe role replacement with last-admin guard inside the
+    // database (locks user_roles for the duration of the swap).
+    const { data: prevRoles, error: rpcErr } = await supabaseAdmin.rpc(
+      "admin_set_user_role",
+      {
+        _target_user_id: data.userId,
+        _new_role: data.role,
+        _granted_by: context.userId,
+      },
+    );
+    if (rpcErr) {
+      if (rpcErr.message?.includes("last_admin")) {
         throw new Error("Cannot demote the last remaining admin.");
       }
+      console.error("[updateUserRole] admin_set_user_role failed", rpcErr);
+      throw new Error("Could not update role. Please try again.");
     }
-
-    // Replace with single role row
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
-    const { error: insErr } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: data.userId, role: data.role, granted_by: context.userId });
-    if (insErr) throw new Error(insErr.message);
+    const currentRoles = (prevRoles ?? []) as AppRole[];
 
     await logAdminAction({
       actorUserId: context.userId,
@@ -663,22 +668,40 @@ export const listAuditLog = createServerFn({ method: "POST" })
       .from("admin_audit_log")
       .select("*")
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(limit);
     if (data.actor) q = q.eq("actor_user_id", data.actor);
     if (data.target) q = q.eq("target_user_id", data.target);
     if (data.action) q = q.eq("action", data.action);
-    if (data.cursor) q = q.lt("created_at", data.cursor);
+    if (data.cursor) {
+      // Composite cursor "<created_at>|<id>" — strict lexicographic
+      // comparison via Supabase's `or` filter so created_at ties are
+      // ordered deterministically by id.
+      const [cAt, cId] = data.cursor.split("|");
+      if (cAt && cId) {
+        q = q.or(
+          `and(created_at.lt.${cAt}),and(created_at.eq.${cAt},id.lt.${cId})`,
+        );
+      }
+    }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    // Resolve actor emails
+    // Resolve actor emails — parallel fan-out to remove the N+1 sequential
+    // waterfall.
     const actorIds = Array.from(
       new Set((rows ?? []).map((r: { actor_user_id: string }) => r.actor_user_id)),
     );
     const actorEmails = new Map<string, string>();
-    for (const id of actorIds) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
-      if (u?.user?.email) actorEmails.set(id, u.user.email);
+    const actorLookups = await Promise.all(
+      actorIds.map((id) =>
+        supabaseAdmin.auth.admin
+          .getUserById(id)
+          .then((r) => ({ id, email: r.data?.user?.email ?? null })),
+      ),
+    );
+    for (const r of actorLookups) {
+      if (r.email) actorEmails.set(r.id, r.email);
     }
 
     return (rows ?? []).map((r: any): AdminAuditEntry => ({
@@ -701,58 +724,51 @@ export const claimInvitation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => ClaimInvitationSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { data: inv, error } = await supabaseAdmin
-      .from("user_invitations")
-      .select("*")
-      .eq("token", data.token)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!inv) throw new Error("Invitation not found.");
-    if (inv.status === "revoked") throw new Error("This invitation has been revoked.");
-    if (inv.status === "accepted") throw new Error("This invitation has already been accepted.");
-    if (new Date(inv.expires_at as string) < new Date()) {
-      await supabaseAdmin
-        .from("user_invitations")
-        .update({ status: "expired" })
-        .eq("id", inv.id);
-      throw new Error("This invitation has expired.");
-    }
-
-    // Make sure the email matches the authenticated user
+    // Verify the caller's email up-front so we don't atomically claim the
+    // invitation for the wrong account. If anything else races us we'll
+    // still detect it because claim_user_invitation only succeeds when
+    // status='pending' AND not expired.
     const { data: me } = await supabaseAdmin.auth.admin.getUserById(context.userId);
     const myEmail = (me?.user?.email ?? "").toLowerCase();
-    if (myEmail !== (inv.email as string).toLowerCase()) {
+    if (!myEmail) throw new Error("Invitation could not be verified.");
+
+    const { data: claimed, error: claimErr } = await supabaseAdmin.rpc(
+      "claim_user_invitation",
+      { _token: data.token, _user_id: context.userId },
+    );
+    if (claimErr) {
+      console.error("[claimInvitation] rpc failed", claimErr);
+      throw new Error("Could not accept invitation.");
+    }
+    const inv = Array.isArray(claimed) ? claimed[0] : claimed;
+    if (!inv) {
+      throw new Error(
+        "This invitation is no longer valid. It may have been used, revoked, or expired.",
+      );
+    }
+    if ((inv.email as string).toLowerCase() !== myEmail) {
+      // Concurrent path: claim_user_invitation already updated the row so
+      // we can't easily roll back. Revoke it instead and surface a clear
+      // error.
+      await supabaseAdmin
+        .from("user_invitations")
+        .update({ status: "revoked" })
+        .eq("id", inv.id);
       throw new Error("This invitation was sent to a different email address.");
     }
 
     // Grant the role (idempotent against the unique (user_id, role) index)
-    const { error: existingErr, data: existingRole } = await supabaseAdmin
+    const { error: roleErr } = await supabaseAdmin
       .from("user_roles")
-      .select("id")
-      .eq("user_id", context.userId)
-      .eq("role", inv.role as AppRole)
-      .maybeSingle();
-    if (existingErr) throw new Error(existingErr.message);
-    if (!existingRole) {
-      const { error: roleErr } = await supabaseAdmin
-        .from("user_roles")
-        .insert({
+      .upsert(
+        {
           user_id: context.userId,
           role: inv.role as AppRole,
           granted_by: (inv.invited_by as string | null) ?? null,
-        } as never);
-      if (roleErr) throw new Error(roleErr.message);
-    }
-
-    // Mark invitation accepted
-    await supabaseAdmin
-      .from("user_invitations")
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        accepted_user_id: context.userId,
-      })
-      .eq("id", inv.id);
+        } as never,
+        { onConflict: "user_id,role", ignoreDuplicates: true },
+      );
+    if (roleErr) throw new Error("Could not grant invited role.");
 
     // Apply admin-supplied display name if any
     if (inv.display_name) {
@@ -792,40 +808,23 @@ export const bulkUpdateRole = createServerFn({ method: "POST" })
     const succeeded: string[] = [];
     const failed: Array<{ userId: string; error: string }> = [];
 
-    // Pre-fetch current roles for all targets in one round-trip
-    const { data: currentRows } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id, role")
-      .in("user_id", ids);
-    const rolesByUser = new Map<string, AppRole[]>();
-    for (const r of (currentRows ?? []) as Array<{ user_id: string; role: AppRole }>) {
-      const arr = rolesByUser.get(r.user_id) ?? [];
-      arr.push(r.role);
-      rolesByUser.set(r.user_id, arr);
-    }
-
-    let liveAdminCount = await countAdmins();
-
     for (const userId of ids) {
       try {
-        const currentRoles = rolesByUser.get(userId) ?? [];
-        const wasAdmin = currentRoles.includes("admin");
-        const willBeAdmin = data.role === "admin";
-
-        if (wasAdmin && !willBeAdmin) {
-          if (liveAdminCount <= 1) {
+        const { data: prev, error: rpcErr } = await supabaseAdmin.rpc(
+          "admin_set_user_role",
+          {
+            _target_user_id: userId,
+            _new_role: data.role,
+            _granted_by: context.userId,
+          },
+        );
+        if (rpcErr) {
+          if (rpcErr.message?.includes("last_admin")) {
             throw new Error("Would remove the last remaining admin.");
           }
+          throw new Error("Role update failed.");
         }
-
-        await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
-        const { error: insErr } = await supabaseAdmin
-          .from("user_roles")
-          .insert({ user_id: userId, role: data.role, granted_by: context.userId });
-        if (insErr) throw new Error(insErr.message);
-
-        if (wasAdmin && !willBeAdmin) liveAdminCount -= 1;
-        if (!wasAdmin && willBeAdmin) liveAdminCount += 1;
+        const currentRoles = (prev ?? []) as AppRole[];
 
         await logAdminAction({
           actorUserId: context.userId,

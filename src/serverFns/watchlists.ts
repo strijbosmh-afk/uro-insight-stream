@@ -192,6 +192,8 @@ const ListMatchesSchema = z.object({
   limit: z.number().int().min(1).max(200).optional().default(50),
   watchlist_id: z.string().uuid().optional(),
   include_dismissed: z.boolean().optional().default(false),
+  // Composite cursor "<classified_at_iso>|<id>" to page beyond the limit.
+  cursor: z.string().optional(),
 });
 
 export const listMyMatches = createServerFn({ method: "GET" })
@@ -205,9 +207,18 @@ export const listMyMatches = createServerFn({ method: "GET" })
         "id, watchlist_id, tweet_id, matched_topic, match_reason, classified_at, dismissed_at, delivered_via",
       )
       .order("classified_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(data.limit);
     if (data.watchlist_id) q = q.eq("watchlist_id", data.watchlist_id);
     if (!data.include_dismissed) q = q.is("dismissed_at", null);
+    if (data.cursor) {
+      const [cAt, cId] = data.cursor.split("|");
+      if (cAt && cId) {
+        q = q.or(
+          `and(classified_at.lt.${cAt}),and(classified_at.eq.${cAt},id.lt.${cId})`,
+        );
+      }
+    }
     const { data: matches, error } = await q;
     if (error) throw new Error(error.message);
     const tweetIds = Array.from(new Set((matches ?? []).map((m) => m.tweet_id as string)));
