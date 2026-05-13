@@ -8,7 +8,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loadCredentials } from "./x-credentials.server";
 
 const DAILY_POST_CAP = 50;
-const WINDOW_MS = 24 * 60 * 60 * 1000;
+const WINDOW_SECONDS = 24 * 60 * 60;
 
 export interface PostTweetInput {
   userId: string;
@@ -61,39 +61,31 @@ async function logPost(args: {
 }
 
 /**
- * Reserve a slot in the per-user 24h posting window.
- * Returns true if allowed, false if cap reached.
+ * Reserve a slot in the per-user 24h posting window via an atomic SQL UPDATE
+ * (try_reserve_x_post_slot). Returns true if a slot was claimed, false if
+ * the cap is exhausted. Race-safe under concurrent posts.
  */
 async function reserveRateLimitSlot(userId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin
-    .from("user_x_credentials")
-    .select("post_count_today, post_count_window_start")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await supabaseAdmin.rpc("try_reserve_x_post_slot", {
+    _user_id: userId,
+    _cap: DAILY_POST_CAP,
+    _window_seconds: WINDOW_SECONDS,
+  });
   if (error) throw new Error(error.message);
-  if (!data) return false;
+  return data === true;
+}
 
-  const now = Date.now();
-  const windowStart = data.post_count_window_start
-    ? new Date(data.post_count_window_start).getTime()
-    : 0;
-  const windowExpired = !windowStart || now - windowStart > WINDOW_MS;
-  const currentCount = windowExpired ? 0 : data.post_count_today ?? 0;
-
-  if (currentCount >= DAILY_POST_CAP) return false;
-
-  const { error: upErr } = await supabaseAdmin
-    .from("user_x_credentials")
-    .update({
-      post_count_today: currentCount + 1,
-      post_count_window_start: windowExpired
-        ? new Date(now).toISOString()
-        : new Date(windowStart).toISOString(),
-    })
-    .eq("user_id", userId);
-  if (upErr) throw new Error(upErr.message);
-
-  return true;
+/**
+ * Release a previously-reserved slot. Used when the post fails for any
+ * reason that ISN'T "X told us we are rate-limited" — without this, a user
+ * hitting transient errors would consume their daily cap without ever
+ * publishing anything.
+ */
+async function releaseRateLimitSlot(userId: string): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("release_x_post_slot", {
+    _user_id: userId,
+  });
+  if (error) console.error("[x-posting] release_x_post_slot failed", error);
 }
 
 export async function postTweet(input: PostTweetInput): Promise<PostTweetResult> {
@@ -186,6 +178,7 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
       body: JSON.stringify(body),
     });
   } catch (e) {
+    await releaseRateLimitSlot(input.userId);
     await logPost({
       userId: input.userId,
       text: input.text,
@@ -201,6 +194,13 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
   if (!res.ok) {
     let errCode = "x_api_error";
     let errMsg = `X API error ${res.status}: ${text.slice(0, 500)}`;
+    // Release the slot for any failure that isn't "X is rate-limiting us".
+    // A 429 from X means our user genuinely consumed a slot upstream; for
+    // every other failure mode the post never happened, so the slot must
+    // be returned to the user's daily budget.
+    if (res.status !== 429) {
+      await releaseRateLimitSlot(input.userId);
+    }
     if (res.status === 401) {
       errCode = "invalid_credentials";
       errMsg = "X rejected your credentials. Reconnect in Settings.";
@@ -241,6 +241,7 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
   const json = JSON.parse(text) as { data?: { id: string; text: string } };
   const tweetId = json.data?.id;
   if (!tweetId) {
+    await releaseRateLimitSlot(input.userId);
     await logPost({
       userId: input.userId,
       text: input.text,

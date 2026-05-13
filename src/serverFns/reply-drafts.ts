@@ -9,6 +9,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertAdmin } from "@/server/admin-middleware.server";
 import { computeReplyDrafts, type ReplyDraft } from "@/server/reply-drafts.server";
+import {
+  reserveExpensiveLlmCall,
+  LlmQuotaExceededError,
+} from "@/server/llm-quota.server";
 
 export type ReplyDraftsResult = {
   drafts: ReplyDraft[];
@@ -66,6 +70,22 @@ export const suggestReplyDrafts = createServerFn({ method: "POST" })
         .eq("id", tweet.source_id)
         .maybeSingle();
       bio = src?.bio ?? null;
+    }
+
+    // Cache miss → gate the LLM call on the per-user daily budget.
+    if (!data.refresh) {
+      const ok = await reserveExpensiveLlmCall(context.userId);
+      if (!ok) {
+        if (cached) {
+          return {
+            drafts: cached.drafts as unknown as ReplyDraft[],
+            computed_at: cached.computed_at,
+            model: cached.model,
+            cache_hit: true,
+          };
+        }
+        throw new LlmQuotaExceededError();
+      }
     }
 
     const result = await computeReplyDrafts({

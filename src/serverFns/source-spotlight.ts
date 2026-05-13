@@ -21,6 +21,10 @@ import {
   currentWeekStartUTC,
   type SourceBriefing,
 } from "@/server/source-briefing.server";
+import {
+  reserveExpensiveLlmCall,
+  LlmQuotaExceededError,
+} from "@/server/llm-quota.server";
 
 export type SpotlightSource = {
   id: string;
@@ -428,6 +432,26 @@ export const getSourceThemes = createServerFn({ method: "POST" })
       return null;
     }
 
+    // Cache miss → about to spend an LLM call. Gate non-admin callers
+    // behind the per-user daily expensive-LLM budget so a script
+    // iterating handles can't burn unbounded credit.
+    if (!data.refresh) {
+      const ok = await reserveExpensiveLlmCall(context.userId);
+      if (!ok) {
+        if (cached) {
+          return {
+            themes: cached.themes as unknown as SourceTheme[],
+            computed_at: cached.computed_at,
+            expires_at: cached.expires_at,
+            model: cached.model,
+            is_stale: true,
+            cache_hit: true,
+          };
+        }
+        throw new LlmQuotaExceededError();
+      }
+    }
+
     const slugs = (areas ?? []).map((a) => a.slug);
     const result = await computeSourceThemes({
       bio: src?.bio ?? null,
@@ -803,6 +827,24 @@ export const getSourceBriefing = createServerFn({ method: "POST" })
     }
 
     const slugs = (areas ?? []).map((a) => a.slug);
+    // Cache miss → gate the LLM call on the per-user daily budget.
+    if (!data.refresh) {
+      const ok = await reserveExpensiveLlmCall(context.userId);
+      if (!ok) {
+        if (cached) {
+          return {
+            briefing: cached.briefing as unknown as SourceBriefing,
+            week_start: weekStart,
+            computed_at: cached.computed_at,
+            expires_at: cached.expires_at,
+            model: cached.model,
+            is_stale: true,
+            cache_hit: true,
+          };
+        }
+        throw new LlmQuotaExceededError();
+      }
+    }
     const result = await computeSourceBriefing({
       handle: id,
       bio: src.bio ?? null,
