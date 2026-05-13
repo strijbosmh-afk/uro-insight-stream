@@ -159,6 +159,9 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
         <span
           className="w-1.5 h-1.5 rounded-full bg-success"
           style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
+          role="img"
+          aria-label="Live — sync active"
+          title="Live — sync active"
         />
         <span className="text-[10px] font-mono font-semibold tracking-wider text-success">
           LIVE
@@ -213,7 +216,12 @@ function XHandleBadge() {
         className="hidden sm:inline-flex h-8 px-2.5 shrink-0 items-center gap-1.5 rounded-[3px] border border-border bg-panel-elevated text-[11px] font-mono text-text-primary hover:border-accent/60 hover:text-accent transition-colors"
         title="Switch X account"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-success"
+          role="img"
+          aria-label="Connected"
+          title="Connected"
+        />
         <span>@{status.x_username}</span>
         <ChevronDown className="w-3 h-3 opacity-60" />
       </DropdownMenuTrigger>
