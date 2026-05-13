@@ -481,6 +481,7 @@ export async function computeAsk(input: AskInput): Promise<AskResult> {
   if (rl === "global") return { status: "error", reason: "global_rate_limited" };
 
   const tweets = await retrieveTweets(input);
+  const widened = (tweets as AskTweet[] & { __widened?: boolean }).__widened === true;
   if (tweets.length === 0) {
     // Still cache an "insufficient_data" answer so repeat questions are cheap.
     const empty: AskAnswer = {
@@ -527,6 +528,11 @@ export async function computeAsk(input: AskInput): Promise<AskResult> {
     tweets,
   });
   if (!synth) return { status: "error", reason: "llm_failed" };
+
+  if (widened) {
+    const note = "Widened beyond your follows to find tweets matching the named author.";
+    synth.answer.caveat = synth.answer.caveat ? `${note} ${synth.answer.caveat}` : note;
+  }
 
   await supabaseAdmin.from("ask_query_cache").upsert(
     [{
