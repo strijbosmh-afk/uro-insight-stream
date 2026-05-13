@@ -64,6 +64,19 @@ function fmtAge(seconds: number | null) {
 
 export function Dashboard() {
   const { user } = useAuth();
+  // Welcome banner shown after a successful invite acceptance.
+  // Persists across re-renders (unlike a toast) until dismissed.
+  const [welcomeBanner, setWelcomeBanner] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      if (sessionStorage.getItem("welcome:invite") === "1") {
+        setWelcomeBanner(true);
+        sessionStorage.removeItem("welcome:invite");
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
   const fetchNewRecs = useServerFn(getNewRecommendedSourcesCount);
   const fetchCronHealth = useServerFn(getIngestionCronHealth);
   const { data: newRecs } = useQuery({
