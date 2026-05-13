@@ -113,8 +113,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [contactOpen, setContactOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (pathname === BRAINSTORM_ITEM.to) markRead();
-  }, [pathname, markRead]);
+    // Only mark as read once per visit when there's actually something
+    // unread; otherwise this no-ops (was firing on every render via the
+    // unstable `markRead` identity in earlier revisions).
+    if (pathname === BRAINSTORM_ITEM.to && unread > 0) markRead();
+  }, [pathname, unread, markRead]);
 
   return (
     <aside
