@@ -498,28 +498,24 @@ export const updateUserRole = createServerFn({ method: "POST" })
       throw new Error("This account is protected and must remain an admin.");
     }
 
-    // Determine current roles
-    const { data: current } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.userId);
-    const currentRoles = ((current ?? []) as Array<{ role: AppRole }>).map((r) => r.role);
-    const wasAdmin = currentRoles.includes("admin");
-    const willBeAdmin = data.role === "admin";
-
-    if (wasAdmin && !willBeAdmin) {
-      const adminCount = await countAdmins();
-      if (adminCount <= 1) {
+    // Atomic, race-safe role replacement with last-admin guard inside the
+    // database (locks user_roles for the duration of the swap).
+    const { data: prevRoles, error: rpcErr } = await supabaseAdmin.rpc(
+      "admin_set_user_role",
+      {
+        _target_user_id: data.userId,
+        _new_role: data.role,
+        _granted_by: context.userId,
+      },
+    );
+    if (rpcErr) {
+      if (rpcErr.message?.includes("last_admin")) {
         throw new Error("Cannot demote the last remaining admin.");
       }
+      console.error("[updateUserRole] admin_set_user_role failed", rpcErr);
+      throw new Error("Could not update role. Please try again.");
     }
-
-    // Replace with single role row
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
-    const { error: insErr } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: data.userId, role: data.role, granted_by: context.userId });
-    if (insErr) throw new Error(insErr.message);
+    const currentRoles = (prevRoles ?? []) as AppRole[];
 
     await logAdminAction({
       actorUserId: context.userId,
