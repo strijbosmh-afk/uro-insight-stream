@@ -862,9 +862,12 @@ function TagSection({
           placeholder="EAU27"
           className="font-mono"
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
+            if (e.key === "Enter" || e.key === "," || e.key === ";") {
               e.preventDefault();
               if (input.trim()) onAdd(input);
+            } else if (e.key === "Tab" && input.trim()) {
+              e.preventDefault();
+              onAdd(input);
             }
           }}
         />
