@@ -9,9 +9,16 @@ import { useFilteredTweets, type FeedDataset } from "@/components/feed/useFilter
 import { InlineComposer } from "@/components/x/InlineComposer";
 import { MobileFeedLayout } from "@/components/feed/MobileFeedLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { buildSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/feed")({
-  head: () => ({ meta: [{ title: "Live Feed — UroFeed" }] }),
+  head: () =>
+    buildSeoHead({
+      title: "Live Feed",
+      description:
+        "Real-time stream of urology posts from the people you follow, with timeline scrubber, filters and inline replies.",
+      path: "/feed",
+    }),
   validateSearch: (search: Record<string, unknown>): { thread?: string } => ({
     thread: typeof search.thread === "string" ? (search.thread as string) : undefined,
   }),
