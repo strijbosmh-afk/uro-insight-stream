@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { getXConnectionStatus, listMyPosts } from "@/serverFns/x-credentials";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,8 @@ function MeHub() {
 
   const followingCount = followingIds?.length ?? 0;
   const postsCount = myPosts?.length ?? 0;
+  const { data: bookmarks } = useBookmarks();
+  const bookmarkCount = bookmarks?.length ?? 0;
 
   const xConnected = xStatus && !xStatus.revoked_at && !!xStatus.x_username;
   const displayName = profile?.display_name || user?.email || "Account";
@@ -118,6 +121,7 @@ function MeHub() {
       <Section label="Content">
         <Row to="/me/following" label={`People I follow (${followingCount})`} />
         <Row to="/me/posts" label={`My posts (${postsCount})`} />
+        <Row to="/me/saved" label={`Saved (${bookmarkCount})`} />
       </Section>
 
       <Section label="Configuration">
