@@ -160,10 +160,11 @@ export const postTweet = createServerFn({ method: "POST" })
       if (e instanceof PostTweetError) {
         return { ok: false as const, code: e.code, message: e.message };
       }
+      console.error("[postTweet] internal", e);
       return {
         ok: false as const,
         code: "internal",
-        message: (e as Error).message,
+        message: "Something went wrong posting to X. Please try again.",
       };
     }
   });
