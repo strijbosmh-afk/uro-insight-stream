@@ -248,13 +248,49 @@ export async function deliverWatchlistMatches(matches: IncomingMatch[]): Promise
     );
     if (!messageId) continue;
 
-    await supabaseAdmin.from("watchlist_email_sends").insert({
-      user_id: userId,
-      watchlist_id: wl.id as string,
-      match_ids: wlMatches.map((m) => m.id),
-      window_closes_at: new Date(nowMs + COALESCE_WINDOW_MS).toISOString(),
-      pending_match_ids: [],
-    });
+    // Race-safe insert: the partial unique index
+    // (uniq_wes_open_window_per_watchlist) ensures only one open
+    // coalescing window per watchlist exists. If a parallel matcher
+    // already opened one between the SELECT above and our INSERT, this
+    // throws a unique-violation that we treat as "merge into the
+    // existing row" instead of double-emailing.
+    const { error: insertErr } = await supabaseAdmin
+      .from("watchlist_email_sends")
+      .insert({
+        user_id: userId,
+        watchlist_id: wl.id as string,
+        match_ids: wlMatches.map((m) => m.id),
+        window_closes_at: new Date(nowMs + COALESCE_WINDOW_MS).toISOString(),
+        pending_match_ids: [],
+      });
+    if (insertErr) {
+      // 23505 = unique_violation. Another matcher beat us; merge our
+      // matches into whatever open window now exists.
+      const code = (insertErr as { code?: string }).code;
+      if (code === "23505") {
+        const { data: rival } = await supabaseAdmin
+          .from("watchlist_email_sends")
+          .select("id, pending_match_ids")
+          .eq("watchlist_id", wl.id as string)
+          .is("delta_sent_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (rival) {
+          const merged = Array.from(
+            new Set([
+              ...((rival.pending_match_ids as unknown as string[]) ?? []),
+              ...wlMatches.map((m) => m.id),
+            ]),
+          );
+          await supabaseAdmin
+            .from("watchlist_email_sends")
+            .update({ pending_match_ids: merged })
+            .eq("id", rival.id as string);
+        }
+      } else {
+        console.error("[watchlist-delivery] insert failed", insertErr);
+      }
+    }
 
     await supabaseAdmin
       .from("user_watchlist_matches")
