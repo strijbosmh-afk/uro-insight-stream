@@ -2786,6 +2786,7 @@ export type Database = {
       watchlist_mute_tokens: {
         Row: {
           created_at: string
+          expires_at: string
           hours: number
           token: string
           used_at: string | null
@@ -2793,6 +2794,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           hours?: number
           token: string
           used_at?: string | null
@@ -2800,6 +2802,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string
           hours?: number
           token?: string
           used_at?: string | null
@@ -2877,6 +2880,7 @@ export type Database = {
         Args: { _day: string; _kind: string; _n: number; _user_id: string }
         Returns: number
       }
+      cleanup_watchlist_mute_tokens: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
