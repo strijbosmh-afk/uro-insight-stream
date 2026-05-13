@@ -2873,6 +2873,10 @@ export type Database = {
       }
     }
     Functions: {
+      bump_user_llm_quota: {
+        Args: { _day: string; _kind: string; _n: number; _user_id: string }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2921,8 +2925,13 @@ export type Database = {
       }
       release_ingest_queue_lock: { Args: never; Returns: boolean }
       release_tweet_matcher_lock: { Args: never; Returns: boolean }
+      release_x_post_slot: { Args: { _user_id: string }; Returns: undefined }
       sync_cron_job_secret: { Args: { _secret: string }; Returns: boolean }
       try_ingest_queue_lock: { Args: never; Returns: boolean }
+      try_reserve_x_post_slot: {
+        Args: { _cap: number; _user_id: string; _window_seconds: number }
+        Returns: boolean
+      }
       try_tweet_matcher_lock: { Args: never; Returns: boolean }
     }
     Enums: {
