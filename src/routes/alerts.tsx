@@ -34,6 +34,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Panel } from "@/components/shell/Panel";
 import { EmptyState } from "@/components/shell/EmptyState";
 import {
@@ -329,7 +339,7 @@ function MatchRow({
             href={xUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-accent"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-accent min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Open on X"
           >
             <ExternalLink className="w-3 h-3" /> Open
@@ -340,7 +350,7 @@ function MatchRow({
             href={replyUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-accent"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-accent min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Reply on X"
           >
             <MessageSquareReply className="w-3 h-3" /> Reply
@@ -351,7 +361,7 @@ function MatchRow({
             type="button"
             onClick={onDismiss}
             disabled={dismissing}
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-destructive"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-destructive min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Dismiss"
           >
             <XIcon className="w-3 h-3" /> Dismiss
