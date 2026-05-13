@@ -404,6 +404,7 @@ export function WatchlistFormDialog({
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
                 onKeyDown={onTopicKey}
+                onPaste={onTopicPaste}
                 onBlur={() => topicInput && addTopic(topicInput)}
                 placeholder={topics.length ? "" : "Type a keyword and press Enter"}
                 className="flex-1 min-w-[120px] bg-transparent text-[12px] outline-none text-text-primary placeholder:text-text-muted"
