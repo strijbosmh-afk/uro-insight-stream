@@ -7,20 +7,38 @@ import OAuth from "oauth-1.0a";
 import { createHmac } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-function getKey(): Buffer {
-  const b64 = process.env.X_CREDENTIALS_KEY;
-  if (!b64) throw new Error("X_CREDENTIALS_KEY env var not configured");
-  const key = Buffer.from(b64, "base64");
-  if (key.length !== 32) {
-    // Allow raw 32-char strings as fallback; otherwise derive via SHA-256.
-    if (b64.length === 32) return Buffer.from(b64, "utf8");
-    return Buffer.from(createHash("sha256").update(b64).digest());
-  }
-  return key;
+// ---------------------------------------------------------------------------
+// Key registry — supports rotation.
+// Each row in user_x_credentials carries a `key_id` (defaults to 1) telling
+// us which key was used to encrypt its blobs. To rotate:
+//   1. Add a new env var X_CREDENTIALS_KEY_<N> alongside the existing
+//      X_CREDENTIALS_KEY (treated as id=1 for back-compat).
+//   2. Bump ACTIVE_KEY_ID below to <N>. New writes start using it.
+//   3. Old rows continue to decrypt with their stored key_id; re-encrypt them
+//      lazily (e.g. next verifyAndStore) or via a one-off backfill that calls
+//      decryptSecret + encryptSecret and updates key_id=ACTIVE_KEY_ID.
+//   4. Once no row references the old key_id, drop the old env var.
+// X_CREDENTIALS_KEY is NOT pgsodium — it's app-level AES-256-GCM. Losing the
+// key means losing every user's OAuth1 secrets (treat as a recoverable
+// re-onboarding, not a silent data loss).
+const ACTIVE_KEY_ID = 1;
+
+function deriveKey(raw: string): Buffer {
+  const buf = Buffer.from(raw, "base64");
+  if (buf.length === 32) return buf;
+  if (raw.length === 32) return Buffer.from(raw, "utf8");
+  return Buffer.from(createHash("sha256").update(raw).digest());
 }
 
-export function encryptSecret(plaintext: string): Buffer {
-  const key = getKey();
+function getKeyById(keyId: number): Buffer {
+  const envName = keyId === 1 ? "X_CREDENTIALS_KEY" : `X_CREDENTIALS_KEY_${keyId}`;
+  const raw = process.env[envName];
+  if (!raw) throw new Error(`${envName} env var not configured (key_id=${keyId})`);
+  return deriveKey(raw);
+}
+
+export function encryptSecret(plaintext: string, keyId: number = ACTIVE_KEY_ID): Buffer {
+  const key = getKeyById(keyId);
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
@@ -29,14 +47,18 @@ export function encryptSecret(plaintext: string): Buffer {
   return Buffer.concat([iv, tag, ct]);
 }
 
-export function decryptSecret(blob: Buffer): string {
-  const key = getKey();
+export function decryptSecret(blob: Buffer, keyId: number = ACTIVE_KEY_ID): string {
+  const key = getKeyById(keyId);
   const iv = blob.subarray(0, 12);
   const tag = blob.subarray(12, 28);
   const ct = blob.subarray(28);
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
+}
+
+export function getActiveKeyId(): number {
+  return ACTIVE_KEY_ID;
 }
 
 export interface XCredentials {
@@ -62,7 +84,7 @@ export async function loadCredentials(userId: string): Promise<XCredentials | nu
   const { data, error } = await supabaseAdmin
     .from("user_x_credentials")
     .select(
-      "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at"
+      "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at, key_id"
     )
     .eq("user_id", userId)
     .eq("is_active", true)
@@ -85,9 +107,9 @@ export async function loadCredentials(userId: string): Promise<XCredentials | nu
   };
   return {
     consumerKey: data.consumer_key,
-    consumerSecret: decryptSecret(toBuf(data.consumer_secret_encrypted)),
+    consumerSecret: decryptSecret(toBuf(data.consumer_secret_encrypted), data.key_id ?? 1),
     accessToken: data.access_token,
-    accessTokenSecret: decryptSecret(toBuf(data.access_token_secret_encrypted)),
+    accessTokenSecret: decryptSecret(toBuf(data.access_token_secret_encrypted), data.key_id ?? 1),
     xUsername: data.x_username,
     xUserId: data.x_user_id,
   };
@@ -174,6 +196,7 @@ export async function verifyAndStore(input: VerifyInput): Promise<VerifyResult> 
         consumer_secret_encrypted: consumerSecretEnc,
         access_token: input.accessToken,
         access_token_secret_encrypted: accessSecretEnc,
+        key_id: ACTIVE_KEY_ID,
         x_user_id: json.data.id,
         x_username: json.data.username,
         scope_write: true,
@@ -239,7 +262,7 @@ export async function loadCredentialsByAccountId(
   const { data, error } = await supabaseAdmin
     .from("user_x_credentials")
     .select(
-      "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at"
+      "consumer_key, consumer_secret_encrypted, access_token, access_token_secret_encrypted, x_username, x_user_id, revoked_at, key_id"
     )
     .eq("user_id", userId)
     .eq("id", accountId)
@@ -265,9 +288,9 @@ export async function loadCredentialsByAccountId(
   };
   return {
     consumerKey: data.consumer_key,
-    consumerSecret: decryptSecret(toBuf(data.consumer_secret_encrypted)),
+    consumerSecret: decryptSecret(toBuf(data.consumer_secret_encrypted), data.key_id ?? 1),
     accessToken: data.access_token,
-    accessTokenSecret: decryptSecret(toBuf(data.access_token_secret_encrypted)),
+    accessTokenSecret: decryptSecret(toBuf(data.access_token_secret_encrypted), data.key_id ?? 1),
     xUsername: data.x_username,
     xUserId: data.x_user_id,
   };
