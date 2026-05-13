@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, MapPin, Calendar, X, Plus, Trash2 } from "lucide-react";
@@ -40,9 +40,16 @@ function fmtTime(iso: string) {
 
 export function CongressDetail({ congressId }: { congressId: string }) {
   const qc = useQueryClient();
+  const router = useRouter();
   const canEdit = useCanEdit();
   const canAdmin = useCanAdmin();
-  const { data: congress, isLoading } = useQuery({
+  const {
+    data: congress,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["congress", congressId],
     queryFn: () => feedService.getCongress(congressId),
   });
@@ -95,9 +102,35 @@ export function CongressDetail({ congressId }: { congressId: string }) {
         target_id: congressId,
         summary: `Deleted ${congress?.shortCode ?? congressId}`,
       });
-      window.history.back();
+      // H-U? prefer router over raw history so we land somewhere known
+      // when the detail page was opened directly.
+      router.history.back();
     },
   });
+
+  if (isError) {
+    return (
+      <div className="grid grid-cols-12 gap-3 h-full">
+        <Panel
+          title="Congress"
+          className="col-span-12"
+          actions={<DefaultViewLabel />}
+        >
+          <div className="flex flex-col items-start gap-3 p-2">
+            <div className="text-text-primary text-[13px]">
+              Couldn't load this congress.
+            </div>
+            <div className="text-text-muted text-[11px] font-mono">
+              {(error as Error)?.message ?? "Network or permissions error."}
+            </div>
+            <Button size="sm" onClick={() => void refetch()}>
+              Try again
+            </Button>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
 
   if (isLoading || !congress) {
     return (

@@ -34,6 +34,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Panel } from "@/components/shell/Panel";
 import { EmptyState } from "@/components/shell/EmptyState";
 import {
@@ -329,7 +339,7 @@ function MatchRow({
             href={xUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-accent"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-accent min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Open on X"
           >
             <ExternalLink className="w-3 h-3" /> Open
@@ -340,7 +350,7 @@ function MatchRow({
             href={replyUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-accent"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-accent min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Reply on X"
           >
             <MessageSquareReply className="w-3 h-3" /> Reply
@@ -351,7 +361,7 @@ function MatchRow({
             type="button"
             onClick={onDismiss}
             disabled={dismissing}
-            className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-destructive"
+            className="inline-flex items-center justify-center gap-1 text-[11px] text-text-muted hover:text-destructive min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 px-2"
             title="Dismiss"
           >
             <XIcon className="w-3 h-3" /> Dismiss
@@ -378,6 +388,12 @@ function WatchlistsTab() {
 
   const [editId, setEditId] = React.useState<string | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
+  // H-U5: AlertDialog replaces window.confirm() — better mobile UX,
+  // matches the rest of the app's design language, not blocked by iOS Safari.
+  const [pendingDelete, setPendingDelete] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["watchlists"] });
@@ -526,15 +542,12 @@ function WatchlistsTab() {
                     variant="ghost"
                     className="h-7 text-destructive hover:text-destructive"
                     title="Delete"
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Delete watchlist "${w.name as string}"? This removes its match history too.`,
-                        )
-                      ) {
-                        deleteMut.mutate(w.id as string);
-                      }
-                    }}
+                    onClick={() =>
+                      setPendingDelete({
+                        id: w.id as string,
+                        name: w.name as string,
+                      })
+                    }
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
@@ -556,6 +569,36 @@ function WatchlistsTab() {
         watchlistId={editId ?? undefined}
         onSaved={refresh}
       />
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete watchlist "{pendingDelete?.name ?? ""}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the watchlist and its match history.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) {
+                  deleteMut.mutate(pendingDelete.id);
+                  setPendingDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Panel>
   );
 }

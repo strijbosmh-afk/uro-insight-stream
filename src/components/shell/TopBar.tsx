@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, ChevronRight, Menu, ChevronDown, Check, Plus, Link2 } from "lucide-react";
+import { ChevronRight, Menu, ChevronDown, Check, Plus, Link2 } from "lucide-react";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,20 +150,9 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
         })}
       </nav>
 
-      {/* Search — hidden on mobile to free up space */}
-      <div className="hidden sm:flex flex-1 justify-center">
-        <div className="relative w-full max-w-xl">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-          <input
-            type="text"
-            placeholder="search sessions, abstracts, handles…"
-            className="w-full h-8 pl-8 pr-3 bg-bg border border-border rounded-[3px] text-[12px] font-mono text-text-primary placeholder:text-text-muted/70 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
-          />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center h-5 px-1.5 text-[10px] font-mono text-text-muted border border-border rounded-[2px] bg-panel">
-            ⌘K
-          </kbd>
-        </div>
-      </div>
+      {/* Search slot reserved — hidden until global search is wired
+          (H-U6: previously rendered a non-functional input). */}
+      <div className="hidden sm:flex flex-1 justify-center" />
 
       {/* Live status pill — hidden on small mobile */}
       <div className="hidden sm:flex items-center gap-2 h-7 px-2.5 border border-border rounded-[3px] bg-panel-elevated">
@@ -184,16 +173,11 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       {!isMobile && <XHandleBadge />}
       {!isMobile && <ConnectXHeaderLink />}
       {!isMobile && <ShareToXButton />}
-      {!isMobile && <NotificationsBell />}
-      {!isMobile && (
-        <button
-          type="button"
-          className="w-8 h-8 shrink-0 rounded-[3px] border border-border bg-panel-elevated flex items-center justify-center text-[11px] font-mono font-semibold text-accent hover:border-accent/60 transition-colors"
-          aria-label="Account"
-        >
-          UR
-        </button>
-      )}
+      {/* H-U9: bell rendered on mobile too so phone users can see unread count. */}
+      <NotificationsBell />
+      {/* H-U6: removed dead "UR" account button — was a non-functional
+          placeholder. Account / settings access lives in the sidebar
+          (desktop) and BottomTabBar → Me (mobile). */}
     </header>
   );
 }

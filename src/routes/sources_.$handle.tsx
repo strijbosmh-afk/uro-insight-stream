@@ -308,7 +308,7 @@ function SourceSpotlightPage() {
                 </div>
               )}
             </div>
-            <div className="shrink-0 flex flex-col gap-2 items-end">
+            <div className="shrink-0 flex flex-col gap-2 items-stretch sm:items-end w-full sm:w-auto">
               <Button
                 onClick={onFollowToggle}
                 disabled={followMut.isPending || unfollowMut.isPending}
@@ -316,7 +316,9 @@ function SourceSpotlightPage() {
               >
                 {data.is_subscribed ? "Following" : "Follow"}
               </Button>
-              <div className="flex items-center gap-1">
+              {/* H-U8: stack the secondary actions vertically on phones so
+                  they don't overflow the header row. */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
