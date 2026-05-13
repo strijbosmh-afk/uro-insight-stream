@@ -1,0 +1,25 @@
+# UroFeed
+
+> AI-powered congress intelligence for urologists. Track EAU, AUA, SIU, and ESMO-GU congresses in real time with curated feeds, session summaries, and weekly digests.
+
+UroFeed aggregates posts from clinicians, researchers, and societies on X (Twitter), groups them by congress and session, and turns them into structured summaries and digests. The product is web-based and requires authentication for most pages.
+
+## Pages
+
+- [Home](/): Landing redirect into the authenticated app.
+- [Sign in](/auth): Email, magic link and Google sign-in.
+- [Dashboard](/dashboard): Overview of live activity, top sources and recent congresses.
+- [Live feed](/feed): Real-time stream of urology posts with filters and timeline scrubber.
+- [Congresses](/congresses): Browse tracked congresses (EAU, AUA, SIU, ESMO-GU) and their sessions.
+- [Discover](/discover): Find new sources, groups and specialties to follow.
+- [Sources](/sources): Manage the X handles and hashtags that feed your stream.
+- [Summaries](/summaries): AI-generated session and topic summaries.
+- [Digests](/digests): Personalised weekly congress digests.
+- [Alerts](/alerts): Watchlists and notification rules.
+- [Help](/help/instructions): UroFeed instruction manual.
+
+## Optional
+
+- [Account](/me): Profile, notifications, AI settings and connected X account.
+- [Settings](/settings): App-wide preferences.
+- [Unsubscribe](/unsubscribe): Manage email subscriptions.
