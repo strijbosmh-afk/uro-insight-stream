@@ -457,7 +457,8 @@ export const listInvitations = createServerFn({ method: "GET" })
       .limit(200);
     if (error) throw new Error(error.message);
 
-    // Resolve invited_by emails
+    // Resolve invited_by emails — batch the auth.admin.getUserById calls in
+    // parallel rather than awaiting them serially (was N+1 sequential).
     const inviterIds = Array.from(
       new Set(
         (data ?? [])
@@ -466,9 +467,15 @@ export const listInvitations = createServerFn({ method: "GET" })
       ),
     );
     const inviterEmails = new Map<string, string>();
-    for (const id of inviterIds) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
-      if (u?.user?.email) inviterEmails.set(id, u.user.email);
+    const inviterLookups = await Promise.all(
+      inviterIds.map((id) =>
+        supabaseAdmin.auth.admin
+          .getUserById(id)
+          .then((r) => ({ id, email: r.data?.user?.email ?? null })),
+      ),
+    );
+    for (const r of inviterLookups) {
+      if (r.email) inviterEmails.set(r.id, r.email);
     }
 
     return (data ?? []).map((row: any): PendingInvitation => ({
