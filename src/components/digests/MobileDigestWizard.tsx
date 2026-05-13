@@ -646,6 +646,18 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
         </div>
       </SheetContent>
     </Sheet>
+    <DigestPreviewDialog
+      open={previewOpen}
+      onClose={() => setPreviewOpen(false)}
+      input={{
+        source_ids: selectedSourceIds,
+        specialty_id: specialtyId,
+        congress_id: congressId,
+        hashtags,
+        digest_name: name,
+      }}
+    />
+    </>
   );
 }
 
