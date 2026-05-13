@@ -172,44 +172,28 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
   };
 
   // 1) Author-intent retrieval: pick out @handles and Capitalised name tokens
-  //    (e.g. "Piet Ost") so questions like "latest post from X" actually work.
-  const authorTokens = extractAuthorTokens(input.query);
+  //    (handles, full names, aliases, partial names) and resolve them to real
+  //    sources via the sources table. This catches "Piet Ost", "ost",
+  //    "@piet_ost", "Dr Ost", "what did Piet say", etc.
   const authorResults: AskTweet[] = [];
   let widenedScope = false;
-  if (authorTokens.length > 0) {
-    const orParts: string[] = [];
-    for (const tok of authorTokens) {
-      const safe = tok.replace(/[%,()*]/g, " ").trim();
-      if (!safe) continue;
-      orParts.push(`author_handle.ilike.%${safe}%`);
-      orParts.push(`author_display_name.ilike.%${safe}%`);
-    }
-    if (orParts.length > 0) {
-      const { data } = await applyScope(
-        supabaseAdmin.from("tweets").select(cols),
-      )
-        .or(orParts.join(","))
-        .order("created_at", { ascending: false })
-        .limit(cap);
-      if (data) authorResults.push(...((data as AskTweet[]) ?? []));
+  const matchedSources = await resolveAuthorsFromQuery(input.query);
+  if (matchedSources.length > 0) {
+    // Prefer sources that ARE in scope; if none, widen.
+    const inScope = sourceIds === null
+      ? matchedSources
+      : matchedSources.filter((s) => sourceIds.includes(s.id));
+    const useIds = inScope.length > 0 ? inScope.map((s) => s.id) : matchedSources.map((s) => s.id);
+    if (inScope.length === 0 && sourceIds !== null) widenedScope = true;
 
-      // If the user named an author and there are no in-scope hits, widen the
-      // search to the entire corpus — they're asking about that person, not
-      // about who they happen to follow.
-      if (authorResults.length === 0 && sourceIds !== null) {
-        const { data: wide } = await supabaseAdmin
-          .from("tweets")
-          .select(cols)
-          .gte("created_at", since)
-          .or(orParts.join(","))
-          .order("created_at", { ascending: false })
-          .limit(cap);
-        if (wide && (wide as AskTweet[]).length > 0) {
-          authorResults.push(...((wide as AskTweet[]) ?? []));
-          widenedScope = true;
-        }
-      }
-    }
+    const { data } = await supabaseAdmin
+      .from("tweets")
+      .select(cols)
+      .gte("created_at", since)
+      .in("source_id", useIds)
+      .order("created_at", { ascending: false })
+      .limit(cap);
+    if (data) authorResults.push(...((data as AskTweet[]) ?? []));
   }
 
   // 2) Full-text search on the question itself.
@@ -256,29 +240,143 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
   return out;
 }
 
-/** Extract likely author references from a free-text question. */
-function extractAuthorTokens(query: string): string[] {
+/** Words that are never useful as author candidates. */
+const STOPWORDS = new Set([
+  "the","a","an","is","are","was","were","be","been","being","of","in","on",
+  "at","to","for","by","from","about","with","without","into","over","under",
+  "and","or","but","if","then","than","that","this","these","those","it","its",
+  "as","what","when","where","who","whom","which","why","how","do","does","did",
+  "have","has","had","can","could","should","would","will","may","might","just",
+  "latest","newest","recent","new","last","post","posts","tweet","tweets","said",
+  "say","says","saying","told","tell","tells","share","shared","sharing",
+  "thoughts","opinion","update","updates","mention","mentions","talk","talks",
+  "talking","said","piece","pieces","week","month","year","day","today","you",
+  "me","my","we","us","our","they","them","their","i","u","r","mr","dr","prof",
+  "professor","sir","ms","mrs",
+]);
+
+/** Extract candidate name/handle phrases from a free-text question. */
+function extractAuthorCandidates(query: string): {
+  handles: string[];
+  phrases: string[]; // multi-word and significant lowercase tokens
+  tokens: string[];  // individual words (for partial matching)
+} {
+  const handles = new Set<string>();
+  const phrases = new Set<string>();
   const tokens = new Set<string>();
 
-  // @handles
+  // 1. @handles
   for (const m of query.matchAll(/@([A-Za-z0-9_]{2,30})/g)) {
-    tokens.add(m[1]);
+    handles.add(m[1].toLowerCase());
   }
 
-  // Capitalised name sequences (e.g. "Piet Ost", "Karim Fizazi"), excluding
-  // sentence-start words by requiring two adjacent capitalised tokens OR a
-  // capitalised token directly after "from"/"by"/"of".
-  const pairRe = /\b([A-Z][a-zà-ÿ'’\-]{1,})\s+([A-Z][a-zà-ÿ'’\-]{1,})\b/g;
-  for (const m of query.matchAll(pairRe)) {
-    tokens.add(`${m[1]} ${m[2]}`);
-    tokens.add(m[2]);
-  }
-  const afterRe = /\b(?:from|by|of|about)\s+([A-Z][a-zà-ÿ'’\-]{1,})\b/g;
-  for (const m of query.matchAll(afterRe)) {
-    tokens.add(m[1]);
+  // 2. Multi-word Capitalised phrases ("Piet Ost", "Karim Andre Fizazi").
+  const titleRe = /\b([A-Z][a-zà-ÿ'’\-]{1,}(?:\s+[A-Z][a-zà-ÿ'’\-]{1,}){1,3})\b/g;
+  for (const m of query.matchAll(titleRe)) {
+    phrases.add(m[1]);
+    for (const w of m[1].split(/\s+/)) {
+      if (w.length >= 3 && !STOPWORDS.has(w.toLowerCase())) tokens.add(w);
+    }
   }
 
-  return Array.from(tokens).filter((t) => t.length >= 2 && t.length <= 60);
+  // 3. After cue words: "from X", "by X", "about X", "X's", "from dr X".
+  const cueRe = /\b(?:from|by|about|of|did|does|do|said|says|posted|wrote|told)\s+(?:dr|prof|mr|ms|mrs|sir)?\.?\s*([A-Za-zà-ÿ'’\-]{2,}(?:\s+[A-Za-zà-ÿ'’\-]{2,}){0,3})/gi;
+  for (const m of query.matchAll(cueRe)) {
+    const phrase = m[1].trim();
+    if (!phrase) continue;
+    // Filter out cue-only or stopword-only matches.
+    const words = phrase.split(/\s+/).filter((w) => !STOPWORDS.has(w.toLowerCase()));
+    if (words.length === 0) continue;
+    phrases.add(words.join(" "));
+    for (const w of words) if (w.length >= 3) tokens.add(w);
+  }
+
+  // 4. Possessive: "Piet's posts", "Ost's view".
+  const possRe = /\b([A-Za-zà-ÿ'’\-]{3,})['’]s\b/g;
+  for (const m of query.matchAll(possRe)) {
+    if (!STOPWORDS.has(m[1].toLowerCase())) tokens.add(m[1]);
+  }
+
+  return {
+    handles: Array.from(handles),
+    phrases: Array.from(phrases),
+    tokens: Array.from(tokens),
+  };
+}
+
+/**
+ * Resolve query text to actual `sources` rows by fuzzy-matching handles and
+ * display names. Returns the highest-scoring matches (max 5).
+ */
+async function resolveAuthorsFromQuery(
+  query: string,
+): Promise<Array<{ id: string; handle: string; display_name: string | null; score: number }>> {
+  const { handles, phrases, tokens } = extractAuthorCandidates(query);
+  if (handles.length === 0 && phrases.length === 0 && tokens.length === 0) return [];
+
+  const orParts: string[] = [];
+  const esc = (s: string) => s.replace(/[%,()*]/g, " ").trim();
+
+  // Exact handle match (highest signal).
+  for (const h of handles) {
+    const safe = esc(h);
+    if (safe) orParts.push(`handle.ilike.${safe}`);
+  }
+  // Phrase match against display name (and broad handle contains).
+  for (const p of phrases) {
+    const safe = esc(p);
+    if (!safe) continue;
+    orParts.push(`display_name.ilike.%${safe}%`);
+    orParts.push(`handle.ilike.%${safe.replace(/\s+/g, "")}%`);
+  }
+  // Single token contains — partial / last-name only matches.
+  for (const t of tokens) {
+    const safe = esc(t);
+    if (!safe || safe.length < 3) continue;
+    orParts.push(`display_name.ilike.%${safe}%`);
+    orParts.push(`handle.ilike.%${safe}%`);
+  }
+  if (orParts.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("sources")
+    .select("id, handle, display_name")
+    .or(orParts.join(","))
+    .limit(50);
+  if (error || !data) return [];
+
+  const handleSet = new Set(handles.map((h) => h.toLowerCase()));
+  const phraseSetLc = new Set(phrases.map((p) => p.toLowerCase()));
+  const tokenSetLc = new Set(tokens.map((t) => t.toLowerCase()));
+
+  type Row = { id: string; handle: string; display_name: string | null };
+  const scored = (data as Row[]).map((r) => {
+    const h = (r.handle ?? "").toLowerCase();
+    const dn = (r.display_name ?? "").toLowerCase();
+    let score = 0;
+    if (handleSet.has(h)) score += 100;                                  // exact handle
+    for (const p of phraseSetLc) {
+      if (!p) continue;
+      if (dn === p) score += 80;
+      else if (dn.includes(p)) score += 50;
+      if (h.includes(p.replace(/\s+/g, ""))) score += 30;
+    }
+    let tokenHits = 0;
+    for (const t of tokenSetLc) {
+      if (!t) continue;
+      if (dn.split(/\s+/).includes(t)) { score += 20; tokenHits++; }
+      else if (dn.includes(t)) { score += 8; tokenHits++; }
+      else if (h.includes(t)) { score += 6; tokenHits++; }
+    }
+    // Bonus for matching multiple distinct query tokens (e.g. first + last name).
+    if (tokenHits >= 2) score += 15;
+    return { ...r, score };
+  })
+  .filter((r) => r.score >= 20)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 5);
+
+  return scored;
 }
 
 /* ----------------------------- LLM ----------------------------- */
