@@ -528,7 +528,10 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
                   value={hashtagInput}
                   onChange={(e) => setHashtagInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
+                    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                      e.preventDefault();
+                      addHashtag();
+                    } else if (e.key === "Tab" && hashtagInput.trim()) {
                       e.preventDefault();
                       addHashtag();
                     }
@@ -571,7 +574,10 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
                 value={recipientInput}
                 onChange={(e) => setRecipientInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addRecipient();
+                  } else if (e.key === "Tab" && recipientInput.trim()) {
                     e.preventDefault();
                     addRecipient();
                   }
