@@ -80,6 +80,7 @@ export function WatchlistFormDialog({
   onSaved,
 }: WatchlistFormDialogProps) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const createFn = useServerFn(createWatchlist);
   const updateFn = useServerFn(updateWatchlist);
   const setTopicsFn = useServerFn(setWatchlistTopics);
@@ -262,7 +263,9 @@ export function WatchlistFormDialog({
         action: {
           label: "View alerts",
           onClick: () => {
-            window.location.href = "/alerts";
+            // Client-side nav preserves cache + auth + scroll instead of
+            // doing a hard reload of the SPA shell.
+            void navigate({ to: "/alerts" });
           },
         },
       });
