@@ -889,7 +889,9 @@ export type CancerAreaLite = { id: string; slug: string; name: string };
 
 export const listCancerAreasAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<CancerAreaLite[]> => {
+  .handler(async ({ context }): Promise<CancerAreaLite[]> => {
+    // H-S6: admin-only — used by the admin recommendations / signals panels.
+    await assertAdmin(context.supabase, context.userId);
     const { data, error } = await supabaseAdmin
       .from("cancer_areas")
       .select("id, slug, name, display_order")
