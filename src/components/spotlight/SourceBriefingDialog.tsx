@@ -551,11 +551,12 @@ function PrintStyles() {
   return (
     <style>{`
       @media print {
-        body * { visibility: hidden !important; }
-        [data-radix-dialog-content], [data-radix-dialog-content] * {
+        body.printing-briefing * { visibility: hidden !important; }
+        body.printing-briefing [data-radix-dialog-content],
+        body.printing-briefing [data-radix-dialog-content] * {
           visibility: visible !important;
         }
-        [data-radix-dialog-content] {
+        body.printing-briefing [data-radix-dialog-content] {
           position: absolute !important;
           left: 0 !important;
           top: 0 !important;
@@ -567,11 +568,11 @@ function PrintStyles() {
           box-shadow: none !important;
           border: none !important;
         }
-        [data-radix-dialog-overlay] { display: none !important; }
-        .briefing-print { color: black !important; background: white !important; }
-        .briefing-pagebreak { page-break-after: always; }
-        .briefing-pagebreak-before { page-break-before: always; }
-        .briefing-section { break-inside: avoid; }
+        body.printing-briefing [data-radix-dialog-overlay] { display: none !important; }
+        body.printing-briefing .briefing-print { color: black !important; background: white !important; }
+        body.printing-briefing .briefing-pagebreak { page-break-after: always; }
+        body.printing-briefing .briefing-pagebreak-before { page-break-before: always; }
+        body.printing-briefing .briefing-section { break-inside: avoid; }
       }
     `}</style>
   );
