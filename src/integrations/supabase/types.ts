@@ -530,6 +530,33 @@ export type Database = {
         }
         Relationships: []
       }
+      digest_preview_cache: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          hit_count: number
+          llm_tokens_used: number
+          rendered: Json
+          tweet_count: number
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          hit_count?: number
+          llm_tokens_used?: number
+          rendered: Json
+          tweet_count: number
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          hit_count?: number
+          llm_tokens_used?: number
+          rendered?: Json
+          tweet_count?: number
+        }
+        Relationships: []
+      }
       digest_subscription_recipients: {
         Row: {
           created_at: string
@@ -1101,6 +1128,27 @@ export type Database = {
         Relationships: []
       }
       rate_limit_lookups: {
+        Row: {
+          count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      rate_limit_preview: {
         Row: {
           count: number
           updated_at: string

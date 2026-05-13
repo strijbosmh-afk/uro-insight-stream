@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computeNextSendAt } from "@/server/digest.server";
+import {
+  computeDigestPreview,
+  consumePreviewRateLimit,
+} from "@/server/digest-preview.server";
 
 const FrequencyEnum = z.enum(["daily", "weekly", "biweekly", "monthly"]);
 
@@ -273,5 +277,48 @@ export const sendDigestNow = createServerFn({ method: "POST" })
 
     const { sendDigestById } = await import("@/server/digest-sender.server");
     const result = await sendDigestById(data.id);
+    return result;
+  });
+
+const PreviewSchema = z.object({
+  source_ids: z.array(z.string().min(1).max(80)).max(200).default([]),
+  specialty_id: z.string().min(1).max(80).nullable().optional(),
+  congress_id: z.string().min(1).max(80).nullable().optional(),
+  hashtags: z.array(z.string().min(1).max(80)).max(50).default([]),
+  window_days: z.number().int().min(1).max(30).default(7),
+  digest_name: z.string().max(120).default(""),
+  bypass_cache: z.boolean().optional(),
+});
+
+export const previewDigest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => PreviewSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const hasBindings =
+      (data.source_ids && data.source_ids.length > 0) ||
+      !!data.specialty_id ||
+      !!data.congress_id ||
+      (data.hashtags && data.hashtags.length > 0);
+    if (!hasBindings) {
+      return { status: "error" as const, reason: "no_bindings" };
+    }
+
+    const allowed = await consumePreviewRateLimit(userId);
+    if (!allowed) {
+      return { status: "error" as const, reason: "rate_limited" };
+    }
+
+    const result = await computeDigestPreview(
+      {
+        source_ids: data.source_ids,
+        specialty_id: data.specialty_id ?? null,
+        congress_id: data.congress_id ?? null,
+        hashtags: data.hashtags,
+        window_days: data.window_days,
+        digest_name: data.digest_name,
+      },
+      { bypassCache: data.bypass_cache ?? false },
+    );
     return result;
   });

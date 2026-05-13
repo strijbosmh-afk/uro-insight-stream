@@ -2,6 +2,7 @@ import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, X, Sparkles, Calendar, Settings2, Plus } from "lucide-react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
+import { DigestPreviewDialog } from "./DigestPreviewDialog";
 
 const DAYS = [
   { v: 1, l: "M" },
@@ -59,6 +61,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
   const [recipientInput, setRecipientInput] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [shake, setShake] = React.useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   const nameRef = React.useRef<HTMLInputElement>(null);
   const nameWrapRef = React.useRef<HTMLDivElement>(null);
@@ -276,6 +279,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
   const shakeCls = (k: string) => (shake === k ? "animate-pulse ring-2 ring-danger rounded-[3px]" : "");
 
   return (
+    <>
     <Sheet open onOpenChange={(o) => !o && onClose(false)}>
       <SheetContent
         side="bottom"
@@ -568,6 +572,15 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
 
           {/* Recipients */}
           <div ref={recipientsRef} className={"space-y-2 " + shakeCls("recipients")}>
+            {hasAnyBinding && (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-[3px] border border-border bg-panel-elevated text-[14px] font-medium text-text-primary mb-3"
+              >
+                <Eye className="w-4 h-4" /> Preview this week's content
+              </button>
+            )}
             <SectionLabel>Recipients</SectionLabel>
             <div className="flex gap-2">
               <Input
@@ -634,6 +647,18 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
         </div>
       </SheetContent>
     </Sheet>
+    <DigestPreviewDialog
+      open={previewOpen}
+      onClose={() => setPreviewOpen(false)}
+      input={{
+        source_ids: selectedSourceIds,
+        specialty_id: specialtyId,
+        congress_id: congressId,
+        hashtags,
+        digest_name: name,
+      }}
+    />
+    </>
   );
 }
 
