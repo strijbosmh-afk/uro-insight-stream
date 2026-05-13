@@ -332,7 +332,7 @@ export async function computeDigestPreview(
     .upsert(
       [{
         fingerprint: fp,
-        rendered: rendered as unknown as Record<string, unknown>,
+        rendered: rendered as unknown as import("@/integrations/supabase/types").Json,
         tweet_count: tweets.length,
         llm_tokens_used: llm.tokens,
         hit_count: 0,
