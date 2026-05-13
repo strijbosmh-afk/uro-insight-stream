@@ -788,40 +788,23 @@ export const bulkUpdateRole = createServerFn({ method: "POST" })
     const succeeded: string[] = [];
     const failed: Array<{ userId: string; error: string }> = [];
 
-    // Pre-fetch current roles for all targets in one round-trip
-    const { data: currentRows } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id, role")
-      .in("user_id", ids);
-    const rolesByUser = new Map<string, AppRole[]>();
-    for (const r of (currentRows ?? []) as Array<{ user_id: string; role: AppRole }>) {
-      const arr = rolesByUser.get(r.user_id) ?? [];
-      arr.push(r.role);
-      rolesByUser.set(r.user_id, arr);
-    }
-
-    let liveAdminCount = await countAdmins();
-
     for (const userId of ids) {
       try {
-        const currentRoles = rolesByUser.get(userId) ?? [];
-        const wasAdmin = currentRoles.includes("admin");
-        const willBeAdmin = data.role === "admin";
-
-        if (wasAdmin && !willBeAdmin) {
-          if (liveAdminCount <= 1) {
+        const { data: prev, error: rpcErr } = await supabaseAdmin.rpc(
+          "admin_set_user_role",
+          {
+            _target_user_id: userId,
+            _new_role: data.role,
+            _granted_by: context.userId,
+          },
+        );
+        if (rpcErr) {
+          if (rpcErr.message?.includes("last_admin")) {
             throw new Error("Would remove the last remaining admin.");
           }
+          throw new Error("Role update failed.");
         }
-
-        await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
-        const { error: insErr } = await supabaseAdmin
-          .from("user_roles")
-          .insert({ user_id: userId, role: data.role, granted_by: context.userId });
-        if (insErr) throw new Error(insErr.message);
-
-        if (wasAdmin && !willBeAdmin) liveAdminCount -= 1;
-        if (!wasAdmin && willBeAdmin) liveAdminCount += 1;
+        const currentRoles = (prev ?? []) as AppRole[];
 
         await logAdminAction({
           actorUserId: context.userId,
