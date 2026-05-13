@@ -106,7 +106,7 @@ function AskBody({
   const [scope, setScope] = React.useState<Scope>("following");
   const [windowDays, setWindowDays] = React.useState<Window>(30);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const tweetRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const tweetRefs = React.useRef<Record<string, HTMLLIElement | null>>({});
 
   React.useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 80);
@@ -434,7 +434,7 @@ function AnswerView({
   fromCache: boolean;
   cachedAt: string;
   citationIndex: Map<string, number>;
-  tweetRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  tweetRefs: React.MutableRefObject<Record<string, HTMLLIElement | null>>;
   onCitationClick: (id: string) => void;
 }) {
   const insufficient = answer.confidence === "insufficient_data";
