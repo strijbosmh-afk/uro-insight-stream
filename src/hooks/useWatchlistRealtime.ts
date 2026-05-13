@@ -25,7 +25,7 @@ export function useWatchlistRealtime() {
 
     function subscribeChannel() {
       const c = supabase
-        .channel(`watchlist-matches-${userId}`)
+        .channel(`watchlist-matches-${userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "user_watchlist_matches" },
