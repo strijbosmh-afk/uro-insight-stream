@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as SummariesRouteImport } from './routes/summaries'
 import { Route as SourcesRouteImport } from './routes/sources'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as FeedRouteImport } from './routes/feed'
@@ -81,6 +82,11 @@ const SummariesRoute = SummariesRouteImport.update({
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -387,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -508,6 +516,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/me': typeof MeRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sources': typeof SourcesRoute
   '/summaries': typeof SummariesRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/me'
     | '/settings'
+    | '/sitemap.xml'
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
@@ -630,6 +640,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/me'
     | '/settings'
+    | '/sitemap.xml'
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
@@ -690,6 +701,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/me'
     | '/settings'
+    | '/sitemap.xml'
     | '/sources'
     | '/summaries'
     | '/unsubscribe'
@@ -751,6 +763,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   MeRoute: typeof MeRouteWithChildren
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SourcesRoute: typeof SourcesRoute
   SummariesRoute: typeof SummariesRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
@@ -812,6 +825,13 @@ declare module '@tanstack/react-router' {
       path: '/sources'
       fullPath: '/sources'
       preLoaderRoute: typeof SourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -1260,6 +1280,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   MeRoute: MeRouteWithChildren,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SourcesRoute: SourcesRoute,
   SummariesRoute: SummariesRoute,
   UnsubscribeRoute: UnsubscribeRoute,
