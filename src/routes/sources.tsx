@@ -3,11 +3,18 @@ import { SourcesTable } from "@/components/sources/SourcesTable";
 import { HashtagsTable } from "@/components/sources/HashtagsTable";
 import { ImportFollowsCard } from "@/components/x/ImportFollowsCard";
 import { LowSourceCountNudge } from "@/components/x/LowSourceCountNudge";
+import { buildSeoHead } from "@/lib/seo";
 
 type ImportMode = "true" | "diff" | "prompt";
 
 export const Route = createFileRoute("/sources")({
-  head: () => ({ meta: [{ title: "Sources — UroFeed" }] }),
+  head: () =>
+    buildSeoHead({
+      title: "Sources",
+      description:
+        "Manage the X handles, lists and hashtags that power your UroFeed stream — import, prune and prioritise the voices you trust.",
+      path: "/sources",
+    }),
   validateSearch: (search: Record<string, unknown>) => {
     const raw = search.import;
     let value: ImportMode | undefined;
