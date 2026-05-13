@@ -105,7 +105,20 @@ function BriefingBody({
     }
   };
 
-  const onPrint = () => window.print();
+  const onPrint = () => {
+    // Scope the print stylesheet so it only applies when this dialog
+    // initiates the print job. Otherwise rules like
+    // `body * { visibility: hidden }` would clobber any other print
+    // (e.g. a browser-initiated Ctrl+P from elsewhere on the page) just
+    // because the dialog happens to be mounted.
+    document.body.classList.add("printing-briefing");
+    const cleanup = () => {
+      document.body.classList.remove("printing-briefing");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
   const onCopy = async () => {
     if (!data?.briefing) return;
     try {
@@ -538,11 +551,12 @@ function PrintStyles() {
   return (
     <style>{`
       @media print {
-        body * { visibility: hidden !important; }
-        [data-radix-dialog-content], [data-radix-dialog-content] * {
+        body.printing-briefing * { visibility: hidden !important; }
+        body.printing-briefing [data-radix-dialog-content],
+        body.printing-briefing [data-radix-dialog-content] * {
           visibility: visible !important;
         }
-        [data-radix-dialog-content] {
+        body.printing-briefing [data-radix-dialog-content] {
           position: absolute !important;
           left: 0 !important;
           top: 0 !important;
@@ -554,11 +568,11 @@ function PrintStyles() {
           box-shadow: none !important;
           border: none !important;
         }
-        [data-radix-dialog-overlay] { display: none !important; }
-        .briefing-print { color: black !important; background: white !important; }
-        .briefing-pagebreak { page-break-after: always; }
-        .briefing-pagebreak-before { page-break-before: always; }
-        .briefing-section { break-inside: avoid; }
+        body.printing-briefing [data-radix-dialog-overlay] { display: none !important; }
+        body.printing-briefing .briefing-print { color: black !important; background: white !important; }
+        body.printing-briefing .briefing-pagebreak { page-break-after: always; }
+        body.printing-briefing .briefing-pagebreak-before { page-break-before: always; }
+        body.printing-briefing .briefing-section { break-inside: avoid; }
       }
     `}</style>
   );

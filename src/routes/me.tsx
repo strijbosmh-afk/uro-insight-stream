@@ -99,7 +99,12 @@ function MeHub() {
           <div className="text-[12px] font-mono text-text-muted truncate">
             {xConnected ? (
               <>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-success mr-1.5 align-middle" />
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full bg-success mr-1.5 align-middle"
+                  role="img"
+                  aria-label="X account connected"
+                  title="X account connected"
+                />
                 @{xStatus!.x_username}
               </>
             ) : (

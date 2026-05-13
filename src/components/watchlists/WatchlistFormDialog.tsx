@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { X, Loader2, Search } from "lucide-react";
 import {
@@ -79,6 +80,7 @@ export function WatchlistFormDialog({
   onSaved,
 }: WatchlistFormDialogProps) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const createFn = useServerFn(createWatchlist);
   const updateFn = useServerFn(updateWatchlist);
   const setTopicsFn = useServerFn(setWatchlistTopics);
@@ -184,12 +186,30 @@ export function WatchlistFormDialog({
   };
 
   const onTopicKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
+    // Accept Enter, comma, semicolon, or Tab as commit delimiters so the
+    // chip-input behaves like every other tags field users have seen.
+    // Tab still moves focus forward — only intercept it when there's a
+    // pending value to commit.
+    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addTopic(topicInput);
+    } else if (e.key === "Tab" && topicInput.trim()) {
       e.preventDefault();
       addTopic(topicInput);
     } else if (e.key === "Backspace" && !topicInput && topics.length > 0) {
       setTopics(topics.slice(0, -1));
     }
+  };
+
+  const onTopicPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!/[,;\n\t]/.test(text)) return;
+    e.preventDefault();
+    text
+      .split(/[,;\n\t]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((s) => addTopic(s));
   };
 
   const validate = (): boolean => {
@@ -243,7 +263,9 @@ export function WatchlistFormDialog({
         action: {
           label: "View alerts",
           onClick: () => {
-            window.location.href = "/alerts";
+            // Client-side nav preserves cache + auth + scroll instead of
+            // doing a hard reload of the SPA shell.
+            void navigate({ to: "/alerts" });
           },
         },
       });
@@ -386,6 +408,7 @@ export function WatchlistFormDialog({
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
                 onKeyDown={onTopicKey}
+                onPaste={onTopicPaste}
                 onBlur={() => topicInput && addTopic(topicInput)}
                 placeholder={topics.length ? "" : "Type a keyword and press Enter"}
                 className="flex-1 min-w-[120px] bg-transparent text-[12px] outline-none text-text-primary placeholder:text-text-muted"

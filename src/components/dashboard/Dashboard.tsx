@@ -357,6 +357,9 @@ export function Dashboard() {
                 <span
                   className="w-1.5 h-1.5 rounded-full bg-success"
                   style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
+                  role="img"
+                  aria-label="Live"
+                  title="Live"
                 />
                 Now happening
                 <span className="text-text-muted font-normal normal-case tracking-normal">
