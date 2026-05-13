@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
 import { MobileDigestWizard } from "./MobileDigestWizard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DigestPreviewDialog } from "./DigestPreviewDialog";
 
 const DAYS = [
   { v: 1, l: "Mon" },
@@ -74,6 +75,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
   const [recipientInput, setRecipientInput] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [sourceFilter, setSourceFilter] = React.useState("");
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   // Load user's subscribed sources to choose from.
   const subSourcesQ = useQuery({
@@ -548,6 +550,19 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
             Cancel
           </Button>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewOpen(true)}
+              disabled={!hasAnyBinding}
+              title={
+                hasAnyBinding
+                  ? "Preview this week's content"
+                  : "Pick at least one source, specialty, congress, or hashtag"
+              }
+            >
+              <Eye className="w-4 h-4 mr-1" /> Preview this week
+            </Button>
             {step > 1 && (
               <Button
                 variant="outline"
@@ -579,6 +594,17 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
           </div>
         </div>
       </div>
+      <DigestPreviewDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        input={{
+          source_ids: selectedSourceIds,
+          specialty_id: specialtyId,
+          congress_id: congressId,
+          hashtags,
+          digest_name: name,
+        }}
+      />
     </div>
   );
 }
