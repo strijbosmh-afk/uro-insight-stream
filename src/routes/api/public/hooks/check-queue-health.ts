@@ -91,24 +91,18 @@ export const Route = createFileRoute("/api/public/hooks/check-queue-health")({
             }
           }
 
-          // H-O7: signup spike detector. Reads the auth.users count via the
-          // admin API (service role only) for the recent window.
+          // H-O7: signup spike detector. profiles.created_at tracks signups
+          // (a row is created on first auth via the user-profile trigger).
           let signupCount: number | null = null;
           try {
             const sinceISO = new Date(
               Date.now() - SIGNUP_SPIKE_WINDOW_MINUTES * 60_000,
             ).toISOString();
-            const { data: recentProfiles } = await supabaseAdmin
-              .from("profiles")
-              .select("id", { count: "exact", head: true })
-              .gt("created_at", sinceISO);
-            // supabase-js returns count separately; fall back to selecting ids
-            // when head:true count is unavailable.
             const { count: cnt } = await supabaseAdmin
               .from("profiles")
               .select("*", { count: "exact", head: true })
               .gt("created_at", sinceISO);
-            signupCount = cnt ?? recentProfiles?.length ?? 0;
+            signupCount = cnt ?? 0;
             if (signupCount && signupCount >= SIGNUP_SPIKE_THRESHOLD) {
               await emitOpsAlert({
                 kind: "signup_spike",
