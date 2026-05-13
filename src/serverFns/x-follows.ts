@@ -133,12 +133,23 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
         };
       });
 
-    let failed = 0;
+    // Per-handle status so the caller can show what actually happened
+    // instead of opaque "X failed" numbers.
+    type Status = "subscribed" | "already" | "source_failed" | "subscribe_failed";
+    const status = new Map<string, Status>();
+
     if (toInsert.length > 0) {
       const { error } = await supabaseAdmin
         .from("sources")
         .upsert(toInsert, { onConflict: "id" });
-      if (error) failed += toInsert.length;
+      if (error) {
+        // Fail-fast: if we can't materialize the source rows, the
+        // user_subscribed_sources insert below would FK-violate. Mark
+        // these handles as failed and skip them rather than silently
+        // recording phantom subscriptions.
+        console.error("[bulkSubscribeFromFollows] sources upsert failed", error);
+        for (const row of toInsert) status.set(row.id, "source_failed");
+      }
     }
 
     // Subscribe (idempotent).
@@ -152,10 +163,11 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
         (r) => r.source_id,
       ),
     );
+    for (const h of alreadySubbed) status.set(h, "already");
     const skipped_existing = alreadySubbed.size;
 
     const subRows = handles
-      .filter((h) => !alreadySubbed.has(h))
+      .filter((h) => !alreadySubbed.has(h) && status.get(h) !== "source_failed")
       .map((h) => ({ user_id: userId, source_id: h }));
 
     let subscribed = 0;
@@ -163,9 +175,17 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin
         .from("user_subscribed_sources")
         .upsert(subRows, { onConflict: "user_id,source_id" });
-      if (error) failed += subRows.length;
-      else subscribed = subRows.length;
+      if (error) {
+        console.error("[bulkSubscribeFromFollows] subscribe failed", error);
+        for (const row of subRows) status.set(row.source_id, "subscribe_failed");
+      } else {
+        for (const row of subRows) status.set(row.source_id, "subscribed");
+        subscribed = subRows.length;
+      }
     }
+    const failed = Array.from(status.values()).filter(
+      (s) => s === "source_failed" || s === "subscribe_failed",
+    ).length;
 
     // Stamp follows_imported_at + count.
     await supabaseAdmin
@@ -179,7 +199,15 @@ export const bulkSubscribeFromFollows = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .eq("is_active", true);
 
-    return { subscribed, skipped_existing, failed };
+    return {
+      subscribed,
+      skipped_existing,
+      failed,
+      results: Array.from(status.entries()).map(([handle, s]) => ({
+        handle,
+        status: s,
+      })),
+    };
   });
 
 export type ScoredFollow = ScoredFollowItem;
