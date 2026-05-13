@@ -11,6 +11,7 @@ import { GroupsTab } from "@/components/discover/GroupsTab";
 import { BySpecialtyTab } from "@/components/discover/BySpecialtyTab";
 import { MobileDiscover } from "@/components/discover/MobileDiscover";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { buildSeoHead } from "@/lib/seo";
 
 const TAB_VALUES = ["for-you", "by-group", "by-specialty"] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -23,16 +24,13 @@ const STORAGE_KEY = "urofeed:discover:tab";
 
 export const Route = createFileRoute("/discover")({
   validateSearch: searchSchema,
-  head: () => ({
-    meta: [
-      { title: "Discover — UroFeed" },
-      {
-        name: "description",
-        content:
-          "Find new sources to follow — by specialty, by curated group, or from your own feed activity.",
-      },
-    ],
-  }),
+  head: () =>
+    buildSeoHead({
+      title: "Discover",
+      description:
+        "Find new urology voices to follow — by specialty, by curated group, or surfaced from your own feed activity.",
+      path: "/discover",
+    }),
   component: DiscoverPage,
 });
 

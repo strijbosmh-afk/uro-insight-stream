@@ -1,9 +1,16 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { Dashboard } from "@/components/dashboard/Dashboard";
+import { buildSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — UroFeed" }] }),
+  head: () =>
+    buildSeoHead({
+      title: "Dashboard",
+      description:
+        "Your UroFeed command center: live activity, top urology sources, congress highlights and curated AI summaries at a glance.",
+      path: "/dashboard",
+    }),
   beforeLoad: () => {
     // Mobile viewports get the Live Feed instead of the Dashboard.
     // SSR has no window — the client effect below handles post-hydration.

@@ -1,8 +1,15 @@
 import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
 import { CongressGrid } from "@/components/congresses/CongressGrid";
+import { buildSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/congresses")({
-  head: () => ({ meta: [{ title: "Congresses — UroFeed" }] }),
+  head: () =>
+    buildSeoHead({
+      title: "Congresses",
+      description:
+        "Track every major urology congress — EAU, AUA, SIU and ESMO-GU — with live session activity, abstracts and AI-curated highlights.",
+      path: "/congresses",
+    }),
   component: CongressesLayout,
 });
 

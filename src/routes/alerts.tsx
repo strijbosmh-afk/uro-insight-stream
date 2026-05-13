@@ -48,18 +48,16 @@ import {
   updateWatchlist,
   deleteWatchlist,
 } from "@/serverFns/watchlists";
+import { buildSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/alerts")({
-  head: () => ({
-    meta: [
-      { title: "Alerts — UroFeed" },
-      {
-        name: "description",
-        content:
-          "Live inbox for tweets matching your watchlists, plus management for the watchlists you've created.",
-      },
-    ],
-  }),
+  head: () =>
+    buildSeoHead({
+      title: "Alerts",
+      description:
+        "A live inbox of urology posts matching your watchlists, plus controls to create, mute and tune the rules behind them.",
+      path: "/alerts",
+    }),
   component: AlertsPage,
 });
 
