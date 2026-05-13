@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,13 +49,13 @@ export function SourceBriefingDialog({ handle, displayName, avatarUrl, trigger }
       >
         {/* B9: Radix requires a DialogTitle/Description for screen readers.
             The visible header has its own styled heading, so we expose the
-            accessible name/description via VisuallyHidden. */}
-        <VisuallyHidden>
-          <DialogTitle>Briefing — {displayName || `@${handle}`}</DialogTitle>
-          <DialogDescription>
-            AI-generated weekly briefing for @{handle}.
-          </DialogDescription>
-        </VisuallyHidden>
+            accessible name/description via the sr-only utility class. */}
+        <DialogTitle className="sr-only">
+          Briefing — {displayName || `@${handle}`}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          AI-generated weekly briefing for @{handle}.
+        </DialogDescription>
         <BriefingBody
           handle={handle}
           displayName={displayName}
