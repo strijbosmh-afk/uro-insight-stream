@@ -428,7 +428,58 @@ export const TweetCard = React.memo(function TweetCard({
               reply={{ tweetId: tweet.id, authorHandle: handle, text: tweet.text }}
             />
             <QuoteButton tweetUrl={tweetUrl} />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark();
+              }}
+              disabled={toggleBookmark.isPending}
+              title={isBookmarked ? "Remove from saved" : "Save tweet"}
+              aria-pressed={isBookmarked}
+              className={cn(
+                "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-accent",
+                isBookmarked && "text-accent",
+              )}
+            >
+              {isBookmarked ? (
+                <BookmarkCheck className="w-3 h-3 fill-current" />
+              ) : (
+                <Bookmark className="w-3 h-3" />
+              )}
+            </button>
           </div>
+          {noteOpen && (
+            <div
+              className="mt-2 border border-border bg-panel-elevated rounded-[3px] p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <textarea
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onBlur={() => {
+                  const trimmed = noteDraft.trim();
+                  if ((bookmark?.note ?? "") !== trimmed) {
+                    updateNote.mutate(
+                      { tweetId: tweet.id, note: trimmed || null },
+                      {
+                        onSuccess: () => toast.success("Note saved"),
+                        onError: (e) => toast.error((e as Error).message),
+                      },
+                    );
+                  }
+                  setNoteOpen(false);
+                }}
+                autoFocus
+                rows={2}
+                placeholder="Add a note (optional)…"
+                className="w-full resize-none bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-muted"
+              />
+              <div className="text-[10px] font-mono text-text-muted">
+                Saves on blur · Esc to cancel
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </article>
