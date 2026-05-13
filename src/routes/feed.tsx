@@ -87,7 +87,7 @@ function DesktopFeedLayout({ data }: { data: FeedDataset }) {
           >
             <span className="inline-flex items-center gap-2">
               <Clock className="w-3.5 h-3.5" />
-              Timeline · 24h
+              timeline · 24h
             </span>
             <span className="inline-flex items-center gap-1">
               <ChevronUp className="w-3 h-3" />

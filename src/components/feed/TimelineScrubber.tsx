@@ -110,7 +110,7 @@ export function TimelineScrubber() {
 
   return (
     <Panel
-      title="Timeline · 24h"
+      title="timeline · 24h"
       className="h-full"
       bodyClassName="p-3"
       actions={

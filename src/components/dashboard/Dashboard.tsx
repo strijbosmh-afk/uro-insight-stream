@@ -64,6 +64,19 @@ function fmtAge(seconds: number | null) {
 
 export function Dashboard() {
   const { user } = useAuth();
+  // Welcome banner shown after a successful invite acceptance.
+  // Persists across re-renders (unlike a toast) until dismissed.
+  const [welcomeBanner, setWelcomeBanner] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      if (sessionStorage.getItem("welcome:invite") === "1") {
+        setWelcomeBanner(true);
+        sessionStorage.removeItem("welcome:invite");
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
   const fetchNewRecs = useServerFn(getNewRecommendedSourcesCount);
   const fetchCronHealth = useServerFn(getIngestionCronHealth);
   const { data: newRecs } = useQuery({
@@ -217,6 +230,30 @@ export function Dashboard() {
   return (
     <div className="flex flex-col h-full min-h-0 gap-3 p-3 overflow-y-auto">
       <QuickStartPanel />
+      {welcomeBanner && (
+        <div
+          role="status"
+          className="flex items-center justify-between px-3 py-2 shrink-0 rounded-[3px]"
+          style={{
+            background: "color-mix(in oklab, var(--accent) 10%, var(--panel))",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <div className="text-[12px] text-text-primary">
+            <span className="font-mono uppercase tracking-wider text-accent text-[10px] mr-2">
+              welcome
+            </span>
+            Invite accepted — your UroFeed workspace is ready.
+          </div>
+          <button
+            type="button"
+            onClick={() => setWelcomeBanner(false)}
+            className="text-[10px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary px-2 py-1"
+          >
+            dismiss
+          </button>
+        </div>
+      )}
       {newRecs && ((newRecs.sourceCount ?? newRecs.count) > 0 || (newRecs.groupCount ?? 0) > 0) && !bannerDismissed && (
         <div
           className="flex items-center justify-between px-3 py-2 shrink-0"

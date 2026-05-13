@@ -10,6 +10,7 @@ import { ComposeTweetDialog } from "./ComposeTweetDialog";
 export function ComposeFAB() {
   const [open, setOpen] = React.useState(false);
   const [aiTrigger, setAiTrigger] = React.useState(false);
+  const [pressing, setPressing] = React.useState(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggeredLongPressRef = React.useRef(false);
 
@@ -23,6 +24,7 @@ export function ComposeFAB() {
   const startPress = () => {
     triggeredLongPressRef.current = false;
     clearTimer();
+    setPressing(true);
     timerRef.current = setTimeout(() => {
       triggeredLongPressRef.current = true;
       try {
@@ -30,12 +32,14 @@ export function ComposeFAB() {
       } catch {
         /* noop */
       }
+      setPressing(false);
       setAiTrigger(true);
       setOpen(true);
     }, 500);
   };
 
   const endPress = () => {
+    setPressing(false);
     if (!timerRef.current && !triggeredLongPressRef.current) return;
     const wasLong = triggeredLongPressRef.current;
     clearTimer();
@@ -47,6 +51,7 @@ export function ComposeFAB() {
 
   const cancelPress = () => {
     clearTimer();
+    setPressing(false);
     triggeredLongPressRef.current = false;
   };
 
@@ -65,7 +70,7 @@ export function ComposeFAB() {
           onMouseLeave={cancelPress}
           onContextMenu={(e) => e.preventDefault()}
           className="
-            fixed z-30 right-4
+            group fixed z-30 right-4
             h-14 w-14 rounded-full
             bg-accent text-accent-foreground
             shadow-lg shadow-black/30
@@ -76,7 +81,20 @@ export function ComposeFAB() {
             bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)",
           }}
         >
-          <Plus className="w-6 h-6" />
+          {/* Long-press progress ring (500ms) */}
+          <span
+            aria-hidden
+            className={
+              "pointer-events-none absolute inset-0 rounded-full border-2 border-accent-foreground/70 transition-transform duration-500 ease-out " +
+              (pressing ? "scale-110 opacity-100" : "scale-100 opacity-0")
+            }
+          />
+          <Plus
+            className={
+              "w-6 h-6 transition-transform duration-500 ease-out " +
+              (pressing ? "rotate-90 scale-90" : "")
+            }
+          />
         </button>
       )}
       <ComposeTweetDialog

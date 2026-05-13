@@ -226,6 +226,10 @@ function GroupCard({
             <Button size="sm" variant="outline" disabled={pending} onClick={onUnsubscribe} className="h-7 text-[11px]">
               Subscribed
             </Button>
+          ) : group.is_archived ? (
+            <Button size="sm" variant="outline" disabled className="h-7 text-[11px]">
+              Archived
+            </Button>
           ) : (
             <Button size="sm" disabled={pending} onClick={onSubscribe} className="h-7 text-[11px]">
               Subscribe
