@@ -279,6 +279,7 @@ export function MobileDigestWizard({ digestId, onClose }: Props) {
   const shakeCls = (k: string) => (shake === k ? "animate-pulse ring-2 ring-danger rounded-[3px]" : "");
 
   return (
+    <>
     <Sheet open onOpenChange={(o) => !o && onClose(false)}>
       <SheetContent
         side="bottom"
