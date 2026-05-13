@@ -119,6 +119,75 @@ export type Database = {
         }
         Relationships: []
       }
+      ask_query_cache: {
+        Row: {
+          answer: Json
+          created_at: string
+          fingerprint: string
+          hit_count: number
+          llm_tokens_used: number
+          query_text: string
+          scope: string
+          tweet_count: number
+          tweet_ids: string[]
+          user_id_for_scope: string | null
+          window_days: number
+        }
+        Insert: {
+          answer: Json
+          created_at?: string
+          fingerprint: string
+          hit_count?: number
+          llm_tokens_used?: number
+          query_text: string
+          scope: string
+          tweet_count: number
+          tweet_ids: string[]
+          user_id_for_scope?: string | null
+          window_days: number
+        }
+        Update: {
+          answer?: Json
+          created_at?: string
+          fingerprint?: string
+          hit_count?: number
+          llm_tokens_used?: number
+          query_text?: string
+          scope?: string
+          tweet_count?: number
+          tweet_ids?: string[]
+          user_id_for_scope?: string | null
+          window_days?: number
+        }
+        Relationships: []
+      }
+      ask_starter_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          prompt: string
+          sort_order: number
+          specialty_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          prompt: string
+          sort_order?: number
+          specialty_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          prompt?: string
+          sort_order?: number
+          specialty_id?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -1082,6 +1151,27 @@ export type Database = {
           count?: number
           ip_hash?: string
           last_attempt_at?: string
+        }
+        Relationships: []
+      }
+      rate_limit_ask: {
+        Row: {
+          count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }

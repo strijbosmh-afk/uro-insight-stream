@@ -1,12 +1,13 @@
 import * as React from "react";
 import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, LogOut } from "lucide-react";
+import { ChevronRight, LogOut, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { getXConnectionStatus, listMyPosts } from "@/serverFns/x-credentials";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { AskUroFeedDialog } from "@/components/ask/AskUroFeedDialog";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/me")({
 function MeHub() {
   const { user, profile, isAdmin, signOut } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [askOpen, setAskOpen] = React.useState(false);
   const [contactOpen, setContactOpen] = React.useState(false);
 
   const { data: xStatus } = useQuery({
@@ -122,6 +124,17 @@ function MeHub() {
         <Row to="/me/following" label={`People I follow (${followingCount})`} />
         <Row to="/me/posts" label={`My posts (${postsCount})`} />
         <Row to="/me/saved" label={`Saved (${bookmarkCount})`} />
+        <button
+          type="button"
+          onClick={() => setAskOpen(true)}
+          className="w-full flex items-center justify-between px-4 h-14 border-b border-border bg-panel text-left hover:bg-panel-elevated transition-colors"
+        >
+          <span className="flex items-center gap-2 text-[14px] text-text-primary">
+            <Sparkles className="w-4 h-4 text-accent" />
+            Ask UroFeed
+          </span>
+          <ChevronRight className="w-4 h-4 text-text-muted" />
+        </button>
       </Section>
 
       <Section label="Configuration">
@@ -195,6 +208,7 @@ function MeHub() {
           </div>
         </DialogContent>
       </Dialog>
+      <AskUroFeedDialog open={askOpen} onOpenChange={setAskOpen} />
     </div>
   );
 }
