@@ -606,7 +606,13 @@ function InviteForm({
       // Now we have a session — set the chosen password.
       const { error: updErr } = await supabase.auth.updateUser({ password });
       if (updErr) throw updErr;
-      toast.success("Welcome — invite accepted");
+      // H-U: surface the welcome message as a persistent banner on the
+      // dashboard rather than a transient toast (easy to miss).
+      try {
+        sessionStorage.setItem("welcome:invite", "1");
+      } catch {
+        /* noop */
+      }
       void navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       const msg =
