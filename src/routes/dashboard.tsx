@@ -29,6 +29,15 @@ function DashboardPage() {
       if (window.innerWidth < 768) navigate({ to: "/feed", replace: true });
     };
     check();
+    // H-U3: also re-check on resize / orientation change so a tablet
+    // rotated into portrait (or a desktop window narrowed) lands on the
+    // mobile feed instead of a broken dashboard.
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
   }, [navigate]);
   return <Dashboard />;
 }
