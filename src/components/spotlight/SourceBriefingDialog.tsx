@@ -105,7 +105,20 @@ function BriefingBody({
     }
   };
 
-  const onPrint = () => window.print();
+  const onPrint = () => {
+    // Scope the print stylesheet so it only applies when this dialog
+    // initiates the print job. Otherwise rules like
+    // `body * { visibility: hidden }` would clobber any other print
+    // (e.g. a browser-initiated Ctrl+P from elsewhere on the page) just
+    // because the dialog happens to be mounted.
+    document.body.classList.add("printing-briefing");
+    const cleanup = () => {
+      document.body.classList.remove("printing-briefing");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
   const onCopy = async () => {
     if (!data?.briefing) return;
     try {
