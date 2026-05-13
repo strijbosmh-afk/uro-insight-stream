@@ -403,10 +403,15 @@ export async function flushPendingDeltas(): Promise<{ processed: number }> {
 export async function consumeMuteToken(token: string): Promise<{ ok: boolean; watchlistName?: string }> {
   const { data: row } = await supabaseAdmin
     .from("watchlist_mute_tokens")
-    .select("watchlist_id, hours, used_at")
+    .select("watchlist_id, hours, used_at, expires_at")
     .eq("token", token)
     .maybeSingle();
+  // Reject if missing, already used, or past its expiry (H-S1: leaked email
+  // archives must not stay actionable forever).
   if (!row || row.used_at) return { ok: false };
+  if (row.expires_at && new Date(row.expires_at as string).getTime() < Date.now()) {
+    return { ok: false };
+  }
 
   const muteUntil = new Date(Date.now() + (row.hours as number) * 3600 * 1000).toISOString();
   await supabaseAdmin
@@ -423,5 +428,14 @@ export async function consumeMuteToken(token: string): Promise<{ ok: boolean; wa
     .select("name")
     .eq("id", row.watchlist_id as string)
     .maybeSingle();
+
+  // Opportunistic cleanup: drop expired/old-used tokens so the table doesn't
+  // grow forever. Best-effort — failures are not user-visible.
+  void supabaseAdmin
+    .rpc("cleanup_watchlist_mute_tokens")
+    .then(({ error }) => {
+      if (error) console.error("[watchlist-mute] cleanup failed", error);
+    });
+
   return { ok: true, watchlistName: (wl?.name as string) ?? "watchlist" };
 }
