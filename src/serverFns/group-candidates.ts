@@ -680,7 +680,9 @@ export type SignalRow = {
 
 export const listSignals = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<SignalRow[]> => {
+  .handler(async ({ context }): Promise<SignalRow[]> => {
+    // H-S6: classifier rules are operational config — admin-only.
+    await assertAdmin(context.supabase, context.userId);
     const { data, error } = await supabaseAdmin
       .from("cancer_area_signals")
       .select(
