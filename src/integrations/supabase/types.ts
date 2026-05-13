@@ -2098,18 +2098,21 @@ export type Database = {
         Row: {
           classifications: number
           day: string
+          expensive_calls: number
           updated_at: string
           user_id: string
         }
         Insert: {
           classifications?: number
           day: string
+          expensive_calls?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           classifications?: number
           day?: string
+          expensive_calls?: number
           updated_at?: string
           user_id?: string
         }
@@ -2547,6 +2550,7 @@ export type Database = {
           follows_new_since_last_import: number
           id: string
           is_active: boolean
+          key_id: number
           last_post_at: string | null
           last_verified_at: string | null
           post_count_today: number
@@ -2576,6 +2580,7 @@ export type Database = {
           follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
+          key_id?: number
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
@@ -2605,6 +2610,7 @@ export type Database = {
           follows_new_since_last_import?: number
           id?: string
           is_active?: boolean
+          key_id?: number
           last_post_at?: string | null
           last_verified_at?: string | null
           post_count_today?: number
