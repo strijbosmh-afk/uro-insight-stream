@@ -11,6 +11,8 @@ import { feedService } from "@/services/feedService";
 import { ShareToXButton } from "@/components/x/ShareToXButton";
 import { NotificationsBell } from "@/components/watchlists/NotificationsBell";
 import { useBookmarks, useHasRecentBookmarks } from "@/hooks/useBookmarks";
+import { AskUroFeedDialog } from "@/components/ask/AskUroFeedDialog";
+import { Sparkles } from "lucide-react";
 import {
   getXConnectionStatus,
   listXAccounts,
@@ -111,6 +113,19 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
   const crumbs = useBreadcrumb();
   const now = useClock();
   const isMobile = useIsMobile();
+  const [askOpen, setAskOpen] = React.useState(false);
+
+  // ⌘K / Ctrl-K opens Ask UroFeed.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setAskOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <header className="h-12 shrink-0 flex items-center gap-2 sm:gap-4 px-2 sm:px-4 border-b border-border bg-panel">
@@ -151,9 +166,23 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
         })}
       </nav>
 
-      {/* Search slot reserved — hidden until global search is wired
-          (H-U6: previously rendered a non-functional input). */}
-      <div className="hidden sm:flex flex-1 justify-center" />
+      {/* Ask UroFeed — natural-language Q&A over the corpus. ⌘K to focus. */}
+      <div className="hidden sm:flex flex-1 justify-center max-w-xl mx-auto">
+        <button
+          type="button"
+          onClick={() => setAskOpen(true)}
+          className="w-full h-9 px-3 rounded-[3px] border border-accent/40 bg-panel-elevated hover:border-accent text-text-muted hover:text-text-primary transition-colors flex items-center gap-2 group"
+          title="Ask UroFeed (⌘K)"
+        >
+          <Sparkles className="w-4 h-4 text-accent" />
+          <span className="text-[12px] flex-1 text-left truncate">
+            Ask anything: "What's the latest on PSMA imaging?"
+          </span>
+          <kbd className="hidden md:inline-flex items-center gap-0.5 h-5 px-1.5 text-[10px] font-mono text-text-muted border border-border rounded-[2px] bg-panel">
+            ⌘K
+          </kbd>
+        </button>
+      </div>
 
       {/* Saved tweets quick access (desktop only) */}
       {!isMobile && <SavedBookmarksLink />}
@@ -185,6 +214,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       {/* H-U6: removed dead "UR" account button — was a non-functional
           placeholder. Account / settings access lives in the sidebar
           (desktop) and BottomTabBar → Me (mobile). */}
+      <AskUroFeedDialog open={askOpen} onOpenChange={setAskOpen} />
     </header>
   );
 }
