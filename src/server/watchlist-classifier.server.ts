@@ -326,20 +326,16 @@ export async function classifyNewTweets(tweetIds: string[]): Promise<void> {
 }
 
 async function bumpQuota(userId: string, day: string, n: number): Promise<void> {
-  // Best-effort upsert; race-safe enough for soft cap purposes.
-  const { data } = await supabaseAdmin
-    .from("user_llm_quota")
-    .select("classifications")
-    .eq("user_id", userId)
-    .eq("day", day)
-    .maybeSingle();
-  const next = (data?.classifications ?? 0) + n;
-  await supabaseAdmin
-    .from("user_llm_quota")
-    .upsert(
-      { user_id: userId, day, classifications: next, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,day" },
-    );
+  // Atomic: INSERT ... ON CONFLICT DO UPDATE SET classifications = classifications + n
+  // (see public.bump_user_llm_quota). Race-safe across concurrent classifier
+  // invocations — no lost updates.
+  const { error } = await supabaseAdmin.rpc("bump_user_llm_quota", {
+    _user_id: userId,
+    _day: day,
+    _kind: "classifications",
+    _n: n,
+  });
+  if (error) console.error("[watchlist-classifier] bumpQuota failed", error);
 }
 
 type Verdict = { matched_topic: string | null; evidence: string };
