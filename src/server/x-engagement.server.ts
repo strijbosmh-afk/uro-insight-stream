@@ -116,8 +116,9 @@ export async function engage(
       "X rate limit reached. Try again later."
     );
   }
+  console.error("[x-engagement] X API error", res.status, text.slice(0, 200));
   throw new EngagementError(
     "x_api_error",
-    `X API error ${res.status}: ${text.slice(0, 300)}`
+    `X couldn't complete that action (status ${res.status}). Please try again.`,
   );
 }
