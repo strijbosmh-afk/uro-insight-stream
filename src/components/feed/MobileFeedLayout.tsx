@@ -228,6 +228,7 @@ export function MobileFeedLayout({ data }: { data: FeedDataset }) {
         onOpenChange={setComposeOpen}
         initialText={composePrefill}
       />
+      <AskUroFeedDialog open={askOpen} onOpenChange={setAskOpen} />
     </div>
   );
 }
