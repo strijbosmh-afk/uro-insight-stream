@@ -898,7 +898,10 @@ function KolsStep({
             placeholder="urology_handle"
             className="pl-7 font-mono"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && input.trim()) {
+              if ((e.key === "Enter" || e.key === "," || e.key === ";") && input.trim()) {
+                e.preventDefault();
+                onAdd(input);
+              } else if (e.key === "Tab" && input.trim()) {
                 e.preventDefault();
                 onAdd(input);
               }
