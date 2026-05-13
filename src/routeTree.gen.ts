@@ -27,6 +27,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SourcesHandleRouteImport } from './routes/sources_.$handle'
 import { Route as SessionsSessionIdRouteImport } from './routes/sessions.$sessionId'
 import { Route as MeXAccountRouteImport } from './routes/me.x-account'
+import { Route as MeSavedRouteImport } from './routes/me.saved'
 import { Route as MeProfileRouteImport } from './routes/me.profile'
 import { Route as MePreferencesRouteImport } from './routes/me.preferences'
 import { Route as MePostsRouteImport } from './routes/me.posts'
@@ -157,6 +158,11 @@ const SessionsSessionIdRoute = SessionsSessionIdRouteImport.update({
 const MeXAccountRoute = MeXAccountRouteImport.update({
   id: '/x-account',
   path: '/x-account',
+  getParentRoute: () => MeRoute,
+} as any)
+const MeSavedRoute = MeSavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
   getParentRoute: () => MeRoute,
 } as any)
 const MeProfileRoute = MeProfileRouteImport.update({
@@ -417,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
   '/me/profile': typeof MeProfileRoute
+  '/me/saved': typeof MeSavedRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources/$handle': typeof SourcesHandleRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
   '/me/profile': typeof MeProfileRoute
+  '/me/saved': typeof MeSavedRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources/$handle': typeof SourcesHandleRoute
@@ -540,6 +548,7 @@ export interface FileRoutesById {
   '/me/posts': typeof MePostsRoute
   '/me/preferences': typeof MePreferencesRoute
   '/me/profile': typeof MeProfileRoute
+  '/me/saved': typeof MeSavedRoute
   '/me/x-account': typeof MeXAccountRoute
   '/sessions/$sessionId': typeof SessionsSessionIdRoute
   '/sources_/$handle': typeof SourcesHandleRoute
@@ -603,6 +612,7 @@ export interface FileRouteTypes {
     | '/me/posts'
     | '/me/preferences'
     | '/me/profile'
+    | '/me/saved'
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources/$handle'
@@ -664,6 +674,7 @@ export interface FileRouteTypes {
     | '/me/posts'
     | '/me/preferences'
     | '/me/profile'
+    | '/me/saved'
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources/$handle'
@@ -725,6 +736,7 @@ export interface FileRouteTypes {
     | '/me/posts'
     | '/me/preferences'
     | '/me/profile'
+    | '/me/saved'
     | '/me/x-account'
     | '/sessions/$sessionId'
     | '/sources_/$handle'
@@ -930,6 +942,13 @@ declare module '@tanstack/react-router' {
       path: '/x-account'
       fullPath: '/me/x-account'
       preLoaderRoute: typeof MeXAccountRouteImport
+      parentRoute: typeof MeRoute
+    }
+    '/me/saved': {
+      id: '/me/saved'
+      path: '/saved'
+      fullPath: '/me/saved'
+      preLoaderRoute: typeof MeSavedRouteImport
       parentRoute: typeof MeRoute
     }
     '/me/profile': {
@@ -1253,6 +1272,7 @@ interface MeRouteChildren {
   MePostsRoute: typeof MePostsRoute
   MePreferencesRoute: typeof MePreferencesRoute
   MeProfileRoute: typeof MeProfileRoute
+  MeSavedRoute: typeof MeSavedRoute
   MeXAccountRoute: typeof MeXAccountRoute
 }
 
@@ -1263,6 +1283,7 @@ const MeRouteChildren: MeRouteChildren = {
   MePostsRoute: MePostsRoute,
   MePreferencesRoute: MePreferencesRoute,
   MeProfileRoute: MeProfileRoute,
+  MeSavedRoute: MeSavedRoute,
   MeXAccountRoute: MeXAccountRoute,
 }
 

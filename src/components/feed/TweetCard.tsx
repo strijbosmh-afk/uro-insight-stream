@@ -1,5 +1,14 @@
 import * as React from "react";
-import { CheckCircle2, Heart, MessageCircle, Repeat2, ExternalLink, CornerDownRight } from "lucide-react";
+import {
+  CheckCircle2,
+  Heart,
+  MessageCircle,
+  Repeat2,
+  ExternalLink,
+  CornerDownRight,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -13,6 +22,12 @@ import { ParentPreview } from "./ParentPreview";
 import { ReplyButton } from "@/components/x/ReplyButton";
 import { QuoteButton } from "@/components/x/QuoteButton";
 import { engageWithTweet } from "@/serverFns/x-engagement";
+import {
+  useIsBookmarked,
+  useToggleBookmark,
+  useUpdateBookmarkNote,
+} from "@/hooks/useBookmarks";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function relativeTime(iso: string): string {
   const diff = feedNowMs() - new Date(iso).getTime();
@@ -137,6 +152,92 @@ export const TweetCard = React.memo(function TweetCard({
     },
   });
 
+  // ---- Bookmarks ----
+  const { isBookmarked, bookmark } = useIsBookmarked(tweet.id);
+  const toggleBookmark = useToggleBookmark();
+  const updateNote = useUpdateBookmarkNote();
+  const [noteOpen, setNoteOpen] = React.useState(false);
+  const [noteDraft, setNoteDraft] = React.useState("");
+
+  React.useEffect(() => {
+    if (noteOpen) setNoteDraft(bookmark?.note ?? "");
+  }, [noteOpen, bookmark?.note]);
+
+  const onToggleBookmark = React.useCallback(
+    (opts?: { silent?: boolean }) => {
+      const next = !isBookmarked;
+      toggleBookmark.mutate(
+        { tweetId: tweet.id, bookmarked: next },
+        {
+          onSuccess: () => {
+            if (opts?.silent) return;
+            if (next) {
+              toast.success("Saved", {
+                description: "Add a note?",
+                action: {
+                  label: "Add note",
+                  onClick: () => setNoteOpen(true),
+                },
+              });
+            } else {
+              toast.success("Removed from saved");
+            }
+          },
+          onError: (e) => toast.error((e as Error).message),
+        },
+      );
+    },
+    [isBookmarked, toggleBookmark, tweet.id],
+  );
+
+  // ---- Mobile swipe-to-bookmark ----
+  const isMobile = useIsMobile();
+  const articleRef = React.useRef<HTMLElement | null>(null);
+  const touchStartRef = React.useRef<{
+    x: number;
+    y: number;
+    locked: "h" | "v" | null;
+    triggered: boolean;
+  } | null>(null);
+  const [swipeDx, setSwipeDx] = React.useState(0);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    const t = e.touches[0];
+    touchStartRef.current = {
+      x: t.clientX,
+      y: t.clientY,
+      locked: null,
+      triggered: false,
+    };
+    setSwipeDx(0);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s = touchStartRef.current;
+    if (!s) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (s.locked === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      s.locked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+    }
+    if (s.locked === "h") {
+      // Right-swipe only — preserve native left scroll/back gestures.
+      if (dx > 0) {
+        setSwipeDx(Math.min(dx, 120));
+        if (dx > 60 && !s.triggered) {
+          s.triggered = true;
+          navigator.vibrate?.(10);
+          onToggleBookmark();
+        }
+      }
+    }
+  };
+  const onTouchEnd = () => {
+    touchStartRef.current = null;
+    setSwipeDx(0);
+  };
   const handleClick = (e: React.MouseEvent) => {
     if (!onOpenThread) return;
     // Don't trigger when the user clicked an interactive child (link, button, etc).
@@ -158,8 +259,18 @@ export const TweetCard = React.memo(function TweetCard({
   return (
     <article
       id={`tweet-${tweet.id}`}
+      ref={articleRef}
       onClick={onOpenThread ? handleClick : undefined}
       onKeyDown={onOpenThread ? handleKey : undefined}
+      onTouchStart={isMobile ? onTouchStart : undefined}
+      onTouchMove={isMobile ? onTouchMove : undefined}
+      onTouchEnd={isMobile ? onTouchEnd : undefined}
+      onTouchCancel={isMobile ? onTouchEnd : undefined}
+      style={
+        swipeDx > 0
+          ? { transform: `translateX(${swipeDx}px)`, transition: "none" }
+          : { transform: "translateX(0)", transition: "transform 180ms ease-out" }
+      }
       role={onOpenThread ? "button" : undefined}
       tabIndex={onOpenThread ? 0 : undefined}
       className={cn(
@@ -175,6 +286,16 @@ export const TweetCard = React.memo(function TweetCard({
       )}
       title={onOpenThread ? "Click to open thread" : undefined}
     >
+      {swipeDx > 20 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 -left-12 flex items-center text-accent"
+        >
+          <Bookmark
+            className={cn("w-5 h-5", swipeDx > 60 && "fill-accent")}
+          />
+        </div>
+      )}
       {isReply && tweet.parentHandle && (
         <div className="mb-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
           <CornerDownRight className="w-3 h-3" />
@@ -307,7 +428,58 @@ export const TweetCard = React.memo(function TweetCard({
               reply={{ tweetId: tweet.id, authorHandle: handle, text: tweet.text }}
             />
             <QuoteButton tweetUrl={tweetUrl} />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark();
+              }}
+              disabled={toggleBookmark.isPending}
+              title={isBookmarked ? "Remove from saved" : "Save tweet"}
+              aria-pressed={isBookmarked}
+              className={cn(
+                "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-accent",
+                isBookmarked && "text-accent",
+              )}
+            >
+              {isBookmarked ? (
+                <BookmarkCheck className="w-3 h-3 fill-current" />
+              ) : (
+                <Bookmark className="w-3 h-3" />
+              )}
+            </button>
           </div>
+          {noteOpen && (
+            <div
+              className="mt-2 border border-border bg-panel-elevated rounded-[3px] p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <textarea
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onBlur={() => {
+                  const trimmed = noteDraft.trim();
+                  if ((bookmark?.note ?? "") !== trimmed) {
+                    updateNote.mutate(
+                      { tweetId: tweet.id, note: trimmed || null },
+                      {
+                        onSuccess: () => toast.success("Note saved"),
+                        onError: (e) => toast.error((e as Error).message),
+                      },
+                    );
+                  }
+                  setNoteOpen(false);
+                }}
+                autoFocus
+                rows={2}
+                placeholder="Add a note (optional)…"
+                className="w-full resize-none bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-muted"
+              />
+              <div className="text-[10px] font-mono text-text-muted">
+                Saves on blur · Esc to cancel
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </article>

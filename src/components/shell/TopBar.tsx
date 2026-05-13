@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useRouterState, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Menu, ChevronDown, Check, Plus, Link2 } from "lucide-react";
+import { ChevronRight, Menu, ChevronDown, Check, Plus, Link2, Bookmark } from "lucide-react";
 import { XConnectWizard } from "@/components/x-wizard/XConnectWizard";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { feedService } from "@/services/feedService";
 import { ShareToXButton } from "@/components/x/ShareToXButton";
 import { NotificationsBell } from "@/components/watchlists/NotificationsBell";
+import { useBookmarks, useHasRecentBookmarks } from "@/hooks/useBookmarks";
 import {
   getXConnectionStatus,
   listXAccounts,
@@ -153,6 +154,9 @@ export function TopBar({ onOpenMobileNav }: TopBarProps = {}) {
       {/* Search slot reserved — hidden until global search is wired
           (H-U6: previously rendered a non-functional input). */}
       <div className="hidden sm:flex flex-1 justify-center" />
+
+      {/* Saved tweets quick access (desktop only) */}
+      {!isMobile && <SavedBookmarksLink />}
 
       {/* Live status pill — hidden on small mobile */}
       <div className="hidden sm:flex items-center gap-2 h-7 px-2.5 border border-border rounded-[3px] bg-panel-elevated">
@@ -299,3 +303,25 @@ function ConnectXHeaderLink() {
 }
 
 export default TopBar;
+
+function SavedBookmarksLink() {
+  const { data } = useBookmarks();
+  const hasRecent = useHasRecentBookmarks();
+  const count = data?.length ?? 0;
+  return (
+    <Link
+      to="/me/saved"
+      title="Saved tweets"
+      aria-label={`Saved tweets${count ? ` (${count})` : ""}`}
+      className="relative hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-[3px] border border-border bg-panel-elevated text-text-muted hover:text-accent hover:border-accent/60 transition-colors"
+    >
+      <Bookmark className="w-3.5 h-3.5" />
+      {hasRecent && (
+        <span
+          className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent ring-1 ring-bg"
+          aria-hidden
+        />
+      )}
+    </Link>
+  );
+}

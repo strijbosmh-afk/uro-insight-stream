@@ -223,6 +223,7 @@ export async function wipeDemoUser(userId: string): Promise<void> {
   await supabaseAdmin.from("demo_posts").delete().eq("user_id", userId);
   await supabaseAdmin.from("source_candidate_dismissals").delete().eq("user_id", userId);
   await supabaseAdmin.from("user_x_post_log").delete().eq("user_id", userId);
+  await supabaseAdmin.from("user_bookmarks").delete().eq("user_id", userId);
 }
 
 /** Apply the canonical seed for one demo user. Idempotent (uses upserts). */
@@ -534,6 +535,32 @@ export async function seedDemoUser(userId: string): Promise<{
   }
 
   // h) Onboarding state — completed
+  // g2) Demo bookmarks — pick up to 4 recent tweets from followed sources.
+  if (resolvedSources.length > 0) {
+    const { data: recentTweets } = await supabaseAdmin
+      .from("tweets")
+      .select("id")
+      .in("source_id", resolvedSources.map((s) => s.id))
+      .order("created_at", { ascending: false })
+      .limit(4);
+    const notes = [
+      "revisit for clinic discussion",
+      "check the cited paper",
+      null,
+      null,
+    ];
+    const rows = (recentTweets ?? []).map((t, i) => ({
+      user_id: userId,
+      tweet_id: t.id,
+      note: notes[i] ?? null,
+    }));
+    if (rows.length > 0) {
+      await supabaseAdmin
+        .from("user_bookmarks")
+        .upsert(rows, { onConflict: "user_id,tweet_id" });
+    }
+  }
+
   await supabaseAdmin.from("user_onboarding_state").upsert(
     {
       user_id: userId,
