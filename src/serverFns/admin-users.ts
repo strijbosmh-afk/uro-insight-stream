@@ -724,58 +724,51 @@ export const claimInvitation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => ClaimInvitationSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { data: inv, error } = await supabaseAdmin
-      .from("user_invitations")
-      .select("*")
-      .eq("token", data.token)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!inv) throw new Error("Invitation not found.");
-    if (inv.status === "revoked") throw new Error("This invitation has been revoked.");
-    if (inv.status === "accepted") throw new Error("This invitation has already been accepted.");
-    if (new Date(inv.expires_at as string) < new Date()) {
-      await supabaseAdmin
-        .from("user_invitations")
-        .update({ status: "expired" })
-        .eq("id", inv.id);
-      throw new Error("This invitation has expired.");
-    }
-
-    // Make sure the email matches the authenticated user
+    // Verify the caller's email up-front so we don't atomically claim the
+    // invitation for the wrong account. If anything else races us we'll
+    // still detect it because claim_user_invitation only succeeds when
+    // status='pending' AND not expired.
     const { data: me } = await supabaseAdmin.auth.admin.getUserById(context.userId);
     const myEmail = (me?.user?.email ?? "").toLowerCase();
-    if (myEmail !== (inv.email as string).toLowerCase()) {
+    if (!myEmail) throw new Error("Invitation could not be verified.");
+
+    const { data: claimed, error: claimErr } = await supabaseAdmin.rpc(
+      "claim_user_invitation",
+      { _token: data.token, _user_id: context.userId },
+    );
+    if (claimErr) {
+      console.error("[claimInvitation] rpc failed", claimErr);
+      throw new Error("Could not accept invitation.");
+    }
+    const inv = Array.isArray(claimed) ? claimed[0] : claimed;
+    if (!inv) {
+      throw new Error(
+        "This invitation is no longer valid. It may have been used, revoked, or expired.",
+      );
+    }
+    if ((inv.email as string).toLowerCase() !== myEmail) {
+      // Concurrent path: claim_user_invitation already updated the row so
+      // we can't easily roll back. Revoke it instead and surface a clear
+      // error.
+      await supabaseAdmin
+        .from("user_invitations")
+        .update({ status: "revoked" })
+        .eq("id", inv.id);
       throw new Error("This invitation was sent to a different email address.");
     }
 
     // Grant the role (idempotent against the unique (user_id, role) index)
-    const { error: existingErr, data: existingRole } = await supabaseAdmin
+    const { error: roleErr } = await supabaseAdmin
       .from("user_roles")
-      .select("id")
-      .eq("user_id", context.userId)
-      .eq("role", inv.role as AppRole)
-      .maybeSingle();
-    if (existingErr) throw new Error(existingErr.message);
-    if (!existingRole) {
-      const { error: roleErr } = await supabaseAdmin
-        .from("user_roles")
-        .insert({
+      .upsert(
+        {
           user_id: context.userId,
           role: inv.role as AppRole,
           granted_by: (inv.invited_by as string | null) ?? null,
-        } as never);
-      if (roleErr) throw new Error(roleErr.message);
-    }
-
-    // Mark invitation accepted
-    await supabaseAdmin
-      .from("user_invitations")
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        accepted_user_id: context.userId,
-      })
-      .eq("id", inv.id);
+        } as never,
+        { onConflict: "user_id,role", ignoreDuplicates: true },
+      );
+    if (roleErr) throw new Error("Could not grant invited role.");
 
     // Apply admin-supplied display name if any
     if (inv.display_name) {
