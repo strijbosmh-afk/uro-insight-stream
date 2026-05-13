@@ -12,6 +12,7 @@
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { deliverWatchlistMatches } from "@/server/watchlist-delivery.server";
+import { emitOpsAlert } from "@/server/ops-alerts.server";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
@@ -322,6 +323,13 @@ export async function classifyNewTweets(tweetIds: string[]): Promise<void> {
     }
   } catch (err) {
     console.error("[watchlist-classifier] failed", err);
+    void emitOpsAlert({
+      kind: "watchlist_classifier_failure",
+      severity: "warning",
+      message: `Watchlist classifier batch failed: ${(err as Error).message ?? "unknown"}`,
+      metadata: { tweet_count: tweetIds.length },
+      dedupeWindowHours: 1,
+    });
   }
 }
 
