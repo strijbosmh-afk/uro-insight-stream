@@ -117,7 +117,12 @@ export const Route = createFileRoute("/email/unsubscribe")({
           .maybeSingle()
 
         if (updateError) {
-          console.error('Failed to mark token as used', { error: updateError, token })
+          // B14: never log the bearer-style token in plain text. Log only a
+          // short prefix so we can correlate without enabling replay attacks.
+          console.error('Failed to mark token as used', {
+            error: updateError,
+            token_prefix: token.slice(0, 8),
+          })
           return Response.json({ error: 'Failed to process unsubscribe' }, { status: 500 })
         }
 
