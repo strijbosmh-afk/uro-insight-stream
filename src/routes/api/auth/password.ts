@@ -19,20 +19,36 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
   });
 }
 
+// H-S2: only accept sign-in requests originating from this project's known
+// hosts. The previous wildcard let *any* *.lovable.app / *.lovableproject.com
+// site post credentials here, which is a credential-stuffing surface.
+const PROJECT_ID = "b4982a9a-484b-4e14-9df5-1bcc313546ed";
+const ALLOWED_HOSTS_EXACT = new Set<string>([
+  // Custom production domains
+  "urofeed.com",
+  "www.urofeed.com",
+  // Published Lovable hosts
+  "uro-insight-stream.lovable.app",
+  // Stable per-project Lovable hosts (prod + preview)
+  `project--${PROJECT_ID}.lovable.app`,
+  `project--${PROJECT_ID}-dev.lovable.app`,
+  `id-preview--${PROJECT_ID}.lovable.app`,
+  // Sandbox preview host
+  `${PROJECT_ID}.lovableproject.com`,
+  `${PROJECT_ID}.sandbox.lovable.dev`,
+]);
+
 function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return true; // same-origin fetches from this app omit Origin
   try {
     const originHost = new URL(origin).host;
     const reqHost = request.headers.get("host") ?? new URL(request.url).host;
     if (originHost === reqHost) return true;
-    // Allow lovable preview/published hosts and custom domains for this project.
-    if (/\.lovable(project)?\.app$/.test(originHost)) return true;
-    if (/\.lovableproject\.com$/.test(originHost)) return true;
+    return ALLOWED_HOSTS_EXACT.has(originHost);
   } catch {
     return false;
   }
-  return false;
 }
 
 export const Route = createFileRoute("/api/auth/password")({
