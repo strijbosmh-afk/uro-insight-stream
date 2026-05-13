@@ -493,7 +493,10 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
                   value={recipientInput}
                   onChange={(e) => setRecipientInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addRecipient();
+                    } else if (e.key === "Tab" && recipientInput.trim()) {
                       e.preventDefault();
                       addRecipient();
                     }
@@ -802,7 +805,10 @@ function Step2Bindings(p: Step2Props) {
             value={p.hashtagInput}
             onChange={(e) => p.setHashtagInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") {
+              if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                e.preventDefault();
+                p.addHashtag();
+              } else if (e.key === "Tab" && p.hashtagInput.trim()) {
                 e.preventDefault();
                 p.addHashtag();
               }
