@@ -232,16 +232,10 @@ export const listMyMatches = createServerFn({ method: "GET" })
         .in("id", tweetIds);
       tweetMap = new Map((tweets ?? []).map((t) => [t.id as string, t]));
     }
-    const items = (matches ?? []).map((m) => ({
+    return (matches ?? []).map((m) => ({
       ...m,
       tweet: tweetMap.get(m.tweet_id as string) ?? null,
     }));
-    const last = items[items.length - 1];
-    const nextCursor =
-      items.length === data.limit && last
-        ? `${(last as { classified_at: string }).classified_at}|${(last as { id: string }).id}`
-        : null;
-    return { items, nextCursor };
   });
 
 export const dismissMatch = createServerFn({ method: "POST" })
