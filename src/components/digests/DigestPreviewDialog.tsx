@@ -6,6 +6,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { previewDigest } from "@/serverFns/digests";
+import { styles, theme } from "@/lib/email-templates/_theme";
 
 export interface DigestPreviewInput {
   source_ids: string[];
@@ -55,11 +56,26 @@ function formatRange(start: string, end: string): string {
   return `${start.slice(0, 10)} → ${end.slice(0, 10)}`;
 }
 
-const SENTIMENT_COLOR: Record<string, string> = {
-  positive: "bg-success/15 text-success border-success/30",
-  neutral: "bg-panel-elevated text-text-muted border-border",
-  mixed: "bg-warning/15 text-warning border-warning/30",
-  negative: "bg-danger/15 text-danger border-danger/30",
+function fmtDateLong(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+const SENTIMENT_TONE: Record<
+  string,
+  { bg: string; fg: string; border: string }
+> = {
+  positive: { bg: "rgba(16,185,129,0.12)", fg: theme.success, border: "rgba(16,185,129,0.4)" },
+  neutral: { bg: theme.panelElevated, fg: theme.textMuted, border: theme.border },
+  mixed: { bg: "rgba(245,158,11,0.12)", fg: theme.amber, border: "rgba(245,158,11,0.4)" },
+  negative: { bg: "rgba(239,68,68,0.12)", fg: theme.danger, border: "rgba(239,68,68,0.4)" },
 };
 
 export function DigestPreviewDialog({ open, onClose, input }: Props) {
@@ -154,7 +170,7 @@ export function DigestPreviewDialog({ open, onClose, input }: Props) {
       <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
         <SheetContent
           side="bottom"
-          className="h-[90vh] max-h-[90vh] p-0 overflow-y-auto"
+          className="h-[90vh] max-h-[90vh] p-0 overflow-y-auto bg-white"
         >
           {Body}
         </SheetContent>
@@ -163,7 +179,7 @@ export function DigestPreviewDialog({ open, onClose, input }: Props) {
   }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0 bg-white border-0">
         {Body}
       </DialogContent>
     </Dialog>
@@ -181,143 +197,230 @@ function PreviewBody({
   onRefresh: () => void;
   onClose: () => void;
 }) {
+  const digestName =
+    state.kind === "ok" ? state.rendered.digest_name : title.replace(/^Preview · /, "");
+  const windowStart = state.kind === "ok" ? state.rendered.window_start : undefined;
+  const windowEnd = state.kind === "ok" ? state.rendered.window_end : undefined;
+  const totalTweets = state.kind === "ok" ? state.rendered.tweet_count : 0;
+
   return (
-    <div className="flex flex-col">
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-text-muted mb-0.5">
-            Weekly preview
-          </div>
-          <h2 className="text-[15px] font-semibold text-text-primary truncate">
-            {title}
-          </h2>
+    <div style={styles.main} className="relative">
+      {/* Floating close button — overlays the email shell */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close preview"
+        className="absolute top-3 right-3 z-10 rounded-sm p-1 text-neutral-500 hover:text-neutral-900 bg-white/80"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      <div style={styles.outer}>
+        {/* Brand bar */}
+        <div style={styles.brandBar}>
+          <span style={styles.brandAccent}>UROFEED</span>
+          {" · CLINICAL CONGRESS INTELLIGENCE"}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-text-muted hover:text-text-primary"
-          aria-label="Close preview"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
 
-      <div className="px-6 py-5">
-        {state.kind === "loading" && (
-          <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-accent" />
-            <p className="text-[13px] text-text-muted">
-              Generating preview from up to 50 tweets in the last 7 days…
-            </p>
-          </div>
-        )}
+        {/* Dark panel — mirrors the email body */}
+        <div style={styles.panel}>
+          <hr style={styles.accentRule} />
+          <div style={styles.eyebrow}>Digest · {digestName}</div>
+          <h1 style={styles.h1}>Your urology feed digest</h1>
 
-        {state.kind === "empty" && (
-          <div className="py-10 text-center space-y-3">
-            <div className="text-[14px] text-text-primary">
-              No tweets matched your filters in the last 7 days.
-            </div>
-            <p className="text-[12px] text-text-muted max-w-md mx-auto">
-              Try adding more sources, picking a different specialty, or removing
-              narrow hashtags. Window: {formatRange(state.window_start, state.window_end)}.
-            </p>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Adjust filters
-            </Button>
-          </div>
-        )}
-
-        {state.kind === "error" && (
-          <div className="py-10 text-center space-y-3">
-            <div className="text-[13px] text-danger">{state.message}</div>
-            <Button variant="outline" size="sm" onClick={onRefresh}>
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Try again
-            </Button>
-          </div>
-        )}
-
-        {state.kind === "ok" && (
-          <div className="space-y-6">
-            <div>
-              <div className="text-[11px] font-mono text-text-muted">
-                Based on {state.rendered.tweet_count} tweets from{" "}
-                {formatRange(state.rendered.window_start, state.rendered.window_end)}
-              </div>
+          {state.kind === "ok" && windowStart && windowEnd && (
+            <div style={styles.muted}>
+              {fmtDateLong(windowStart)} → {fmtDateLong(windowEnd)} · {totalTweets} posts
               {state.from_cache && (
-                <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.14em] text-text-muted">
-                  cached · generated {relativeFromNow(state.cached_at)}
-                </div>
+                <>
+                  {" · "}
+                  <span style={{ ...styles.footer, display: "inline" }}>
+                    cached · {relativeFromNow(state.cached_at)}
+                  </span>
+                </>
               )}
             </div>
+          )}
 
-            <section>
-              <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-text-muted mb-2">
-                Takeaways
+          {state.kind === "loading" && (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: theme.accent }} />
+              <p style={{ ...styles.muted, margin: 0 }}>
+                Generating preview from up to 50 tweets in the last 7 days…
+              </p>
+            </div>
+          )}
+
+          {state.kind === "empty" && (
+            <div className="py-8 text-center space-y-3">
+              <div style={styles.text}>
+                No tweets matched your filters in the last 7 days.
               </div>
-              <ul className="space-y-2">
-                {state.rendered.takeaways.map((t, i) => (
-                  <li
-                    key={i}
-                    className="flex gap-2 text-[13px] leading-snug text-text-primary"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-1" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {state.rendered.key_quotes.length > 0 && (
-              <section>
-                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-text-muted mb-2">
-                  Key quotes
-                </div>
-                <div className="space-y-3">
-                  {state.rendered.key_quotes.map((q) => (
-                    <blockquote
-                      key={q.tweet_id}
-                      className="border-l-2 border-accent pl-3 text-[13px] text-text-primary"
-                    >
-                      <p className="italic">"{q.text}"</p>
-                      <footer className="mt-1 text-[11px] font-mono text-text-muted">
-                        —{" "}
-                        <a
-                          href={`https://x.com/${q.author_handle}/status/${q.tweet_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-accent"
-                        >
-                          @{q.author_handle}
-                        </a>
-                      </footer>
-                    </blockquote>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-border">
-              <span
-                role="img"
-                aria-label={`Sentiment: ${state.rendered.sentiment}`}
-                className={
-                  "inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[10px] font-mono uppercase tracking-[0.14em] " +
-                  (SENTIMENT_COLOR[state.rendered.sentiment] ?? SENTIMENT_COLOR.neutral)
-                }
-              >
-                {state.rendered.sentiment}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-text-muted">
-                  {state.rendered.model}
-                </span>
-                <Button variant="outline" size="sm" onClick={onRefresh}>
-                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh preview
+              <p style={{ ...styles.muted, maxWidth: 420, margin: "0 auto" }}>
+                Try adding more sources, picking a different specialty, or removing
+                narrow hashtags. Window: {formatRange(state.window_start, state.window_end)}.
+              </p>
+              <div className="pt-2">
+                <Button variant="outline" size="sm" onClick={onClose}>
+                  Adjust filters
                 </Button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {state.kind === "error" && (
+            <div className="py-8 text-center space-y-3">
+              <div style={{ ...styles.text, color: theme.danger }}>
+                {state.message}
+              </div>
+              <Button variant="outline" size="sm" onClick={onRefresh}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Try again
+              </Button>
+            </div>
+          )}
+
+          {state.kind === "ok" && (
+            <>
+              {/* Takeaways — bullets */}
+              <section style={{ marginTop: 20 }}>
+                <div style={{ ...styles.eyebrow, margin: "0 0 10px" }}>Takeaways</div>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                  {state.rendered.takeaways.map((t, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        padding: "8px 0",
+                        borderTop: i === 0 ? "none" : `1px solid ${theme.border}`,
+                        fontFamily: theme.bodyFont,
+                        fontSize: 14,
+                        color: theme.textPrimary,
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      <Sparkles
+                        className="shrink-0"
+                        style={{ color: theme.accent, width: 14, height: 14, marginTop: 4 }}
+                      />
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              {state.rendered.key_quotes.length > 0 && (
+                <section style={{ marginTop: 24 }}>
+                  <div style={{ ...styles.eyebrow, margin: "0 0 10px" }}>Key quotes</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {state.rendered.key_quotes.map((q) => (
+                      <div
+                        key={q.tweet_id}
+                        style={{
+                          backgroundColor: theme.panelElevated,
+                          border: `1px solid ${theme.border}`,
+                          borderRadius: 4,
+                          padding: "12px 14px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontFamily: theme.bodyFont,
+                            fontSize: 13,
+                            color: theme.textPrimary,
+                            lineHeight: 1.55,
+                            margin: "0 0 8px",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          “{q.text}”
+                        </p>
+                        <div
+                          style={{
+                            fontFamily: theme.monoFont,
+                            fontSize: 10,
+                            letterSpacing: "0.08em",
+                            color: theme.textMuted,
+                            margin: 0,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          —{" "}
+                          <a
+                            href={`https://x.com/${q.author_handle}/status/${q.tweet_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: theme.accent, textDecoration: "none" }}
+                          >
+                            @{q.author_handle}
+                          </a>
+                          {" · "}
+                          <a
+                            href={`https://x.com/${q.author_handle}/status/${q.tweet_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: theme.textMuted, textDecoration: "underline" }}
+                          >
+                            open on X
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Sentiment chip + actions */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  marginTop: 24,
+                }}
+              >
+                {(() => {
+                  const tone =
+                    SENTIMENT_TONE[state.rendered.sentiment] ?? SENTIMENT_TONE.neutral;
+                  return (
+                    <span
+                      aria-label={`Sentiment: ${state.rendered.sentiment}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "3px 8px",
+                        borderRadius: 3,
+                        border: `1px solid ${tone.border}`,
+                        backgroundColor: tone.bg,
+                        color: tone.fg,
+                        fontFamily: theme.monoFont,
+                        fontSize: 10,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      sentiment · {state.rendered.sentiment}
+                    </span>
+                  );
+                })()}
+                <Button variant="outline" size="sm" onClick={onRefresh}>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+                </Button>
+              </div>
+
+              <hr style={styles.divider} />
+              <div style={styles.footer}>
+                Generated by {state.rendered.model} · Manage or pause this digest in
+                your UroFeed dashboard.
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={styles.outerFooter}>
+          UroFeed · preview of weekly digest email
+        </div>
       </div>
     </div>
   );
