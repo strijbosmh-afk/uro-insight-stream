@@ -66,7 +66,7 @@ export async function reserveExpensiveLlmCall(
     await supabaseAdmin.rpc("bump_user_llm_quota", {
       _user_id: GLOBAL_QUOTA_USER_ID,
       _day: todayUtc(),
-      _kind: "expensive_calls_global",
+      _kind: "expensive_calls",
       _n: -n,
     });
     void emitOpsAlert({
@@ -86,10 +86,12 @@ export async function reserveExpensiveLlmCall(
 const GLOBAL_QUOTA_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 async function reserveGlobalExpensiveSlot(n: number): Promise<boolean> {
+  // Reuses the per-user `expensive_calls` bucket on a sentinel UUID row.
+  // user_llm_quota has no FK to auth.users, so the sentinel is stable.
   const { data, error } = await supabaseAdmin.rpc("bump_user_llm_quota", {
     _user_id: GLOBAL_QUOTA_USER_ID,
     _day: todayUtc(),
-    _kind: "expensive_calls_global",
+    _kind: "expensive_calls",
     _n: n,
   });
   if (error) {
@@ -101,7 +103,7 @@ async function reserveGlobalExpensiveSlot(n: number): Promise<boolean> {
     await supabaseAdmin.rpc("bump_user_llm_quota", {
       _user_id: GLOBAL_QUOTA_USER_ID,
       _day: todayUtc(),
-      _kind: "expensive_calls_global",
+      _kind: "expensive_calls",
       _n: -n,
     });
     void emitOpsAlert({
