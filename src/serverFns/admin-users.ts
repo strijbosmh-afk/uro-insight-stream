@@ -668,22 +668,40 @@ export const listAuditLog = createServerFn({ method: "POST" })
       .from("admin_audit_log")
       .select("*")
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(limit);
     if (data.actor) q = q.eq("actor_user_id", data.actor);
     if (data.target) q = q.eq("target_user_id", data.target);
     if (data.action) q = q.eq("action", data.action);
-    if (data.cursor) q = q.lt("created_at", data.cursor);
+    if (data.cursor) {
+      // Composite cursor "<created_at>|<id>" — strict lexicographic
+      // comparison via Supabase's `or` filter so created_at ties are
+      // ordered deterministically by id.
+      const [cAt, cId] = data.cursor.split("|");
+      if (cAt && cId) {
+        q = q.or(
+          `and(created_at.lt.${cAt}),and(created_at.eq.${cAt},id.lt.${cId})`,
+        );
+      }
+    }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    // Resolve actor emails
+    // Resolve actor emails — parallel fan-out to remove the N+1 sequential
+    // waterfall.
     const actorIds = Array.from(
       new Set((rows ?? []).map((r: { actor_user_id: string }) => r.actor_user_id)),
     );
     const actorEmails = new Map<string, string>();
-    for (const id of actorIds) {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
-      if (u?.user?.email) actorEmails.set(id, u.user.email);
+    const actorLookups = await Promise.all(
+      actorIds.map((id) =>
+        supabaseAdmin.auth.admin
+          .getUserById(id)
+          .then((r) => ({ id, email: r.data?.user?.email ?? null })),
+      ),
+    );
+    for (const r of actorLookups) {
+      if (r.email) actorEmails.set(r.id, r.email);
     }
 
     return (rows ?? []).map((r: any): AdminAuditEntry => ({
