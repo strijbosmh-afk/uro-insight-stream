@@ -286,9 +286,25 @@ function PasswordForm({
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  // H-U4: inline error so users on noisy mobile connections don't miss
+  // the toast (toasts auto-dismiss + can be off-screen).
+  const [emailErr, setEmailErr] = React.useState<string | null>(null);
+  const [passwordErr, setPasswordErr] = React.useState<string | null>(null);
+  const [formErr, setFormErr] = React.useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailErr(null);
+    setPasswordErr(null);
+    setFormErr(null);
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailErr("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      setPasswordErr("Password is required.");
+      return;
+    }
     setBusy(true);
     onBusy(true);
     try {
@@ -305,6 +321,7 @@ function PasswordForm({
         msg === "Failed to fetch" || msg.toLowerCase().includes("networkerror")
           ? "Can't reach the auth server. A browser extension (uBlock, Brave Shields, AdGuard) or your network is likely blocking *.supabase.co. Try an incognito window or allowlist the domain."
           : msg;
+      setFormErr(friendly);
       toast.error(friendly);
     } finally {
       setBusy(false);
@@ -323,9 +340,16 @@ function PasswordForm({
           autoComplete="email"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (emailErr) setEmailErr(null);
+          }}
+          aria-invalid={emailErr ? "true" : undefined}
           className="font-mono"
         />
+        {emailErr && (
+          <p className="text-[11px] text-destructive font-mono">{emailErr}</p>
+        )}
       </div>
       <div className="space-y-1.5">
         <Label className="text-[11px] uppercase tracking-wider text-text-muted">
@@ -336,10 +360,25 @@ function PasswordForm({
           autoComplete="current-password"
           required
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (passwordErr) setPasswordErr(null);
+          }}
+          aria-invalid={passwordErr ? "true" : undefined}
           className="font-mono"
         />
+        {passwordErr && (
+          <p className="text-[11px] text-destructive font-mono">{passwordErr}</p>
+        )}
       </div>
+      {formErr && (
+        <p
+          role="alert"
+          className="text-[11px] text-destructive font-mono leading-relaxed"
+        >
+          {formErr}
+        </p>
+      )}
       <Button type="submit" className="w-full h-9" disabled={busy}>
         {busy ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
