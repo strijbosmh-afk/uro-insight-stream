@@ -6,6 +6,7 @@ import { createHmac } from "crypto";
 import OAuth from "oauth-1.0a";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loadCredentials } from "./x-credentials.server";
+import { emitOpsAlert } from "@/server/ops-alerts.server";
 
 const DAILY_POST_CAP = 50;
 const WINDOW_SECONDS = 24 * 60 * 60;
@@ -196,10 +197,15 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
     // Generic friendly fallback. We log the raw body server-side but never
     // surface raw X API content to the client — it can include rate-limit
     // reset headers / internal codes.
+    // H-O10: log X rate-limit headers (server-side only) so we can detect
+    // sustained pressure and emit `x_rate_limit_burst`.
+    const rlRemaining = res.headers.get("x-rate-limit-remaining");
+    const rlReset = res.headers.get("x-rate-limit-reset");
     console.error(
       "[x-posting] X API error",
       res.status,
       text.slice(0, 200),
+      { rlRemaining, rlReset },
     );
     let errMsg = `X couldn't post that tweet (status ${res.status}). Please try again.`;
     // Release the slot for any failure that isn't "X is rate-limiting us".
@@ -225,6 +231,18 @@ export async function postTweet(input: PostTweetInput): Promise<PostTweetResult>
     } else if (res.status === 429) {
       errCode = "rate_limited";
       errMsg = "X rate limit reached for your account. Try again later.";
+      void emitOpsAlert({
+        kind: "x_rate_limit_burst",
+        severity: "warning",
+        message: `X 429 on POST /tweets (user ${input.userId}); reset=${rlReset ?? "?"}`,
+        metadata: {
+          endpoint: "POST /2/tweets",
+          user_id: input.userId,
+          rate_limit_remaining: rlRemaining,
+          rate_limit_reset: rlReset,
+        },
+        dedupeWindowHours: 1,
+      });
     }
     await logPost({
       userId: input.userId,

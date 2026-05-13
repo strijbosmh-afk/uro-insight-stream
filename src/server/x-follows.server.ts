@@ -6,6 +6,7 @@ import OAuth from "oauth-1.0a";
 import { createHmac } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loadCredentials } from "@/server/x-credentials.server";
+import { emitOpsAlert } from "@/server/ops-alerts.server";
 
 export type XFollowItem = {
   x_user_id: string;
@@ -95,9 +96,23 @@ export async function fetchMyXFollows(opts: {
 
     if (res.status === 429) {
       const reset = Number(res.headers.get("x-rate-limit-reset"));
+      const remaining = res.headers.get("x-rate-limit-remaining");
       const retry = reset
         ? Math.max(0, reset - Math.floor(Date.now() / 1000))
         : 900;
+      void emitOpsAlert({
+        kind: "x_rate_limit_burst",
+        severity: "warning",
+        message: `X 429 on GET /following (user ${opts.userId}); retry in ${retry}s`,
+        metadata: {
+          endpoint: "GET /2/users/:id/following",
+          user_id: opts.userId,
+          rate_limit_remaining: remaining,
+          rate_limit_reset: reset || null,
+          retry_after_seconds: retry,
+        },
+        dedupeWindowHours: 1,
+      });
       return { ok: false, error: "rate_limited", retry_after_seconds: retry };
     }
     if (res.status === 401 || res.status === 403) {
