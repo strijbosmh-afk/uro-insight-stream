@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PenSquare, SlidersHorizontal, X } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { AskUroFeedDialog } from "@/components/ask/AskUroFeedDialog";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,6 +18,7 @@ export function MobileFeedLayout({ data }: { data: FeedDataset }) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [composeOpen, setComposeOpen] = React.useState(false);
   const [todayOpen, setTodayOpen] = React.useState(false);
+  const [askOpen, setAskOpen] = React.useState(false);
 
   const { data: congresses = [] } = useQuery({
     queryKey: ["congresses"],
@@ -101,6 +104,18 @@ export function MobileFeedLayout({ data }: { data: FeedDataset }) {
       <MobileInlineComposer
         onOpen={() => setComposeOpen(true)}
       />
+
+      {/* Ask UroFeed — full-width entry point on mobile */}
+      <button
+        type="button"
+        onClick={() => setAskOpen(true)}
+        className="w-full h-12 bg-panel border border-accent/40 rounded-[3px] px-4 flex items-center gap-3 hover:border-accent transition-colors"
+      >
+        <Sparkles className="w-5 h-5 text-accent shrink-0" />
+        <span className="text-text-muted text-[14px] truncate text-left">
+          Ask UroFeed anything…
+        </span>
+      </button>
 
       {/* Today ribbon */}
       <button
