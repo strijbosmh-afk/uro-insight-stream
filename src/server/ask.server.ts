@@ -175,6 +175,7 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
   //    (e.g. "Piet Ost") so questions like "latest post from X" actually work.
   const authorTokens = extractAuthorTokens(input.query);
   const authorResults: AskTweet[] = [];
+  let widenedScope = false;
   if (authorTokens.length > 0) {
     const orParts: string[] = [];
     for (const tok of authorTokens) {
@@ -191,6 +192,23 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
         .order("created_at", { ascending: false })
         .limit(cap);
       if (data) authorResults.push(...((data as AskTweet[]) ?? []));
+
+      // If the user named an author and there are no in-scope hits, widen the
+      // search to the entire corpus — they're asking about that person, not
+      // about who they happen to follow.
+      if (authorResults.length === 0 && sourceIds !== null) {
+        const { data: wide } = await supabaseAdmin
+          .from("tweets")
+          .select(cols)
+          .gte("created_at", since)
+          .or(orParts.join(","))
+          .order("created_at", { ascending: false })
+          .limit(cap);
+        if (wide && (wide as AskTweet[]).length > 0) {
+          authorResults.push(...((wide as AskTweet[]) ?? []));
+          widenedScope = true;
+        }
+      }
     }
   }
 
@@ -232,7 +250,10 @@ async function retrieveTweets(input: AskInput): Promise<AskTweet[]> {
     }
   }
 
-  return Array.from(merged.values()).slice(0, cap);
+  const out = Array.from(merged.values()).slice(0, cap) as AskTweet[];
+  // Tag the widened-scope flag on the array so the caller can surface a caveat.
+  (out as AskTweet[] & { __widened?: boolean }).__widened = widenedScope;
+  return out;
 }
 
 /** Extract likely author references from a free-text question. */
