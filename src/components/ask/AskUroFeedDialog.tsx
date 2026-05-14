@@ -16,6 +16,8 @@ import {
   askUroFeed,
   listAskRecent,
   listAskStarters,
+  suggestAskSources,
+  type SourceSuggestion,
 } from "@/serverFns/ask";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -44,6 +46,99 @@ function relativeTime(iso: string): string {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   return `${d}d ago`;
+}
+
+/**
+ * Extract the autosuggest token at the caret. We look at the substring
+ * preceding the caret, take whatever follows the last whitespace, and treat
+ * an optional leading `@` as a handle prefix. The token is only "active"
+ * when the caret sits at its end (so we don't suggest while editing earlier
+ * words).
+ */
+function extractToken(
+  text: string,
+  caret: number,
+): { term: string; start: number; end: number } | null {
+  if (caret < 0 || caret > text.length) return null;
+  // End must be at caret or trailing whitespace right after it
+  const after = text.slice(caret);
+  if (after && !/^\s/.test(after)) return null;
+  const before = text.slice(0, caret);
+  const m = before.match(/(@?[A-Za-z][A-Za-z0-9._-]*)$/);
+  if (!m) return null;
+  const raw = m[1];
+  const term = raw.replace(/^@+/, "");
+  if (term.length < 1) return null;
+  const start = caret - raw.length;
+  return { term, start, end: caret };
+}
+
+function SuggestionList({
+  items,
+  activeIdx,
+  onPick,
+  onHover,
+}: {
+  items: SourceSuggestion[];
+  activeIdx: number;
+  onPick: (s: SourceSuggestion) => void;
+  onHover: (i: number) => void;
+}) {
+  return (
+    <ul
+      role="listbox"
+      className="absolute left-0 right-0 top-full mt-1 z-20 max-h-72 overflow-auto rounded-[3px] border border-border bg-panel-elevated shadow-lg"
+    >
+      {items.map((s, i) => {
+        const active = i === activeIdx;
+        return (
+          <li key={s.id}>
+            <button
+              type="button"
+              role="option"
+              aria-selected={active}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onPick(s);
+              }}
+              onMouseEnter={() => onHover(i)}
+              className={cn(
+                "w-full flex items-center gap-2 px-2.5 py-1.5 text-left",
+                active ? "bg-accent/10" : "hover:bg-panel",
+              )}
+            >
+              {s.avatar_url ? (
+                <img
+                  src={s.avatar_url}
+                  alt=""
+                  className="w-7 h-7 rounded-full object-cover shrink-0"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-panel shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 text-[13px] text-text-primary truncate">
+                  <span className="truncate font-medium">{s.display_name}</span>
+                  {s.verified && (
+                    <span className="text-accent text-[10px]" aria-label="verified">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] font-mono text-text-muted truncate">
+                  @{s.handle}
+                  {s.followed && (
+                    <span className="ml-2 text-accent">following</span>
+                  )}
+                </div>
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 export function AskUroFeedDialog({
@@ -107,6 +202,46 @@ function AskBody({
   const [windowDays, setWindowDays] = React.useState<Window>(30);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const tweetRefs = React.useRef<Record<string, HTMLLIElement | null>>({});
+
+  // ── Author autosuggest ────────────────────────────────────────────────
+  const [caret, setCaret] = React.useState(0);
+  const [suggestOpen, setSuggestOpen] = React.useState(false);
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const token = React.useMemo(() => extractToken(query, caret), [query, caret]);
+  const [debouncedTerm, setDebouncedTerm] = React.useState("");
+  React.useEffect(() => {
+    const id = setTimeout(() => setDebouncedTerm(token?.term ?? ""), 140);
+    return () => clearTimeout(id);
+  }, [token?.term]);
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["ask-suggest", debouncedTerm],
+    queryFn: () =>
+      suggestAskSources({ data: { term: debouncedTerm, limit: 6 } }),
+    enabled: debouncedTerm.length >= 2,
+    staleTime: 60_000,
+  });
+  React.useEffect(() => {
+    setActiveIdx(0);
+  }, [suggestions]);
+  const showSuggest =
+    suggestOpen && (token?.term.length ?? 0) >= 2 && suggestions.length > 0;
+
+  const applySuggestion = (s: SourceSuggestion) => {
+    if (!token) return;
+    const replacement = `@${s.handle} `;
+    const next =
+      query.slice(0, token.start) + replacement + query.slice(token.end);
+    setQuery(next);
+    setSuggestOpen(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      const pos = token.start + replacement.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      setCaret(pos);
+    });
+  };
 
   React.useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 80);
@@ -196,17 +331,69 @@ function AskBody({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (showSuggest) {
+              const pick = suggestions[activeIdx];
+              if (pick) {
+                applySuggestion(pick);
+                return;
+              }
+            }
             submit();
           }}
         >
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            maxLength={300}
-            placeholder={'Ask anything: "What\'s the latest on PSMA imaging?"'}
-            className="w-full h-11 bg-panel-elevated border border-border rounded-[3px] px-3 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/60"
-          />
+          <div className="relative">
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setCaret(e.target.selectionStart ?? e.target.value.length);
+                setSuggestOpen(true);
+              }}
+              onKeyUp={(e) => {
+                const el = e.currentTarget;
+                setCaret(el.selectionStart ?? el.value.length);
+              }}
+              onClick={(e) => {
+                const el = e.currentTarget;
+                setCaret(el.selectionStart ?? el.value.length);
+              }}
+              onFocus={() => setSuggestOpen(true)}
+              onBlur={() =>
+                setTimeout(() => setSuggestOpen(false), 120)
+              }
+              onKeyDown={(e) => {
+                if (!showSuggest) return;
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActiveIdx((i) => (i + 1) % suggestions.length);
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActiveIdx(
+                    (i) => (i - 1 + suggestions.length) % suggestions.length,
+                  );
+                } else if (e.key === "Tab") {
+                  e.preventDefault();
+                  applySuggestion(suggestions[activeIdx]);
+                } else if (e.key === "Escape") {
+                  setSuggestOpen(false);
+                }
+              }}
+              maxLength={300}
+              placeholder={'Ask anything: "What\'s the latest on PSMA imaging?"'}
+              className="w-full h-11 bg-panel-elevated border border-border rounded-[3px] px-3 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/60"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {showSuggest && (
+              <SuggestionList
+                items={suggestions}
+                activeIdx={activeIdx}
+                onPick={applySuggestion}
+                onHover={setActiveIdx}
+              />
+            )}
+          </div>
         </form>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <ScopeSelect value={scope} onChange={setScope} />
