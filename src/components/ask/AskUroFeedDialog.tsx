@@ -48,6 +48,99 @@ function relativeTime(iso: string): string {
   return `${d}d ago`;
 }
 
+/**
+ * Extract the autosuggest token at the caret. We look at the substring
+ * preceding the caret, take whatever follows the last whitespace, and treat
+ * an optional leading `@` as a handle prefix. The token is only "active"
+ * when the caret sits at its end (so we don't suggest while editing earlier
+ * words).
+ */
+function extractToken(
+  text: string,
+  caret: number,
+): { term: string; start: number; end: number } | null {
+  if (caret < 0 || caret > text.length) return null;
+  // End must be at caret or trailing whitespace right after it
+  const after = text.slice(caret);
+  if (after && !/^\s/.test(after)) return null;
+  const before = text.slice(0, caret);
+  const m = before.match(/(@?[A-Za-z][A-Za-z0-9._-]*)$/);
+  if (!m) return null;
+  const raw = m[1];
+  const term = raw.replace(/^@+/, "");
+  if (term.length < 1) return null;
+  const start = caret - raw.length;
+  return { term, start, end: caret };
+}
+
+function SuggestionList({
+  items,
+  activeIdx,
+  onPick,
+  onHover,
+}: {
+  items: SourceSuggestion[];
+  activeIdx: number;
+  onPick: (s: SourceSuggestion) => void;
+  onHover: (i: number) => void;
+}) {
+  return (
+    <ul
+      role="listbox"
+      className="absolute left-0 right-0 top-full mt-1 z-20 max-h-72 overflow-auto rounded-[3px] border border-border bg-panel-elevated shadow-lg"
+    >
+      {items.map((s, i) => {
+        const active = i === activeIdx;
+        return (
+          <li key={s.id}>
+            <button
+              type="button"
+              role="option"
+              aria-selected={active}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onPick(s);
+              }}
+              onMouseEnter={() => onHover(i)}
+              className={cn(
+                "w-full flex items-center gap-2 px-2.5 py-1.5 text-left",
+                active ? "bg-accent/10" : "hover:bg-panel",
+              )}
+            >
+              {s.avatar_url ? (
+                <img
+                  src={s.avatar_url}
+                  alt=""
+                  className="w-7 h-7 rounded-full object-cover shrink-0"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-panel shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 text-[13px] text-text-primary truncate">
+                  <span className="truncate font-medium">{s.display_name}</span>
+                  {s.verified && (
+                    <span className="text-accent text-[10px]" aria-label="verified">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] font-mono text-text-muted truncate">
+                  @{s.handle}
+                  {s.followed && (
+                    <span className="ml-2 text-accent">following</span>
+                  )}
+                </div>
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function AskUroFeedDialog({
   open,
   onOpenChange,
