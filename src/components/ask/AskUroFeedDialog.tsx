@@ -16,6 +16,8 @@ import {
   askUroFeed,
   listAskRecent,
   listAskStarters,
+  suggestAskSources,
+  type SourceSuggestion,
 } from "@/serverFns/ask";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -108,6 +110,46 @@ function AskBody({
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const tweetRefs = React.useRef<Record<string, HTMLLIElement | null>>({});
 
+  // ── Author autosuggest ────────────────────────────────────────────────
+  const [caret, setCaret] = React.useState(0);
+  const [suggestOpen, setSuggestOpen] = React.useState(false);
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const token = React.useMemo(() => extractToken(query, caret), [query, caret]);
+  const [debouncedTerm, setDebouncedTerm] = React.useState("");
+  React.useEffect(() => {
+    const id = setTimeout(() => setDebouncedTerm(token?.term ?? ""), 140);
+    return () => clearTimeout(id);
+  }, [token?.term]);
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["ask-suggest", debouncedTerm],
+    queryFn: () =>
+      suggestAskSources({ data: { term: debouncedTerm, limit: 6 } }),
+    enabled: debouncedTerm.length >= 2,
+    staleTime: 60_000,
+  });
+  React.useEffect(() => {
+    setActiveIdx(0);
+  }, [suggestions]);
+  const showSuggest =
+    suggestOpen && (token?.term.length ?? 0) >= 2 && suggestions.length > 0;
+
+  const applySuggestion = (s: SourceSuggestion) => {
+    if (!token) return;
+    const replacement = `@${s.handle} `;
+    const next =
+      query.slice(0, token.start) + replacement + query.slice(token.end);
+    setQuery(next);
+    setSuggestOpen(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      const pos = token.start + replacement.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      setCaret(pos);
+    });
+  };
+
   React.useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 80);
     return () => clearTimeout(id);
@@ -196,17 +238,69 @@ function AskBody({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (showSuggest) {
+              const pick = suggestions[activeIdx];
+              if (pick) {
+                applySuggestion(pick);
+                return;
+              }
+            }
             submit();
           }}
         >
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            maxLength={300}
-            placeholder={'Ask anything: "What\'s the latest on PSMA imaging?"'}
-            className="w-full h-11 bg-panel-elevated border border-border rounded-[3px] px-3 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/60"
-          />
+          <div className="relative">
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setCaret(e.target.selectionStart ?? e.target.value.length);
+                setSuggestOpen(true);
+              }}
+              onKeyUp={(e) => {
+                const el = e.currentTarget;
+                setCaret(el.selectionStart ?? el.value.length);
+              }}
+              onClick={(e) => {
+                const el = e.currentTarget;
+                setCaret(el.selectionStart ?? el.value.length);
+              }}
+              onFocus={() => setSuggestOpen(true)}
+              onBlur={() =>
+                setTimeout(() => setSuggestOpen(false), 120)
+              }
+              onKeyDown={(e) => {
+                if (!showSuggest) return;
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActiveIdx((i) => (i + 1) % suggestions.length);
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActiveIdx(
+                    (i) => (i - 1 + suggestions.length) % suggestions.length,
+                  );
+                } else if (e.key === "Tab") {
+                  e.preventDefault();
+                  applySuggestion(suggestions[activeIdx]);
+                } else if (e.key === "Escape") {
+                  setSuggestOpen(false);
+                }
+              }}
+              maxLength={300}
+              placeholder={'Ask anything: "What\'s the latest on PSMA imaging?"'}
+              className="w-full h-11 bg-panel-elevated border border-border rounded-[3px] px-3 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/60"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {showSuggest && (
+              <SuggestionList
+                items={suggestions}
+                activeIdx={activeIdx}
+                onPick={applySuggestion}
+                onHover={setActiveIdx}
+              />
+            )}
+          </div>
         </form>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <ScopeSelect value={scope} onChange={setScope} />
