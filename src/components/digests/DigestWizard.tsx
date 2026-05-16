@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight, Eye, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,16 +84,46 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
     queryFn: async () => {
       const { data } = await supabase
         .from("user_subscribed_sources")
-        .select("source_id, sources(id, handle, display_name)")
+        .select(
+          "source_id, sources(id, handle, display_name, role, specialty, list_ids, last_seen_at, followers_count)",
+        )
         .eq("user_id", user!.id);
       return ((data ?? []) as Array<{
         source_id: string;
-        sources: { id: string; handle: string; display_name: string | null } | null;
+        sources: {
+          id: string;
+          handle: string;
+          display_name: string | null;
+          role: string | null;
+          specialty: string[] | null;
+          list_ids: string[] | null;
+          last_seen_at: string | null;
+          followers_count: number | null;
+        } | null;
       }>).map((r) => ({
         id: r.sources?.id ?? r.source_id,
         handle: r.sources?.handle ?? r.source_id,
         display_name: r.sources?.display_name ?? r.source_id,
+        role: r.sources?.role ?? "other",
+        specialty: r.sources?.specialty ?? [],
+        list_ids: r.sources?.list_ids ?? [],
+        last_seen_at: r.sources?.last_seen_at ?? null,
+        followers_count: r.sources?.followers_count ?? 0,
       }));
+    },
+  });
+
+  // Load user's source lists so we can group/bulk-add by list.
+  const sourceListsQ = useQuery({
+    queryKey: ["user-source-lists", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("source_lists")
+        .select("id, name, color")
+        .eq("user_id", user!.id)
+        .order("name", { ascending: true });
+      return (data ?? []) as Array<{ id: string; name: string; color: string | null }>;
     },
   });
 
@@ -233,6 +263,19 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
     setSelectedSourceIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  };
+
+  const addSources = (ids: string[]) => {
+    setSelectedSourceIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return Array.from(next);
+    });
+  };
+
+  const removeSources = (ids: string[]) => {
+    const drop = new Set(ids);
+    setSelectedSourceIds((prev) => prev.filter((id) => !drop.has(id)));
   };
 
   const addRecipient = () => {
@@ -392,6 +435,9 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
               setSourceFilter={setSourceFilter}
               selectedSourceIds={selectedSourceIds}
               toggleSource={toggleSource}
+              addSources={addSources}
+              removeSources={removeSources}
+              sourceLists={sourceListsQ.data ?? []}
               specialtyId={specialtyId}
               setSpecialtyId={setSpecialtyId}
               congressId={congressId}
@@ -618,13 +664,16 @@ interface Step2Props {
   userSpecialties: Array<{ id: string; label: string; is_primary: boolean }>;
   liveCongresses: Array<{ id: string; name: string; short_code: string }>;
   allCongresses: Array<{ id: string; name: string; short_code: string; status: string }>;
-  subSources: Array<{ id: string; handle: string; display_name: string }>;
+  subSources: SourceItem[];
   subSourcesLoading: boolean;
-  filteredSources: Array<{ id: string; handle: string; display_name: string }>;
+  filteredSources: SourceItem[];
   sourceFilter: string;
   setSourceFilter: (v: string) => void;
   selectedSourceIds: string[];
   toggleSource: (id: string) => void;
+  addSources: (ids: string[]) => void;
+  removeSources: (ids: string[]) => void;
+  sourceLists: Array<{ id: string; name: string; color: string | null }>;
   specialtyId: string | null;
   setSpecialtyId: (id: string | null) => void;
   congressId: string | null;
@@ -638,6 +687,20 @@ interface Step2Props {
   setOpenSection: (s: "sources" | "specialty" | "congress" | "hashtags" | null) => void;
   applyPreset: (p: PresetKind) => void;
 }
+
+type SourceItem = {
+  id: string;
+  handle: string;
+  display_name: string;
+  role: string;
+  specialty: string[];
+  list_ids: string[];
+  last_seen_at: string | null;
+  followers_count: number;
+};
+
+type GroupBy = "none" | "list" | "specialty";
+type SortBy = "name" | "recent" | "followers";
 
 function Step2Bindings(p: Step2Props) {
   const noLive = p.liveCongresses.length === 0;
@@ -729,34 +792,7 @@ function Step2Bindings(p: Step2Props) {
         label="Sources"
         summary={`${p.selectedSourceIds.length} selected`}
       >
-        <Input
-          value={p.sourceFilter}
-          onChange={(e) => p.setSourceFilter(e.target.value)}
-          placeholder="filter sources…"
-          className="h-8 text-[12px] mb-2"
-        />
-        <div className="border border-border rounded-[3px] max-h-[260px] overflow-y-auto">
-          {p.subSources.length === 0 && !p.subSourcesLoading && (
-            <div className="p-3 text-[12px] text-text-muted">
-              You don't have any subscribed sources yet. Add some from Discover or Sources first.
-            </div>
-          )}
-          {p.filteredSources.map((s) => {
-            const checked = p.selectedSourceIds.includes(s.id);
-            return (
-              <label
-                key={s.id}
-                className="flex items-center gap-3 px-3 py-2 border-b border-border cursor-pointer hover:bg-panel-elevated/60"
-              >
-                <Checkbox checked={checked} onCheckedChange={() => p.toggleSource(s.id)} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-text-primary truncate">{s.display_name}</div>
-                  <div className="text-[11px] font-mono text-text-muted">@{s.handle}</div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
+        <SourcesPicker p={p} />
       </Section>
 
       <Section
@@ -864,6 +900,265 @@ function Step2Bindings(p: Step2Props) {
           ))}
         </div>
       </Section>
+    </div>
+  );
+}
+
+function SourcesPicker({ p }: { p: Step2Props }) {
+  const [groupBy, setGroupBy] = React.useState<GroupBy>("none");
+  const [sortBy, setSortBy] = React.useState<SortBy>("name");
+
+  const sortFn = React.useCallback(
+    (a: SourceItem, b: SourceItem) => {
+      if (sortBy === "name") return a.display_name.localeCompare(b.display_name);
+      if (sortBy === "followers") return (b.followers_count ?? 0) - (a.followers_count ?? 0);
+      // recent
+      const at = a.last_seen_at ? Date.parse(a.last_seen_at) : 0;
+      const bt = b.last_seen_at ? Date.parse(b.last_seen_at) : 0;
+      return bt - at;
+    },
+    [sortBy],
+  );
+
+  const filteredSorted = React.useMemo(
+    () => [...p.filteredSources].sort(sortFn),
+    [p.filteredSources, sortFn],
+  );
+
+  // Build groups
+  type Group = { key: string; label: string; items: SourceItem[] };
+  const groups: Group[] = React.useMemo(() => {
+    if (groupBy === "none") {
+      return [{ key: "all", label: "All sources", items: filteredSorted }];
+    }
+    if (groupBy === "list") {
+      const listNameById = new Map(p.sourceLists.map((l) => [l.id, l.name]));
+      const buckets = new Map<string, SourceItem[]>();
+      for (const s of filteredSorted) {
+        const ids = s.list_ids.length > 0 ? s.list_ids : ["__none__"];
+        for (const id of ids) {
+          if (!buckets.has(id)) buckets.set(id, []);
+          buckets.get(id)!.push(s);
+        }
+      }
+      const out: Group[] = [];
+      for (const l of p.sourceLists) {
+        const items = buckets.get(l.id);
+        if (items && items.length) out.push({ key: l.id, label: l.name, items });
+      }
+      const none = buckets.get("__none__");
+      if (none && none.length) out.push({ key: "__none__", label: "No list", items: none });
+      // Lists that don't exist anymore (orphan IDs) get their own bucket
+      for (const [id, items] of buckets) {
+        if (id === "__none__") continue;
+        if (!listNameById.has(id)) out.push({ key: id, label: "Other list", items });
+      }
+      return out;
+    }
+    // specialty
+    const buckets = new Map<string, SourceItem[]>();
+    for (const s of filteredSorted) {
+      const specs = s.specialty.length > 0 ? s.specialty : ["__none__"];
+      for (const spec of specs) {
+        if (!buckets.has(spec)) buckets.set(spec, []);
+        buckets.get(spec)!.push(s);
+      }
+    }
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => (a === "__none__" ? 1 : b === "__none__" ? -1 : a.localeCompare(b)))
+      .map(([key, items]) => ({
+        key,
+        label: key === "__none__" ? "No specialty" : key,
+        items,
+      }));
+  }, [filteredSorted, groupBy, p.sourceLists]);
+
+  const selectedSet = React.useMemo(
+    () => new Set(p.selectedSourceIds),
+    [p.selectedSourceIds],
+  );
+
+  const filteredIds = React.useMemo(
+    () => p.filteredSources.map((s) => s.id),
+    [p.filteredSources],
+  );
+  const filteredSelectedCount = filteredIds.filter((id) => selectedSet.has(id)).length;
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredSelectedCount === filteredIds.length;
+
+  const selectedItems = React.useMemo(
+    () => p.subSources.filter((s) => selectedSet.has(s.id)),
+    [p.subSources, selectedSet],
+  );
+
+  if (p.subSources.length === 0 && !p.subSourcesLoading) {
+    return (
+      <div className="p-3 text-[12px] text-text-muted border border-border rounded-[3px]">
+        You don't have any subscribed sources yet. Add some from Discover or Sources first.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Selected chips */}
+      {selectedItems.length > 0 && (
+        <div className="flex flex-wrap gap-1 p-2 border border-border rounded-[3px] bg-panel-elevated/30 max-h-[88px] overflow-y-auto">
+          {selectedItems.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => p.toggleSource(s.id)}
+              title={`Remove @${s.handle}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 border border-border rounded-[3px] text-[11px] font-mono bg-panel hover:bg-panel-elevated"
+            >
+              @{s.handle}
+              <X className="w-3 h-3" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => p.removeSources(selectedItems.map((s) => s.id))}
+            className="ml-auto text-[10px] font-mono uppercase tracking-[0.12em] text-text-muted hover:text-danger px-1"
+          >
+            clear
+          </button>
+        </div>
+      )}
+
+      {/* Filter + sort + group */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={p.sourceFilter}
+          onChange={(e) => p.setSourceFilter(e.target.value)}
+          placeholder="filter by name or @handle…"
+          className="h-8 text-[12px] flex-1 min-w-[180px]"
+        />
+        <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+          <SelectTrigger className="h-8 w-[140px] text-[12px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No grouping</SelectItem>
+            <SelectItem value="list">By source list</SelectItem>
+            <SelectItem value="specialty">By specialty</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <SelectTrigger className="h-8 w-[130px] text-[12px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">A → Z</SelectItem>
+            <SelectItem value="recent">Most recent</SelectItem>
+            <SelectItem value="followers">Most followed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Select all / count */}
+      <div className="flex items-center justify-between text-[11px] font-mono text-text-muted px-1">
+        <span>
+          {p.selectedSourceIds.length} selected · {p.filteredSources.length} shown ·{" "}
+          {p.subSources.length} total
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            allFilteredSelected ? p.removeSources(filteredIds) : p.addSources(filteredIds)
+          }
+          className="uppercase tracking-[0.12em] hover:text-accent"
+          disabled={filteredIds.length === 0}
+        >
+          {allFilteredSelected ? "deselect shown" : "select shown"}
+        </button>
+      </div>
+
+      {/* Grouped list */}
+      <div className="border border-border rounded-[3px] max-h-[320px] overflow-y-auto">
+        {groups.length === 0 && (
+          <div className="p-3 text-[12px] text-text-muted">No matches.</div>
+        )}
+        {groups.map((g) => (
+          <SourceGroup
+            key={g.key}
+            label={g.label}
+            items={g.items}
+            selectedSet={selectedSet}
+            onToggle={p.toggleSource}
+            onAdd={p.addSources}
+            onRemove={p.removeSources}
+            collapsible={groupBy !== "none"}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourceGroup({
+  label,
+  items,
+  selectedSet,
+  onToggle,
+  onAdd,
+  onRemove,
+  collapsible,
+}: {
+  label: string;
+  items: SourceItem[];
+  selectedSet: Set<string>;
+  onToggle: (id: string) => void;
+  onAdd: (ids: string[]) => void;
+  onRemove: (ids: string[]) => void;
+  collapsible: boolean;
+}) {
+  const [open, setOpen] = React.useState(true);
+  const ids = items.map((s) => s.id);
+  const selectedCount = ids.filter((id) => selectedSet.has(id)).length;
+  const allSelected = selectedCount === ids.length && ids.length > 0;
+  return (
+    <div className="border-b border-border last:border-b-0">
+      {collapsible && (
+        <div className="flex items-center justify-between px-2 py-1.5 bg-panel-elevated/30 sticky top-0 z-[1]">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.12em] text-text-muted hover:text-text-primary"
+          >
+            {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            {label} <span className="text-text-muted/70">({selectedCount}/{ids.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => (allSelected ? onRemove(ids) : onAdd(ids))}
+            className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-accent hover:opacity-80"
+          >
+            <Check className="w-3 h-3" />
+            {allSelected ? "remove all" : "add all"}
+          </button>
+        </div>
+      )}
+      {open &&
+        items.map((s) => {
+          const checked = selectedSet.has(s.id);
+          return (
+            <label
+              key={`${label}-${s.id}`}
+              className="flex items-center gap-3 px-3 py-2 border-t border-border cursor-pointer hover:bg-panel-elevated/60"
+            >
+              <Checkbox checked={checked} onCheckedChange={() => onToggle(s.id)} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] text-text-primary truncate">{s.display_name}</div>
+                <div className="text-[11px] font-mono text-text-muted truncate">
+                  @{s.handle}
+                  {s.role && s.role !== "other" ? ` · ${s.role}` : ""}
+                  {s.specialty.length > 0 ? ` · ${s.specialty.join(", ")}` : ""}
+                </div>
+              </div>
+            </label>
+          );
+        })}
     </div>
   );
 }
