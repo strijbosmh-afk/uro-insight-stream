@@ -903,3 +903,262 @@ function Step2Bindings(p: Step2Props) {
     </div>
   );
 }
+
+function SourcesPicker({ p }: { p: Step2Props }) {
+  const [groupBy, setGroupBy] = React.useState<GroupBy>("none");
+  const [sortBy, setSortBy] = React.useState<SortBy>("name");
+
+  const sortFn = React.useCallback(
+    (a: SourceItem, b: SourceItem) => {
+      if (sortBy === "name") return a.display_name.localeCompare(b.display_name);
+      if (sortBy === "followers") return (b.followers_count ?? 0) - (a.followers_count ?? 0);
+      // recent
+      const at = a.last_seen_at ? Date.parse(a.last_seen_at) : 0;
+      const bt = b.last_seen_at ? Date.parse(b.last_seen_at) : 0;
+      return bt - at;
+    },
+    [sortBy],
+  );
+
+  const filteredSorted = React.useMemo(
+    () => [...p.filteredSources].sort(sortFn),
+    [p.filteredSources, sortFn],
+  );
+
+  // Build groups
+  type Group = { key: string; label: string; items: SourceItem[] };
+  const groups: Group[] = React.useMemo(() => {
+    if (groupBy === "none") {
+      return [{ key: "all", label: "All sources", items: filteredSorted }];
+    }
+    if (groupBy === "list") {
+      const listNameById = new Map(p.sourceLists.map((l) => [l.id, l.name]));
+      const buckets = new Map<string, SourceItem[]>();
+      for (const s of filteredSorted) {
+        const ids = s.list_ids.length > 0 ? s.list_ids : ["__none__"];
+        for (const id of ids) {
+          if (!buckets.has(id)) buckets.set(id, []);
+          buckets.get(id)!.push(s);
+        }
+      }
+      const out: Group[] = [];
+      for (const l of p.sourceLists) {
+        const items = buckets.get(l.id);
+        if (items && items.length) out.push({ key: l.id, label: l.name, items });
+      }
+      const none = buckets.get("__none__");
+      if (none && none.length) out.push({ key: "__none__", label: "No list", items: none });
+      // Lists that don't exist anymore (orphan IDs) get their own bucket
+      for (const [id, items] of buckets) {
+        if (id === "__none__") continue;
+        if (!listNameById.has(id)) out.push({ key: id, label: "Other list", items });
+      }
+      return out;
+    }
+    // specialty
+    const buckets = new Map<string, SourceItem[]>();
+    for (const s of filteredSorted) {
+      const specs = s.specialty.length > 0 ? s.specialty : ["__none__"];
+      for (const spec of specs) {
+        if (!buckets.has(spec)) buckets.set(spec, []);
+        buckets.get(spec)!.push(s);
+      }
+    }
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => (a === "__none__" ? 1 : b === "__none__" ? -1 : a.localeCompare(b)))
+      .map(([key, items]) => ({
+        key,
+        label: key === "__none__" ? "No specialty" : key,
+        items,
+      }));
+  }, [filteredSorted, groupBy, p.sourceLists]);
+
+  const selectedSet = React.useMemo(
+    () => new Set(p.selectedSourceIds),
+    [p.selectedSourceIds],
+  );
+
+  const filteredIds = React.useMemo(
+    () => p.filteredSources.map((s) => s.id),
+    [p.filteredSources],
+  );
+  const filteredSelectedCount = filteredIds.filter((id) => selectedSet.has(id)).length;
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredSelectedCount === filteredIds.length;
+
+  const selectedItems = React.useMemo(
+    () => p.subSources.filter((s) => selectedSet.has(s.id)),
+    [p.subSources, selectedSet],
+  );
+
+  if (p.subSources.length === 0 && !p.subSourcesLoading) {
+    return (
+      <div className="p-3 text-[12px] text-text-muted border border-border rounded-[3px]">
+        You don't have any subscribed sources yet. Add some from Discover or Sources first.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Selected chips */}
+      {selectedItems.length > 0 && (
+        <div className="flex flex-wrap gap-1 p-2 border border-border rounded-[3px] bg-panel-elevated/30 max-h-[88px] overflow-y-auto">
+          {selectedItems.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => p.toggleSource(s.id)}
+              title={`Remove @${s.handle}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 border border-border rounded-[3px] text-[11px] font-mono bg-panel hover:bg-panel-elevated"
+            >
+              @{s.handle}
+              <X className="w-3 h-3" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => p.removeSources(selectedItems.map((s) => s.id))}
+            className="ml-auto text-[10px] font-mono uppercase tracking-[0.12em] text-text-muted hover:text-danger px-1"
+          >
+            clear
+          </button>
+        </div>
+      )}
+
+      {/* Filter + sort + group */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={p.sourceFilter}
+          onChange={(e) => p.setSourceFilter(e.target.value)}
+          placeholder="filter by name or @handle…"
+          className="h-8 text-[12px] flex-1 min-w-[180px]"
+        />
+        <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+          <SelectTrigger className="h-8 w-[140px] text-[12px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No grouping</SelectItem>
+            <SelectItem value="list">By source list</SelectItem>
+            <SelectItem value="specialty">By specialty</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <SelectTrigger className="h-8 w-[130px] text-[12px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">A → Z</SelectItem>
+            <SelectItem value="recent">Most recent</SelectItem>
+            <SelectItem value="followers">Most followed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Select all / count */}
+      <div className="flex items-center justify-between text-[11px] font-mono text-text-muted px-1">
+        <span>
+          {p.selectedSourceIds.length} selected · {p.filteredSources.length} shown ·{" "}
+          {p.subSources.length} total
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            allFilteredSelected ? p.removeSources(filteredIds) : p.addSources(filteredIds)
+          }
+          className="uppercase tracking-[0.12em] hover:text-accent"
+          disabled={filteredIds.length === 0}
+        >
+          {allFilteredSelected ? "deselect shown" : "select shown"}
+        </button>
+      </div>
+
+      {/* Grouped list */}
+      <div className="border border-border rounded-[3px] max-h-[320px] overflow-y-auto">
+        {groups.length === 0 && (
+          <div className="p-3 text-[12px] text-text-muted">No matches.</div>
+        )}
+        {groups.map((g) => (
+          <SourceGroup
+            key={g.key}
+            label={g.label}
+            items={g.items}
+            selectedSet={selectedSet}
+            onToggle={p.toggleSource}
+            onAdd={p.addSources}
+            onRemove={p.removeSources}
+            collapsible={groupBy !== "none"}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourceGroup({
+  label,
+  items,
+  selectedSet,
+  onToggle,
+  onAdd,
+  onRemove,
+  collapsible,
+}: {
+  label: string;
+  items: SourceItem[];
+  selectedSet: Set<string>;
+  onToggle: (id: string) => void;
+  onAdd: (ids: string[]) => void;
+  onRemove: (ids: string[]) => void;
+  collapsible: boolean;
+}) {
+  const [open, setOpen] = React.useState(true);
+  const ids = items.map((s) => s.id);
+  const selectedCount = ids.filter((id) => selectedSet.has(id)).length;
+  const allSelected = selectedCount === ids.length && ids.length > 0;
+  return (
+    <div className="border-b border-border last:border-b-0">
+      {collapsible && (
+        <div className="flex items-center justify-between px-2 py-1.5 bg-panel-elevated/30 sticky top-0 z-[1]">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.12em] text-text-muted hover:text-text-primary"
+          >
+            {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            {label} <span className="text-text-muted/70">({selectedCount}/{ids.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => (allSelected ? onRemove(ids) : onAdd(ids))}
+            className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.12em] text-accent hover:opacity-80"
+          >
+            <Check className="w-3 h-3" />
+            {allSelected ? "remove all" : "add all"}
+          </button>
+        </div>
+      )}
+      {open &&
+        items.map((s) => {
+          const checked = selectedSet.has(s.id);
+          return (
+            <label
+              key={`${label}-${s.id}`}
+              className="flex items-center gap-3 px-3 py-2 border-t border-border cursor-pointer hover:bg-panel-elevated/60"
+            >
+              <Checkbox checked={checked} onCheckedChange={() => onToggle(s.id)} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] text-text-primary truncate">{s.display_name}</div>
+                <div className="text-[11px] font-mono text-text-muted truncate">
+                  @{s.handle}
+                  {s.role && s.role !== "other" ? ` · ${s.role}` : ""}
+                  {s.specialty.length > 0 ? ` · ${s.specialty.join(", ")}` : ""}
+                </div>
+              </div>
+            </label>
+          );
+        })}
+    </div>
+  );
+}
