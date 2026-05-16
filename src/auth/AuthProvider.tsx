@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import "@/auth/serverFnFetchPatch";
 import { claimInvitation } from "@/serverFns/admin-users";
 import { getMyAuthContext } from "@/lib/auth-context.functions";
+import { useIdleLogout } from "@/hooks/useIdleLogout";
 
 export type AppRole = "admin" | "editor" | "viewer";
 
@@ -128,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = React.useState<AppRole[]>([]);
   const [prefs, setPrefs] = React.useState<UserPreferences | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  useIdleLogout(!!session);
 
   // Apply density body class. Default to `comfortable` to avoid a
   // first-paint flash of the compact (root) sizes for new users.
