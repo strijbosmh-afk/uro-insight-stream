@@ -101,7 +101,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { isAdmin } = useAuth();
+  const { isAdmin, signOut } = useAuth();
   const { unread, markRead } = useBrainstormUnread();
   const sections = React.useMemo(
     () => {
