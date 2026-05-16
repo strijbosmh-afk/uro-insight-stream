@@ -435,6 +435,9 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
               setSourceFilter={setSourceFilter}
               selectedSourceIds={selectedSourceIds}
               toggleSource={toggleSource}
+              addSources={addSources}
+              removeSources={removeSources}
+              sourceLists={sourceListsQ.data ?? []}
               specialtyId={specialtyId}
               setSpecialtyId={setSpecialtyId}
               congressId={congressId}
