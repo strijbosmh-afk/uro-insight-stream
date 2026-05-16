@@ -20,6 +20,7 @@ import { feedService } from "@/services/feedService";
 import { isValidHashtag, normalizeHashtag } from "@/lib/validation";
 import type { Congress, Session, SourceList } from "@/types";
 import { StatusPill } from "./StatusPill";
+import { deriveCongressStatus } from "@/lib/congress-status";
 import { Sparkline } from "./Sparkline";
 import { useCanEdit, useCanAdmin } from "@/auth/permissions";
 import { recordAudit } from "@/services/auditService";
@@ -201,7 +202,13 @@ export function CongressDetail({ congressId }: { congressId: string }) {
           >
             <ArrowLeft className="w-3 h-3" /> All congresses
           </Link>
-          <StatusPill status={congress.status} />
+          <StatusPill
+            status={deriveCongressStatus(
+              congress.startDate,
+              congress.endDate,
+              congress.status,
+            )}
+          />
           <span className="inline-flex items-center gap-1 text-[12px] text-text-muted">
             <MapPin className="w-3 h-3" /> {congress.city}, {congress.country}
           </span>

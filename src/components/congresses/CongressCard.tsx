@@ -4,6 +4,7 @@ import { MapPin, Calendar, Users, FileText, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Congress } from "@/types";
 import { StatusPill } from "./StatusPill";
+import { deriveCongressStatus } from "@/lib/congress-status";
 
 function fmtRange(a: string, b: string) {
   const start = new Date(a);
@@ -62,7 +63,13 @@ export function CongressCard({
             {congress.name}
           </h3>
         </div>
-        <StatusPill status={congress.status} />
+        <StatusPill
+          status={deriveCongressStatus(
+            congress.startDate,
+            congress.endDate,
+            congress.status,
+          )}
+        />
       </div>
 
       <div className="px-4 pl-5 pb-3 space-y-1.5 text-[12px] text-text-muted">
