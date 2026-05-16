@@ -664,13 +664,16 @@ interface Step2Props {
   userSpecialties: Array<{ id: string; label: string; is_primary: boolean }>;
   liveCongresses: Array<{ id: string; name: string; short_code: string }>;
   allCongresses: Array<{ id: string; name: string; short_code: string; status: string }>;
-  subSources: Array<{ id: string; handle: string; display_name: string }>;
+  subSources: SourceItem[];
   subSourcesLoading: boolean;
-  filteredSources: Array<{ id: string; handle: string; display_name: string }>;
+  filteredSources: SourceItem[];
   sourceFilter: string;
   setSourceFilter: (v: string) => void;
   selectedSourceIds: string[];
   toggleSource: (id: string) => void;
+  addSources: (ids: string[]) => void;
+  removeSources: (ids: string[]) => void;
+  sourceLists: Array<{ id: string; name: string; color: string | null }>;
   specialtyId: string | null;
   setSpecialtyId: (id: string | null) => void;
   congressId: string | null;
@@ -684,6 +687,20 @@ interface Step2Props {
   setOpenSection: (s: "sources" | "specialty" | "congress" | "hashtags" | null) => void;
   applyPreset: (p: PresetKind) => void;
 }
+
+type SourceItem = {
+  id: string;
+  handle: string;
+  display_name: string;
+  role: string;
+  specialty: string[];
+  list_ids: string[];
+  last_seen_at: string | null;
+  followers_count: number;
+};
+
+type GroupBy = "none" | "list" | "specialty";
+type SortBy = "name" | "recent" | "followers";
 
 function Step2Bindings(p: Step2Props) {
   const noLive = p.liveCongresses.length === 0;
