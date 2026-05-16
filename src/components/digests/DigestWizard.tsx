@@ -265,6 +265,19 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
     );
   };
 
+  const addSources = (ids: string[]) => {
+    setSelectedSourceIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return Array.from(next);
+    });
+  };
+
+  const removeSources = (ids: string[]) => {
+    const drop = new Set(ids);
+    setSelectedSourceIds((prev) => prev.filter((id) => !drop.has(id)));
+  };
+
   const addRecipient = () => {
     const v = recipientInput.trim().toLowerCase();
     if (!v) return;
