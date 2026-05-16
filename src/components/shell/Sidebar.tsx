@@ -21,6 +21,7 @@ import {
   Lightbulb,
   ShieldAlert,
   Bell,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
@@ -260,6 +261,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               <AtSign className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="truncate">Contact</span>}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                void signOut();
+              }}
+              className={cn(
+                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
+                collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
+              )}
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="truncate">Sign out</span>}
             </button>
           </li>
         </ul>
