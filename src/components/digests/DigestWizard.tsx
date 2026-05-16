@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, X, Sparkles, Calendar, Settings2, ChevronDown, ChevronRight, Eye, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,16 +84,46 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
     queryFn: async () => {
       const { data } = await supabase
         .from("user_subscribed_sources")
-        .select("source_id, sources(id, handle, display_name)")
+        .select(
+          "source_id, sources(id, handle, display_name, role, specialty, list_ids, last_seen_at, followers_count)",
+        )
         .eq("user_id", user!.id);
       return ((data ?? []) as Array<{
         source_id: string;
-        sources: { id: string; handle: string; display_name: string | null } | null;
+        sources: {
+          id: string;
+          handle: string;
+          display_name: string | null;
+          role: string | null;
+          specialty: string[] | null;
+          list_ids: string[] | null;
+          last_seen_at: string | null;
+          followers_count: number | null;
+        } | null;
       }>).map((r) => ({
         id: r.sources?.id ?? r.source_id,
         handle: r.sources?.handle ?? r.source_id,
         display_name: r.sources?.display_name ?? r.source_id,
+        role: r.sources?.role ?? "other",
+        specialty: r.sources?.specialty ?? [],
+        list_ids: r.sources?.list_ids ?? [],
+        last_seen_at: r.sources?.last_seen_at ?? null,
+        followers_count: r.sources?.followers_count ?? 0,
       }));
+    },
+  });
+
+  // Load user's source lists so we can group/bulk-add by list.
+  const sourceListsQ = useQuery({
+    queryKey: ["user-source-lists", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("source_lists")
+        .select("id, name, color")
+        .eq("user_id", user!.id)
+        .order("name", { ascending: true });
+      return (data ?? []) as Array<{ id: string; name: string; color: string | null }>;
     },
   });
 
