@@ -792,34 +792,7 @@ function Step2Bindings(p: Step2Props) {
         label="Sources"
         summary={`${p.selectedSourceIds.length} selected`}
       >
-        <Input
-          value={p.sourceFilter}
-          onChange={(e) => p.setSourceFilter(e.target.value)}
-          placeholder="filter sources…"
-          className="h-8 text-[12px] mb-2"
-        />
-        <div className="border border-border rounded-[3px] max-h-[260px] overflow-y-auto">
-          {p.subSources.length === 0 && !p.subSourcesLoading && (
-            <div className="p-3 text-[12px] text-text-muted">
-              You don't have any subscribed sources yet. Add some from Discover or Sources first.
-            </div>
-          )}
-          {p.filteredSources.map((s) => {
-            const checked = p.selectedSourceIds.includes(s.id);
-            return (
-              <label
-                key={s.id}
-                className="flex items-center gap-3 px-3 py-2 border-b border-border cursor-pointer hover:bg-panel-elevated/60"
-              >
-                <Checkbox checked={checked} onCheckedChange={() => p.toggleSource(s.id)} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-text-primary truncate">{s.display_name}</div>
-                  <div className="text-[11px] font-mono text-text-muted">@{s.handle}</div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
+        <SourcesPicker p={p} />
       </Section>
 
       <Section
