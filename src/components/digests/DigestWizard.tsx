@@ -730,6 +730,11 @@ interface Step2Props {
   openSection: "sources" | "specialty" | "congress" | "hashtags" | null;
   setOpenSection: (s: "sources" | "specialty" | "congress" | "hashtags" | null) => void;
   applyPreset: (p: PresetKind) => void;
+  includeSourcesSummary: boolean;
+  setIncludeSourcesSummary: (v: boolean) => void;
+  runSummaryPreview: () => void;
+  summaryLoading: boolean;
+  summaryPreview: string | null;
 }
 
 type SourceItem = {
