@@ -692,6 +692,7 @@ export type Database = {
           frequency: string
           hashtags: string[]
           id: string
+          include_sources_summary: boolean
           is_active: boolean
           last_sent_at: string | null
           name: string
@@ -709,6 +710,7 @@ export type Database = {
           frequency: string
           hashtags?: string[]
           id?: string
+          include_sources_summary?: boolean
           is_active?: boolean
           last_sent_at?: string | null
           name: string
@@ -726,6 +728,7 @@ export type Database = {
           frequency?: string
           hashtags?: string[]
           id?: string
+          include_sources_summary?: boolean
           is_active?: boolean
           last_sent_at?: string | null
           name?: string
