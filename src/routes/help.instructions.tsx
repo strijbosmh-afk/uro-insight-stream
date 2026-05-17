@@ -2,7 +2,17 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Search } from "lucide-react";
+import * as React from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ArrowUp, Search, FileText, BookOpen, Download, ExternalLink } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/help/instructions")({
   head: () => ({ meta: [{ title: "UroFeed Instructions Manual" }] }),
