@@ -413,8 +413,30 @@ function InstructionsPage() {
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof window !== "undefined") {
+      history.pushState(null, "", `#${id}`);
+    }
     setTocOpen(false);
   };
+
+  // Deep-link: on mount and on hashchange, scroll to the targeted section.
+  React.useEffect(() => {
+    const jumpToHash = () => {
+      const id = window.location.hash.replace(/^#/, "");
+      if (!id) return;
+      // Defer to next frame so the accordion content is mounted.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          setActiveId(id);
+        }
+      });
+    };
+    jumpToHash();
+    window.addEventListener("hashchange", jumpToHash);
+    return () => window.removeEventListener("hashchange", jumpToHash);
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
