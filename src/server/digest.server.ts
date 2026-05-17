@@ -94,6 +94,7 @@ export interface DigestPayload {
   totalTweets: number;
   groups: DigestSourceGroup[];
   recipients: string[];
+  aiSummary?: string | null;
 }
 
 /**
