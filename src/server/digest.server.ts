@@ -3,6 +3,7 @@ import type {
   DigestSourceGroup,
   DigestTweetItem,
 } from "@/lib/email-templates/weekly-digest";
+import { summarizeSelectedSources } from "@/server/sources-summary.server";
 
 export type DigestFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -94,6 +95,7 @@ export interface DigestPayload {
   totalTweets: number;
   groups: DigestSourceGroup[];
   recipients: string[];
+  aiSummary?: string | null;
 }
 
 /**
@@ -104,7 +106,7 @@ export async function buildDigestPayload(digestId: string): Promise<DigestPayloa
   const { data: digest, error: digestErr } = await supabaseAdmin
     .from("digest_subscriptions")
     .select(
-      "id, name, frequency, last_sent_at, next_send_at, specialty_id, congress_id, hashtags",
+      "id, name, frequency, last_sent_at, next_send_at, specialty_id, congress_id, hashtags, include_sources_summary",
     )
     .eq("id", digestId)
     .maybeSingle();
@@ -266,5 +268,34 @@ export async function buildDigestPayload(digestId: string): Promise<DigestPayloa
     totalTweets: totalTaken,
     groups,
     recipients,
+    aiSummary: await maybeBuildSummary({
+      includeSummary: !!(digest as any).include_sources_summary,
+      sourceIds: unionSourceIds,
+      windowStart,
+      windowEnd,
+      digestName: digest.name,
+    }),
   };
+}
+
+async function maybeBuildSummary(args: {
+  includeSummary: boolean;
+  sourceIds: string[];
+  windowStart: string;
+  windowEnd: string;
+  digestName: string;
+}): Promise<string | null> {
+  if (!args.includeSummary || args.sourceIds.length === 0) return null;
+  try {
+    const result = await summarizeSelectedSources({
+      sourceIds: args.sourceIds,
+      windowStartISO: args.windowStart,
+      windowEndISO: args.windowEnd,
+      digestName: args.digestName,
+    });
+    return result?.summary ?? null;
+  } catch (e) {
+    console.error("[digest] summary failed", e);
+    return null;
+  }
 }

@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
-import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
+import { createDigest, updateDigest, getDigest, previewSourcesSummary } from "@/serverFns/digests";
 import { MobileDigestWizard } from "./MobileDigestWizard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DigestPreviewDialog } from "./DigestPreviewDialog";
@@ -55,6 +55,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
   const createFn = useServerFn(createDigest);
   const updateFn = useServerFn(updateDigest);
   const getFn = useServerFn(getDigest);
+  const summaryFn = useServerFn(previewSourcesSummary);
 
   const [step, setStep] = React.useState(1);
   const [name, setName] = React.useState("");
@@ -76,6 +77,9 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
   const [submitting, setSubmitting] = React.useState(false);
   const [sourceFilter, setSourceFilter] = React.useState("");
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [includeSourcesSummary, setIncludeSourcesSummary] = React.useState(false);
+  const [summaryPreview, setSummaryPreview] = React.useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = React.useState(false);
 
   // Load user's subscribed sources to choose from.
   const subSourcesQ = useQuery({
@@ -207,12 +211,14 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
         specialty_id?: string | null;
         congress_id?: string | null;
         hashtags?: string[];
+        include_sources_summary?: boolean;
       };
       if (dx.timezone) setTimezone(dx.timezone);
       if (typeof dx.is_active === "boolean") setIsActive(dx.is_active);
       setSpecialtyId(dx.specialty_id ?? null);
       setCongressId(dx.congress_id ?? null);
       setHashtags(Array.isArray(dx.hashtags) ? dx.hashtags : []);
+      setIncludeSourcesSummary(!!dx.include_sources_summary);
     })();
     return () => {
       cancelled = true;
@@ -321,6 +327,38 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
 
   const removeHashtag = (h: string) => setHashtags(hashtags.filter((x) => x !== h));
 
+  const runSummaryPreview = async () => {
+    if (summaryLoading) return;
+    if (selectedSourceIds.length === 0) {
+      toast.error("Select at least one source");
+      return;
+    }
+    setSummaryLoading(true);
+    setSummaryPreview(null);
+    try {
+      const res = await summaryFn({
+        data: {
+          source_ids: selectedSourceIds,
+          window_days: 7,
+          digest_name: name || undefined,
+        },
+      });
+      if (res.status === "ok") {
+        setSummaryPreview(res.summary);
+      } else {
+        const reason = res.reason ?? "failed";
+        if (reason === "rate_limited") toast.error("Rate limited — try again in a moment");
+        else if (reason === "payment_required") toast.error("AI credits exhausted — add credits in workspace settings");
+        else if (reason === "no_summary") toast.error("Not enough recent posts from these sources to summarise");
+        else toast.error(`Summary failed: ${reason}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Summary failed");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   const hasAnyBinding =
     selectedSourceIds.length > 0 ||
     !!specialtyId ||
@@ -351,6 +389,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
         specialty_id: specialtyId,
         congress_id: congressId,
         hashtags,
+        include_sources_summary: includeSourcesSummary,
         recipients: recipients.map((email, idx) => ({
           email,
           is_default: idx === 0,
@@ -449,6 +488,11 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
               removeHashtag={removeHashtag}
               openSection={openSection}
               setOpenSection={setOpenSection}
+              includeSourcesSummary={includeSourcesSummary}
+              setIncludeSourcesSummary={setIncludeSourcesSummary}
+              runSummaryPreview={runSummaryPreview}
+              summaryLoading={summaryLoading}
+              summaryPreview={summaryPreview}
               applyPreset={(p) => {
                 if (p === "specialty") {
                   const id = userSpecialtiesQ.data?.primaryId ?? null;
@@ -686,6 +730,11 @@ interface Step2Props {
   openSection: "sources" | "specialty" | "congress" | "hashtags" | null;
   setOpenSection: (s: "sources" | "specialty" | "congress" | "hashtags" | null) => void;
   applyPreset: (p: PresetKind) => void;
+  includeSourcesSummary: boolean;
+  setIncludeSourcesSummary: (v: boolean) => void;
+  runSummaryPreview: () => void;
+  summaryLoading: boolean;
+  summaryPreview: string | null;
 }
 
 type SourceItem = {
@@ -793,6 +842,56 @@ function Step2Bindings(p: Step2Props) {
         summary={`${p.selectedSourceIds.length} selected`}
       >
         <SourcesPicker p={p} />
+        <div className="mt-4 border-t border-border pt-3 space-y-3">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <Checkbox
+              checked={p.includeSourcesSummary}
+              onCheckedChange={(v) => p.setIncludeSourcesSummary(!!v)}
+              className="mt-0.5"
+            />
+            <div className="min-w-0">
+              <div className="text-[12px] font-medium text-text-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                Include AI summary across all selected sources
+              </div>
+              <div className="text-[11px] text-text-muted mt-0.5">
+                Adds a short briefing at the top of every digest email, synthesising
+                the period's posts across the selected sources.
+              </div>
+            </div>
+          </label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={p.runSummaryPreview}
+              disabled={p.summaryLoading || p.selectedSourceIds.length === 0}
+            >
+              {p.summaryLoading ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 mr-1" />
+              )}
+              Preview summary now
+            </Button>
+            <span className="text-[11px] text-text-muted font-mono">
+              last 7 days · {p.selectedSourceIds.length} source{p.selectedSourceIds.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          {p.summaryPreview && (
+            <div
+              className="text-[12px] text-text-primary leading-relaxed whitespace-pre-wrap p-3 rounded-[3px]"
+              style={{
+                background: "var(--panel-elevated)",
+                border: "1px solid var(--border)",
+                borderLeft: "3px solid var(--accent)",
+              }}
+            >
+              {p.summaryPreview}
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section

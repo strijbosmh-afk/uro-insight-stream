@@ -58,6 +58,7 @@ export async function sendDigestById(digestId: string): Promise<{
     windowEnd: payload.windowEnd,
     totalTweets: payload.totalTweets,
     groups: payload.groups,
+    aiSummary: payload.aiSummary ?? null,
   } as Record<string, unknown>;
 
   const element = React.createElement(template.component, templateData);

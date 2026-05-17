@@ -38,6 +38,7 @@ export interface WeeklyDigestProps {
   windowEnd?: string
   totalTweets?: number
   groups?: DigestSourceGroup[]
+  aiSummary?: string | null
 }
 
 function fmtDate(iso?: string) {
@@ -63,6 +64,7 @@ const WeeklyDigestEmail = ({
   windowEnd,
   totalTweets = 0,
   groups = [],
+  aiSummary = null,
 }: WeeklyDigestProps) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -83,6 +85,15 @@ const WeeklyDigestEmail = ({
             {fmtDate(windowStart)} → {fmtDate(windowEnd)} · {totalTweets} posts
             from {groups.length} {groups.length === 1 ? 'source' : 'sources'}
           </Text>
+
+          {aiSummary && (
+            <Section style={summaryBlock}>
+              <Text style={summaryEyebrow}>AI briefing · across selected sources</Text>
+              {aiSummary.split(/\n+/).map((line, i) => (
+                <Text key={i} style={summaryLine}>{line}</Text>
+              ))}
+            </Section>
+          )}
 
           {groups.length === 0 && (
             <Text style={styles.text}>
@@ -174,6 +185,33 @@ const tweetMeta = {
   color: theme.textMuted,
   margin: 0,
   textTransform: 'uppercase' as const,
+}
+
+const summaryBlock = {
+  backgroundColor: theme.panelElevated,
+  border: `1px solid ${theme.border}`,
+  borderLeft: `3px solid ${theme.textPrimary}`,
+  borderRadius: '4px',
+  padding: '14px 16px',
+  margin: '16px 0 8px',
+}
+
+const summaryEyebrow = {
+  fontFamily: theme.monoFont,
+  fontSize: '10px',
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase' as const,
+  color: theme.textMuted,
+  margin: '0 0 8px',
+}
+
+const summaryLine = {
+  fontFamily: theme.bodyFont,
+  fontSize: '13px',
+  color: theme.textPrimary,
+  lineHeight: '1.55',
+  margin: '0 0 8px',
+  whiteSpace: 'pre-wrap' as const,
 }
 
 export const template = {
