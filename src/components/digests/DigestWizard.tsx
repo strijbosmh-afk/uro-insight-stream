@@ -488,6 +488,11 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
               removeHashtag={removeHashtag}
               openSection={openSection}
               setOpenSection={setOpenSection}
+              includeSourcesSummary={includeSourcesSummary}
+              setIncludeSourcesSummary={setIncludeSourcesSummary}
+              runSummaryPreview={runSummaryPreview}
+              summaryLoading={summaryLoading}
+              summaryPreview={summaryPreview}
               applyPreset={(p) => {
                 if (p === "specialty") {
                   const id = userSpecialtiesQ.data?.primaryId ?? null;
