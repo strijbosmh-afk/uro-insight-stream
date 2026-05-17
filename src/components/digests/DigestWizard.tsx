@@ -842,6 +842,56 @@ function Step2Bindings(p: Step2Props) {
         summary={`${p.selectedSourceIds.length} selected`}
       >
         <SourcesPicker p={p} />
+        <div className="mt-4 border-t border-border pt-3 space-y-3">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <Checkbox
+              checked={p.includeSourcesSummary}
+              onCheckedChange={(v) => p.setIncludeSourcesSummary(!!v)}
+              className="mt-0.5"
+            />
+            <div className="min-w-0">
+              <div className="text-[12px] font-medium text-text-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                Include AI summary across all selected sources
+              </div>
+              <div className="text-[11px] text-text-muted mt-0.5">
+                Adds a short briefing at the top of every digest email, synthesising
+                the period's posts across the selected sources.
+              </div>
+            </div>
+          </label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={p.runSummaryPreview}
+              disabled={p.summaryLoading || p.selectedSourceIds.length === 0}
+            >
+              {p.summaryLoading ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 mr-1" />
+              )}
+              Preview summary now
+            </Button>
+            <span className="text-[11px] text-text-muted font-mono">
+              last 7 days · {p.selectedSourceIds.length} source{p.selectedSourceIds.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          {p.summaryPreview && (
+            <div
+              className="text-[12px] text-text-primary leading-relaxed whitespace-pre-wrap p-3 rounded-[3px]"
+              style={{
+                background: "var(--panel-elevated)",
+                border: "1px solid var(--border)",
+                borderLeft: "3px solid var(--accent)",
+              }}
+            >
+              {p.summaryPreview}
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section
