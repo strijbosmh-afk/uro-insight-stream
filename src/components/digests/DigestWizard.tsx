@@ -357,6 +357,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
         specialty_id: specialtyId,
         congress_id: congressId,
         hashtags,
+        include_sources_summary: includeSourcesSummary,
         recipients: recipients.map((email, idx) => ({
           email,
           is_default: idx === 0,
