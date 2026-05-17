@@ -2,13 +2,20 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Search, FileText, BookOpen, Download, ExternalLink } from "lucide-react";
+import { ArrowUp, Search, FileText, BookOpen, Download, Eye } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/help/instructions")({
   head: () => ({ meta: [{ title: "UroFeed Instructions Manual" }] }),
@@ -663,16 +670,24 @@ function InstructionsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <Button asChild variant="outline">
-                  <a
-                    href="/urofeed_architecture.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View PDF
-                  </a>
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View PDF
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 flex flex-col">
+                    <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
+                      <DialogTitle className="text-base">Technical architecture</DialogTitle>
+                    </DialogHeader>
+                    <iframe
+                      src="/urofeed_architecture.pdf#view=FitH"
+                      title="UroFeed technical architecture PDF"
+                      className="w-full flex-1 rounded-b-md bg-panel-elevated"
+                    />
+                  </DialogContent>
+                </Dialog>
                 <Button asChild variant="outline">
                   <a
                     href="/urofeed_architecture.pdf"
