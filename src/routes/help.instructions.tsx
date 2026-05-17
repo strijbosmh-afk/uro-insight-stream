@@ -421,21 +421,44 @@ function InstructionsPage() {
 
   // Deep-link: on mount and on hashchange, scroll to the targeted section.
   React.useEffect(() => {
+    let debounceId: number | undefined;
+    let rafId: number | undefined;
+
+    const cancelPending = () => {
+      if (debounceId !== undefined) {
+        window.clearTimeout(debounceId);
+        debounceId = undefined;
+      }
+      if (rafId !== undefined) {
+        cancelAnimationFrame(rafId);
+        rafId = undefined;
+      }
+      // Interrupt any in-flight smooth scroll by issuing an instant
+      // scrollTo at the current position — the browser treats this as a
+      // new scroll request and drops the previous animation.
+      window.scrollTo({ top: window.scrollY, behavior: "auto" });
+    };
+
     const jumpToHash = () => {
       const id = window.location.hash.replace(/^#/, "");
       if (!id) return;
-      // Defer to next frame so the accordion content is mounted.
-      requestAnimationFrame(() => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-          setActiveId(id);
-        }
-      });
+      cancelPending();
+      debounceId = window.setTimeout(() => {
+        rafId = requestAnimationFrame(() => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            setActiveId(id);
+          }
+        });
+      }, 80);
     };
     jumpToHash();
     window.addEventListener("hashchange", jumpToHash);
-    return () => window.removeEventListener("hashchange", jumpToHash);
+    return () => {
+      window.removeEventListener("hashchange", jumpToHash);
+      cancelPending();
+    };
   }, []);
 
   return (
