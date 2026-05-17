@@ -327,6 +327,38 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
 
   const removeHashtag = (h: string) => setHashtags(hashtags.filter((x) => x !== h));
 
+  const runSummaryPreview = async () => {
+    if (summaryLoading) return;
+    if (selectedSourceIds.length === 0) {
+      toast.error("Select at least one source");
+      return;
+    }
+    setSummaryLoading(true);
+    setSummaryPreview(null);
+    try {
+      const res = await summaryFn({
+        data: {
+          source_ids: selectedSourceIds,
+          window_days: 7,
+          digest_name: name || undefined,
+        },
+      });
+      if (res.status === "ok") {
+        setSummaryPreview(res.summary);
+      } else {
+        const reason = res.reason ?? "failed";
+        if (reason === "rate_limited") toast.error("Rate limited — try again in a moment");
+        else if (reason === "payment_required") toast.error("AI credits exhausted — add credits in workspace settings");
+        else if (reason === "no_summary") toast.error("Not enough recent posts from these sources to summarise");
+        else toast.error(`Summary failed: ${reason}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Summary failed");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   const hasAnyBinding =
     selectedSourceIds.length > 0 ||
     !!specialtyId ||
