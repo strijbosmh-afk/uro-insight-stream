@@ -2,7 +2,13 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Search } from "lucide-react";
+import { ArrowUp, Search, FileText, BookOpen, Download, ExternalLink } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/help/instructions")({
   head: () => ({ meta: [{ title: "UroFeed Instructions Manual" }] }),
@@ -431,99 +437,212 @@ function InstructionsPage() {
         </div>
       </header>
 
-      <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-10">
-        {/* TOC — desktop sticky / mobile collapsible */}
-        <aside className="lg:sticky lg:top-4 lg:self-start mb-6 lg:mb-0">
-          <div className="lg:hidden">
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-              onClick={() => setTocOpen((v) => !v)}
-            >
-              Table of contents
-              <span className="text-xs text-text-muted">{tocOpen ? "Hide" : "Show"}</span>
-            </Button>
-          </div>
-          <nav
-            className={`${tocOpen ? "block" : "hidden"} lg:block mt-3 lg:mt-0 rounded-md border border-border bg-panel p-3`}
-          >
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-2">
-              Contents
+      <Accordion type="multiple" defaultValue={["user-guide"]} className="space-y-4">
+        <AccordionItem value="user-guide" className="border border-border rounded-lg bg-panel">
+          <AccordionTrigger className="px-4 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-5 w-5 text-accent" />
+              <div className="text-left">
+                <div className="text-base font-semibold text-text-primary">User guide</div>
+                <div className="text-sm text-text-muted">How to use UroFeed · {SECTIONS.length} sections</div>
+              </div>
             </div>
-            <ul className="space-y-1">
-              {filtered.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => scrollTo(s.id)}
-                    className={`relative w-full text-left text-[13px] py-1 pl-3 rounded-sm transition-colors ${
-                      activeId === s.id
-                        ? "text-text-primary bg-panel-elevated"
-                        : "text-text-muted hover:text-text-primary"
-                    }`}
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-10">
+              {/* TOC — desktop sticky / mobile collapsible */}
+              <aside className="lg:sticky lg:top-4 lg:self-start mb-6 lg:mb-0">
+                <div className="lg:hidden">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => setTocOpen((v) => !v)}
                   >
-                    {activeId === s.id && (
-                      <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-accent rounded-full" />
+                    Table of contents
+                    <span className="text-xs text-text-muted">{tocOpen ? "Hide" : "Show"}</span>
+                  </Button>
+                </div>
+                <nav
+                  className={`${tocOpen ? "block" : "hidden"} lg:block mt-3 lg:mt-0 rounded-md border border-border bg-panel p-3`}
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-2">
+                    Contents
+                  </div>
+                  <ul className="space-y-1">
+                    {filtered.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => scrollTo(s.id)}
+                          className={`relative w-full text-left text-[13px] py-1 pl-3 rounded-sm transition-colors ${
+                            activeId === s.id
+                              ? "text-text-primary bg-panel-elevated"
+                              : "text-text-muted hover:text-text-primary"
+                          }`}
+                        >
+                          {activeId === s.id && (
+                            <span className="absolute left-0 top-1 bottom-1 w-[2px] bg-accent rounded-full" />
+                          )}
+                          <span className="font-mono text-accent mr-2">{s.number}.</span>
+                          {s.title}
+                        </button>
+                      </li>
+                    ))}
+                    {filtered.length === 0 && (
+                      <li className="text-[13px] text-text-muted py-1">No matches.</li>
                     )}
-                    <span className="font-mono text-accent mr-2">{s.number}.</span>
-                    {s.title}
-                  </button>
-                </li>
-              ))}
-              {filtered.length === 0 && (
-                <li className="text-[13px] text-text-muted py-1">No matches.</li>
-              )}
-            </ul>
-          </nav>
-        </aside>
+                  </ul>
+                </nav>
+              </aside>
 
-        <article className="space-y-12 max-w-3xl">
-          {filtered.map((section) => (
-            <section key={section.id} id={section.id} className="scroll-mt-6">
-              <h2 className="text-2xl font-semibold text-accent">
-                <span className="font-mono mr-3">{section.number}.</span>
-                {section.title}
-              </h2>
-              <p className="mt-2 text-text-primary/90 leading-relaxed max-w-[75ch]">
-                {section.overview}
-              </p>
-              {section.image ? (
-                <div className="mt-4 rounded-md border border-border overflow-hidden bg-panel-elevated/40">
-                  <img
-                    src={section.image}
-                    alt={section.screenshot}
-                    loading="lazy"
-                    className="w-full h-auto block"
-                  />
-                </div>
-              ) : (
-                <div className="mt-4 rounded-md border border-dashed border-border bg-panel-elevated/40 aspect-[16/9] flex items-center justify-center text-text-muted text-sm">
-                  Screenshot: {section.screenshot}
-                </div>
-              )}
-              <ol className="mt-6 space-y-4 list-decimal pl-5">
-                {section.steps.map((step, i) => (
-                  <li key={i} className="text-text-primary/90 leading-relaxed max-w-[75ch]">
-                    <div className="font-medium">{step.title}</div>
-                    <div className="text-text-muted mt-1">{step.body}</div>
-                    {step.tip && (
-                      <div className="mt-2 rounded-md border-l-2 border-accent bg-panel-elevated/60 px-3 py-2 text-[13px] text-text-primary/80">
-                        <span className="font-mono uppercase text-[10px] tracking-[0.18em] text-accent mr-2">
-                          Tip
-                        </span>
-                        {step.tip}
+              <article className="space-y-12 max-w-3xl">
+                {filtered.map((section) => (
+                  <section key={section.id} id={section.id} className="scroll-mt-6">
+                    <h2 className="text-2xl font-semibold text-accent">
+                      <span className="font-mono mr-3">{section.number}.</span>
+                      {section.title}
+                    </h2>
+                    <p className="mt-2 text-text-primary/90 leading-relaxed max-w-[75ch]">
+                      {section.overview}
+                    </p>
+                    {section.image ? (
+                      <div className="mt-4 rounded-md border border-border overflow-hidden bg-panel-elevated/40">
+                        <img
+                          src={section.image}
+                          alt={section.screenshot}
+                          loading="lazy"
+                          className="w-full h-auto block"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-md border border-dashed border-border bg-panel-elevated/40 aspect-[16/9] flex items-center justify-center text-text-muted text-sm">
+                        Screenshot: {section.screenshot}
                       </div>
                     )}
-                  </li>
+                    <ol className="mt-6 space-y-4 list-decimal pl-5">
+                      {section.steps.map((step, i) => (
+                        <li key={i} className="text-text-primary/90 leading-relaxed max-w-[75ch]">
+                          <div className="font-medium">{step.title}</div>
+                          <div className="text-text-muted mt-1">{step.body}</div>
+                          {step.tip && (
+                            <div className="mt-2 rounded-md border-l-2 border-accent bg-panel-elevated/60 px-3 py-2 text-[13px] text-text-primary/80">
+                              <span className="font-mono uppercase text-[10px] tracking-[0.18em] text-accent mr-2">
+                                Tip
+                              </span>
+                              {step.tip}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
                 ))}
-              </ol>
-            </section>
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-text-muted">No sections match “{query}”.</p>
-          )}
-        </article>
-      </div>
+                {filtered.length === 0 && (
+                  <p className="text-text-muted">No sections match "{query}".</p>
+                )}
+              </article>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="technical-architecture" className="border border-border rounded-lg bg-panel">
+          <AccordionTrigger className="px-4 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-accent" />
+              <div className="text-left">
+                <div className="text-base font-semibold text-text-primary">Technical architecture</div>
+                <div className="text-sm text-text-muted">For engineers · 35-page PDF</div>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="max-w-3xl space-y-6">
+              <p className="text-text-primary/90 leading-relaxed">
+                A complete technical reference covering the system architecture, data model,
+                ingestion and summarization pipelines, frontend organization, and operational
+                surfaces. Intended for engineers extending or maintaining the codebase.
+              </p>
+
+              <div className="rounded-md border border-border bg-panel-elevated/40 p-4">
+                <h3 className="text-sm font-semibold text-text-primary mb-3">Document contents</h3>
+                <ul className="space-y-2 text-sm text-text-muted">
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>System architecture overview · 4-tier topology</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Database schema · core domain + per-user tier · ER diagrams</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Authentication and Row-Level Security</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Tweet ingestion pipeline · X v2 adapter</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Tweet-to-session matcher · 7-step cascade</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Summarization pipeline · debounce rules</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>AI Gateway integration · cost controls</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Operational layer · 8 cron jobs</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Frontend routes and component organization</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Mobile architecture · iOS-first patterns</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Demo account sandbox · trust boundaries</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-accent mt-0.5">·</span>
+                    <span>Observability, audit, technical debt, roadmap</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button asChild variant="outline">
+                  <a
+                    href="/urofeed_architecture.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View PDF
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a
+                    href="/urofeed_architecture.pdf"
+                    download="urofeed_architecture.pdf"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </a>
+                </Button>
+                <span className="text-sm text-text-muted">PDF · 735 KB · 35 pages</span>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {showTop && (
         <button
