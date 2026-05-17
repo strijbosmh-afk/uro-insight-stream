@@ -7,6 +7,7 @@ import {
   computeDigestPreview,
   consumePreviewRateLimit,
 } from "@/server/digest-preview.server";
+import { summarizeSelectedSources } from "@/server/sources-summary.server";
 
 const FrequencyEnum = z.enum(["daily", "weekly", "biweekly", "monthly"]);
 
@@ -21,6 +22,7 @@ const BaseSchema = z.object({
   specialty_id: z.string().min(1).max(80).nullable().optional(),
   congress_id: z.string().min(1).max(80).nullable().optional(),
   hashtags: z.array(z.string().min(1).max(80)).max(50).default([]),
+  include_sources_summary: z.boolean().optional(),
   recipients: z
     .array(
       z.object({
@@ -150,6 +152,7 @@ export const createDigest = createServerFn({ method: "POST" })
         specialty_id: data.specialty_id ?? null,
         congress_id: data.congress_id ?? null,
         hashtags: data.hashtags ?? [],
+        include_sources_summary: data.include_sources_summary ?? false,
       })
       .select("id")
       .single();
@@ -206,6 +209,7 @@ export const updateDigest = createServerFn({ method: "POST" })
         specialty_id: data.specialty_id ?? null,
         congress_id: data.congress_id ?? null,
         hashtags: data.hashtags ?? [],
+        include_sources_summary: data.include_sources_summary ?? false,
       })
       .eq("id", data.id)
       .eq("user_id", userId);
@@ -321,4 +325,37 @@ export const previewDigest = createServerFn({ method: "POST" })
       { bypassCache: data.bypass_cache ?? false },
     );
     return result;
+  });
+
+const SummarySchema = z.object({
+  source_ids: z.array(z.string().min(1).max(80)).min(1).max(200),
+  window_days: z.number().int().min(1).max(30).default(7),
+  digest_name: z.string().max(120).optional(),
+});
+
+export const previewSourcesSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SummarySchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const allowed = await consumePreviewRateLimit(context.userId);
+    if (!allowed) {
+      return { status: "error" as const, reason: "rate_limited" };
+    }
+    const end = new Date();
+    const start = new Date(end.getTime() - data.window_days * 24 * 60 * 60 * 1000);
+    try {
+      const result = await summarizeSelectedSources({
+        sourceIds: data.source_ids,
+        windowStartISO: start.toISOString(),
+        windowEndISO: end.toISOString(),
+        digestName: data.digest_name,
+      });
+      if (!result) {
+        return { status: "error" as const, reason: "no_summary" };
+      }
+      return { status: "ok" as const, ...result };
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "failed";
+      return { status: "error" as const, reason };
+    }
   });
