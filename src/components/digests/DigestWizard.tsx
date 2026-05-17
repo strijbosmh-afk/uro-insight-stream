@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
-import { createDigest, updateDigest, getDigest } from "@/serverFns/digests";
+import { createDigest, updateDigest, getDigest, previewSourcesSummary } from "@/serverFns/digests";
 import { MobileDigestWizard } from "./MobileDigestWizard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DigestPreviewDialog } from "./DigestPreviewDialog";
@@ -55,6 +55,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
   const createFn = useServerFn(createDigest);
   const updateFn = useServerFn(updateDigest);
   const getFn = useServerFn(getDigest);
+  const summaryFn = useServerFn(previewSourcesSummary);
 
   const [step, setStep] = React.useState(1);
   const [name, setName] = React.useState("");
@@ -76,6 +77,9 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
   const [submitting, setSubmitting] = React.useState(false);
   const [sourceFilter, setSourceFilter] = React.useState("");
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [includeSourcesSummary, setIncludeSourcesSummary] = React.useState(false);
+  const [summaryPreview, setSummaryPreview] = React.useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = React.useState(false);
 
   // Load user's subscribed sources to choose from.
   const subSourcesQ = useQuery({
@@ -207,12 +211,14 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
         specialty_id?: string | null;
         congress_id?: string | null;
         hashtags?: string[];
+        include_sources_summary?: boolean;
       };
       if (dx.timezone) setTimezone(dx.timezone);
       if (typeof dx.is_active === "boolean") setIsActive(dx.is_active);
       setSpecialtyId(dx.specialty_id ?? null);
       setCongressId(dx.congress_id ?? null);
       setHashtags(Array.isArray(dx.hashtags) ? dx.hashtags : []);
+      setIncludeSourcesSummary(!!dx.include_sources_summary);
     })();
     return () => {
       cancelled = true;
