@@ -58,9 +58,12 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogHeader.displayName = "DialogHeader";
 
-const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+const DialogFooter = ({ className, style, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  // iOS: prevents the action row from sitting under the home indicator on
+  // bottom-anchored dialogs. No-op on devices without a safe-area inset.
   <div
     className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
+    style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)", ...style }}
     {...props}
   />
 );

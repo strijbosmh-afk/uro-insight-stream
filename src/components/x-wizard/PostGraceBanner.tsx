@@ -27,8 +27,12 @@ export function PostGraceBanner() {
   if (status || !expired) return null;
   return (
     <>
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-destructive/40 bg-destructive/10 text-sm">
-        <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+      <div
+        role="alert"
+        aria-live="assertive"
+        className="flex items-center gap-3 px-3 py-2 border-b border-destructive/40 bg-destructive/10 text-sm"
+      >
+        <AlertTriangle aria-hidden="true" className="w-4 h-4 text-destructive shrink-0" />
         <span className="flex-1 min-w-0 text-text-primary">
           Your 14-day grace window has ended. Ingestion is paused until you
           connect your X (Twitter) developer credentials.

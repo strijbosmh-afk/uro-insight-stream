@@ -153,20 +153,31 @@ export function SourcesTable() {
     onError: () => toast.error("Source test failed"),
   });
 
-  const onToggleFollow = async (s: Source) => {
-    const isSub = subSourceIds.has(s.id);
-    try {
-      if (isSub) {
-        await unfollowMut.mutateAsync({ handle: s.handle });
-        toast.success(`Unfollowed @${s.handle}`);
-      } else {
-        await followMut.mutateAsync({ handle: s.handle, needsLookup: false });
-        toast.success(`Now following @${s.handle}`);
+  const onToggleFollow = React.useCallback(
+    async (s: Source) => {
+      const isSub = subSourceIds.has(s.id);
+      try {
+        if (isSub) {
+          await unfollowMut.mutateAsync({ handle: s.handle });
+          toast.success(`Unfollowed @${s.handle}`);
+        } else {
+          await followMut.mutateAsync({ handle: s.handle, needsLookup: false });
+          toast.success(`Now following @${s.handle}`);
+        }
+      } catch {
+        toast.error("Couldn't update follow state");
       }
-    } catch {
-      toast.error("Couldn't update follow state");
-    }
-  };
+    },
+    [subSourceIds, followMut, unfollowMut],
+  );
+
+  const onToggleActive = React.useCallback(
+    (id: string, active: boolean) => toggleActive.mutate({ id, active }),
+    [toggleActive],
+  );
+  const onTest = React.useCallback((id: string) => test.mutate(id), [test]);
+  const followPending = followMut.isPending || unfollowMut.isPending;
+  const testPending = test.isPending;
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -278,133 +289,22 @@ export function SourcesTable() {
                   <TableRowSkeleton key={`sk-${i}`} cols={11} />
                 ))}
               {filtered.map((s) => (
-                <tr
+                <SourceRow
                   key={s.id}
-                  className={cn(
-                    "group border-t border-border hover:bg-panel-elevated/40 cursor-pointer transition-colors",
-                    !s.active && "opacity-60",
-                  )}
-                  onClick={() => setActiveId(s.id)}
-                >
-                  <td
-                    className="px-3 py-1.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <FollowToggle
-                      isFollowing={subSourceIds.has(s.id)}
-                      disabled={!user || followMut.isPending || unfollowMut.isPending}
-                      onClick={() => onToggleFollow(s)}
-                    />
-                  </td>
-                  <td
-                    className="px-3 py-1.5 font-mono text-accent whitespace-nowrap"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <HandleChip handle={s.handle} />
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{s.displayName}</td>
-                  <td className="px-3 py-1.5">
-                    <RoleBadge role={s.role} />
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <div className="flex flex-wrap gap-1">
-                      {s.specialty.slice(0, 3).map((sp) => (
-                        <span
-                          key={sp}
-                          className="px-1.5 h-4 inline-flex items-center text-[10px] rounded-sm bg-panel-elevated text-text-muted border border-border font-mono"
-                        >
-                          {sp}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-3 py-1.5">
-                    <div className="flex flex-wrap gap-1">
-                      {(s.listIds ?? []).map((id) => {
-                        const l = listsById[id];
-                        if (!l) return null;
-                        return (
-                          <span
-                            key={id}
-                            className="px-1.5 h-4 inline-flex items-center text-[10px] rounded-sm border font-mono"
-                            style={{
-                              borderColor: (l.color ?? "var(--border)") + "55",
-                              color: l.color ?? "var(--text-muted)",
-                              background: (l.color ?? "transparent") + "12",
-                            }}
-                          >
-                            {l.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-3 py-1.5 text-center">
-                    {s.verified ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-accent inline" />
-                    ) : (
-                      <span className="text-text-muted">—</span>
-                    )}
-                  </td>
-                  <td
-                    className="px-3 py-1.5 text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Switch
-                      checked={s.active}
-                      onCheckedChange={(v) =>
-                        toggleActive.mutate({ id: s.id, active: v })
-                      }
-                      disabled={!canEdit}
-                    />
-                  </td>
-                  <td className="px-3 py-1.5 text-right font-mono text-text-muted whitespace-nowrap">
-                    {formatLastSeen(s.lastSeenAt)}
-                  </td>
-                  <td className="px-3 py-1.5 text-right font-mono">
-                    {s.tweetCount ?? 0}
-                  </td>
-                  <td
-                    className="px-3 py-1.5 text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="inline-flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={() => test.mutate(s.id)}
-                        disabled={test.isPending || !canEdit}
-                      >
-                        <PlayCircle className="h-3 w-3 mr-1" />
-                        Test
-                      </Button>
-                      {canAdmin && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-text-muted hover:text-destructive"
-                              aria-label="More actions"
-                            >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setDeleteTarget(s)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              Delete source…
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  source={s}
+                  isFollowing={subSourceIds.has(s.id)}
+                  listsById={listsById}
+                  canEdit={canEdit}
+                  canAdmin={canAdmin}
+                  signedIn={!!user}
+                  followPending={followPending}
+                  testPending={testPending}
+                  onOpen={setActiveId}
+                  onToggleFollow={onToggleFollow}
+                  onToggleActive={onToggleActive}
+                  onTest={onTest}
+                  onDelete={setDeleteTarget}
+                />
               ))}
               {filtered.length === 0 && !isLoading && (
                 <tr>
@@ -467,6 +367,163 @@ export function SourcesTable() {
     </>
   );
 }
+
+interface SourceRowProps {
+  source: Source;
+  isFollowing: boolean;
+  listsById: Record<string, SourceList>;
+  canEdit: boolean;
+  canAdmin: boolean;
+  signedIn: boolean;
+  followPending: boolean;
+  testPending: boolean;
+  onOpen: (id: string) => void;
+  onToggleFollow: (s: Source) => void;
+  onToggleActive: (id: string, active: boolean) => void;
+  onTest: (id: string) => void;
+  onDelete: (s: Source) => void;
+}
+
+// Memoised: the table can hit hundreds of rows; without this every keystroke
+// in the search field re-rendered every surviving row including all child
+// lucide icons. Now only rows whose props changed re-render.
+const SourceRow = React.memo(function SourceRow({
+  source: s,
+  isFollowing,
+  listsById,
+  canEdit,
+  canAdmin,
+  signedIn,
+  followPending,
+  testPending,
+  onOpen,
+  onToggleFollow,
+  onToggleActive,
+  onTest,
+  onDelete,
+}: SourceRowProps) {
+  const specialty = React.useMemo(() => s.specialty.slice(0, 3), [s.specialty]);
+  return (
+    <tr
+      className={cn(
+        "group border-t border-border hover:bg-panel-elevated/40 cursor-pointer transition-colors",
+        !s.active && "opacity-60",
+      )}
+      onClick={() => onOpen(s.id)}
+    >
+      <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+        <FollowToggle
+          isFollowing={isFollowing}
+          disabled={!signedIn || followPending}
+          onClick={() => onToggleFollow(s)}
+        />
+      </td>
+      <td
+        className="px-3 py-1.5 font-mono text-accent whitespace-nowrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <HandleChip handle={s.handle} />
+      </td>
+      <td className="px-3 py-1.5 max-w-[220px] truncate" title={s.displayName}>
+        {s.displayName}
+      </td>
+      <td className="px-3 py-1.5">
+        <RoleBadge role={s.role} />
+      </td>
+      <td className="px-3 py-1.5">
+        <div className="flex flex-wrap gap-1">
+          {specialty.map((sp) => (
+            <span
+              key={sp}
+              className="px-1.5 h-4 inline-flex items-center text-[10px] rounded-sm bg-panel-elevated text-text-muted border border-border font-mono"
+            >
+              {sp}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-3 py-1.5">
+        <div className="flex flex-wrap gap-1">
+          {(s.listIds ?? []).map((id) => {
+            const l = listsById[id];
+            if (!l) return null;
+            return (
+              <span
+                key={id}
+                className="px-1.5 h-4 inline-flex items-center text-[10px] rounded-sm border font-mono"
+                style={{
+                  borderColor: (l.color ?? "var(--border)") + "55",
+                  color: l.color ?? "var(--text-muted)",
+                  background: (l.color ?? "transparent") + "12",
+                }}
+              >
+                {l.name}
+              </span>
+            );
+          })}
+        </div>
+      </td>
+      <td className="px-3 py-1.5 text-center">
+        {s.verified ? (
+          <CheckCircle2
+            aria-hidden="true"
+            className="h-3.5 w-3.5 text-accent inline"
+          />
+        ) : (
+          <span className="text-text-muted">—</span>
+        )}
+      </td>
+      <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <Switch
+          checked={s.active}
+          onCheckedChange={(v) => onToggleActive(s.id, v)}
+          disabled={!canEdit}
+        />
+      </td>
+      <td className="px-3 py-1.5 text-right font-mono text-text-muted whitespace-nowrap">
+        {formatLastSeen(s.lastSeenAt)}
+      </td>
+      <td className="px-3 py-1.5 text-right font-mono">{s.tweetCount ?? 0}</td>
+      <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="inline-flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => onTest(s.id)}
+            disabled={testPending || !canEdit}
+          >
+            <PlayCircle aria-hidden="true" className="h-3 w-3 mr-1" />
+            Test
+          </Button>
+          {canAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-text-muted hover:text-destructive"
+                  aria-label="More actions"
+                >
+                  <MoreHorizontal aria-hidden="true" className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onDelete(s)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 aria-hidden="true" className="h-3.5 w-3.5 mr-2" />
+                  Delete source…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 function FollowToggle({
   isFollowing,

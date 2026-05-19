@@ -102,25 +102,39 @@ export function ForYouTab({ filters }: { filters: DiscoverFilterState }) {
     return list;
   }, [candidatesQuery.data, filters]);
 
-  const toggle = (handle: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(handle)) next.delete(handle);
-      else next.add(handle);
-      return next;
-    });
+  const toggle = React.useCallback(
+    (handle: string) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(handle)) next.delete(handle);
+        else next.add(handle);
+        return next;
+      }),
+    [],
+  );
 
-  const handleFollow = async (handle: string) => {
-    try {
-      await followMut.mutateAsync({ handle, needsLookup: true });
-      toast.success(`Following @${handle}`);
-      qc.invalidateQueries({ queryKey: ["source-candidates"] });
-    } catch (err) {
-      toast.error("Couldn't follow", {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
+  const handleFollow = React.useCallback(
+    async (handle: string) => {
+      try {
+        await followMut.mutateAsync({ handle, needsLookup: true });
+        toast.success(`Following @${handle}`);
+        qc.invalidateQueries({ queryKey: ["source-candidates"] });
+      } catch (err) {
+        toast.error("Couldn't follow", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [followMut, qc],
+  );
+
+  const handleDismiss = React.useCallback(
+    (handle: string) => dismissMut.mutate(handle),
+    [dismissMut],
+  );
+
+  const isFollowPending = followMut.isPending;
+  const isDismissPending = dismissMut.isPending;
 
   if (authLoading) {
     return (
@@ -150,78 +164,117 @@ export function ForYouTab({ filters }: { filters: DiscoverFilterState }) {
       ) : (
         <ul className="divide-y divide-border">
           {candidates.map((c) => (
-            <li
+            <CandidateRow
               key={c.handle}
-              className="flex items-start gap-3 px-3 py-3 hover:bg-panel-elevated/40 transition-colors"
-            >
-              <Checkbox
-                checked={selected.has(c.handle)}
-                onCheckedChange={() => toggle(c.handle)}
-                className="mt-1"
-                aria-label={`Select @${c.handle}`}
-              />
-              <Link to="/sources/$handle" params={{ handle: c.handle }} className="shrink-0">
-                {c.avatar_url ? (
-                  <img src={c.avatar_url} alt="" loading="lazy"
-                    className="w-10 h-10 rounded-full bg-panel-elevated hover:ring-2 hover:ring-accent/40 transition" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-panel-elevated" />
-                )}
-              </Link>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Link
-                    to="/sources/$handle"
-                    params={{ handle: c.handle }}
-                    className="font-medium text-text-primary truncate hover:text-accent hover:underline"
-                  >
-                    {c.display_name || `@${c.handle}`}
-                  </Link>
-                  {c.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
-                  <Link
-                    to="/sources/$handle"
-                    params={{ handle: c.handle }}
-                    className="text-text-muted text-sm hover:text-accent"
-                  >
-                    @{c.handle}
-                  </Link>
-                </div>
-                {c.bio && (
-                  <p className="text-sm text-text-muted mt-0.5 line-clamp-2">{c.bio}</p>
-                )}
-                <div className="flex items-center gap-3 mt-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" /> {fmt(c.followers_count)}
-                  </span>
-                  <span>{c.reply_count} rpl</span>
-                  <span>{c.quote_count} qt</span>
-                  <span>{c.mention_count} mn</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => dismissMut.mutate(c.handle)}
-                  disabled={dismissMut.isPending}
-                  aria-label={`Dismiss @${c.handle}`}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleFollow(c.handle)}
-                  disabled={followMut.isPending}
-                >
-                  <UserPlus className="w-4 h-4 mr-1" /> Follow
-                </Button>
-              </div>
-            </li>
+              candidate={c}
+              selected={selected.has(c.handle)}
+              onToggle={toggle}
+              onDismiss={handleDismiss}
+              onFollow={handleFollow}
+              isFollowPending={isFollowPending}
+              isDismissPending={isDismissPending}
+            />
           ))}
         </ul>
       )}
     </Panel>
   );
 }
+
+interface CandidateRowProps {
+  candidate: Candidate;
+  selected: boolean;
+  onToggle: (handle: string) => void;
+  onDismiss: (handle: string) => void;
+  onFollow: (handle: string) => void;
+  isFollowPending: boolean;
+  isDismissPending: boolean;
+}
+
+// React.memo: ~60 rows in the candidates list; without memo, every parent
+// re-render (search keystrokes, checkbox toggles, mutations resolving)
+// re-rendered all rows including the lucide icons and Link components.
+const CandidateRow = React.memo(function CandidateRow({
+  candidate: c,
+  selected,
+  onToggle,
+  onDismiss,
+  onFollow,
+  isFollowPending,
+  isDismissPending,
+}: CandidateRowProps) {
+  return (
+    <li className="flex items-start gap-3 px-3 py-3 hover:bg-panel-elevated/40 transition-colors">
+      <Checkbox
+        checked={selected}
+        onCheckedChange={() => onToggle(c.handle)}
+        className="mt-1"
+        aria-label={`Select @${c.handle}`}
+      />
+      <Link to="/sources/$handle" params={{ handle: c.handle }} className="shrink-0">
+        {c.avatar_url ? (
+          <img
+            src={c.avatar_url}
+            alt=""
+            loading="lazy"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-full bg-panel-elevated hover:ring-2 hover:ring-accent/40 transition"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-panel-elevated" />
+        )}
+      </Link>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Link
+            to="/sources/$handle"
+            params={{ handle: c.handle }}
+            className="font-medium text-text-primary truncate hover:text-accent hover:underline"
+          >
+            {c.display_name || `@${c.handle}`}
+          </Link>
+          {c.verified && (
+            <BadgeCheck aria-hidden="true" className="w-3.5 h-3.5 text-accent shrink-0" />
+          )}
+          <Link
+            to="/sources/$handle"
+            params={{ handle: c.handle }}
+            className="text-text-muted text-sm hover:text-accent"
+          >
+            @{c.handle}
+          </Link>
+        </div>
+        {c.bio && <p className="text-sm text-text-muted mt-0.5 line-clamp-2">{c.bio}</p>}
+        <div className="flex items-center gap-3 mt-1 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="flex items-center gap-1">
+            <Users aria-hidden="true" className="w-3 h-3" /> {fmt(c.followers_count)}
+          </span>
+          <span>{c.reply_count} rpl</span>
+          <span>{c.quote_count} qt</span>
+          <span>{c.mention_count} mn</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onDismiss(c.handle)}
+          disabled={isDismissPending}
+          aria-label={`Dismiss @${c.handle}`}
+        >
+          <X aria-hidden="true" className="w-4 h-4" />
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => onFollow(c.handle)}
+          disabled={isFollowPending}
+        >
+          <UserPlus aria-hidden="true" className="w-4 h-4 mr-1" /> Follow
+        </Button>
+      </div>
+    </li>
+  );
+});
 
 export default ForYouTab;

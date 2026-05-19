@@ -41,14 +41,16 @@ export function ReactionsBar({
                 type="button"
                 onClick={() => onReact(emoji as Emoji)}
                 className={cn(
-                  "text-[11px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 transition-colors",
+                  "text-[11px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                   mine
                     ? "border-accent/60 bg-accent/15 text-text-primary"
-                    : "border-border bg-panel-elevated/60 text-text-muted hover:text-text-primary",
+                    : "border-border bg-panel-elevated/60 text-text-primary/90 hover:text-text-primary",
                 )}
+                aria-label={`React with ${emoji}, ${ids.length} ${ids.length === 1 ? "reaction" : "reactions"}`}
+                aria-pressed={mine}
               >
-                <span>{emoji}</span>
-                <span>{ids.length}</span>
+                <span aria-hidden="true">{emoji}</span>
+                <span className="tabular-nums">{ids.length}</span>
               </button>
             </TooltipTrigger>
             <TooltipContent>

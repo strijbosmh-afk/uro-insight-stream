@@ -53,7 +53,6 @@ export function MessageItem({
   onDelete,
   onReact,
   onJumpTo,
-  registerRef,
 }: {
   msg: Message;
   parent: Message | null;
@@ -69,13 +68,11 @@ export function MessageItem({
   onDelete: () => void;
   onReact: (e: Emoji) => void;
   onJumpTo: (id: string) => void;
-  registerRef: (el: HTMLDivElement | null) => void;
 }) {
   const allRead = totalOtherAdmins > 0 && readers.length >= totalOtherAdmins;
   const someRead = readers.length > 0;
   return (
     <div
-      ref={registerRef}
       className={cn(
         "group flex flex-col rounded-md transition-shadow",
         isOwn ? "items-end" : "items-start",

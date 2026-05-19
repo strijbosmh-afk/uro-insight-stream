@@ -61,7 +61,19 @@ export function NotificationsSettings() {
   const update = <K extends keyof UserPreferences>(k: K, v: UserPreferences[K]) =>
     setDraft((d) => (d ? { ...d, [k]: v } : d));
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(prefs);
+  // Shallow per-field compare; UserPreferences is a flat object of primitive
+  // values. Avoids the double JSON.stringify allocation on every render.
+  const dirty = React.useMemo(() => {
+    if (!draft || !prefs) return false;
+    const keys = new Set([
+      ...Object.keys(draft),
+      ...Object.keys(prefs),
+    ]) as Set<keyof UserPreferences>;
+    for (const k of keys) {
+      if (draft[k] !== prefs[k]) return true;
+    }
+    return false;
+  }, [draft, prefs]);
 
   const save = async () => {
     if (!user || !draft) return;

@@ -11,6 +11,7 @@ import { feedService } from "@/services/feedService";
 import { ShareToXButton } from "@/components/x/ShareToXButton";
 import { NotificationsBell } from "@/components/watchlists/NotificationsBell";
 import { useBookmarks, useHasRecentBookmarks } from "@/hooks/useBookmarks";
+import { useClock } from "@/hooks/useClock";
 import { AskUroFeedDialog } from "@/components/ask/AskUroFeedDialog";
 import { Sparkles } from "lucide-react";
 import {
@@ -83,16 +84,6 @@ function useBreadcrumb() {
       return { label, to };
     }),
   ];
-}
-
-function useClock() {
-  const [now, setNow] = React.useState<Date | null>(null);
-  React.useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
 }
 
 function fmtTime(d: Date | null) {

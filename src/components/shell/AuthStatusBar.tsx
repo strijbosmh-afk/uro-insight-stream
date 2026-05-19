@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useClock } from "@/hooks/useClock";
 
 /**
  * Slim status bar for the /auth page. Same visual language as the main
@@ -17,21 +18,13 @@ export function AuthStatusBar({
     | "resetting"
     | "requesting-access";
 }) {
-  const [time, setTime] = React.useState<string>("--:--:--");
-  React.useEffect(() => {
-    const tick = () =>
-      setTime(
-        new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        }),
-      );
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useClock();
+  const time = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
   const stateTone =
     state === "ready" ? "text-success" : "text-warning";

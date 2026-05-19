@@ -4,16 +4,7 @@ import { useLiveKpis } from "@/hooks/useLiveKpis";
 import { feedBackend } from "@/services/feedService";
 import { getActiveUserCount } from "@/serverFns/active-users";
 import { cn } from "@/lib/utils";
-
-function useClock() {
-  const [now, setNow] = React.useState<Date | null>(null);
-  React.useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
+import { useClock } from "@/hooks/useClock";
 
 function Cell({ children }: { children: React.ReactNode }) {
   return <span className="flex items-center gap-1.5">{children}</span>;
@@ -68,14 +59,12 @@ export function StatusBar() {
     queryFn: () => getActiveUserCount(),
     refetchInterval: 30_000,
   });
-  const time = now
-    ? now.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      })
-    : "--:--:--";
+  const time = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
   return (
     <footer className="h-6 shrink-0 flex items-center gap-3 px-3 border-t border-border bg-panel text-[10px] font-mono uppercase tracking-wider">

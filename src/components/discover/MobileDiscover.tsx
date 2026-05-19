@@ -95,11 +95,14 @@ export function MobileDiscover({ tab, onTabChange }: Props) {
                 type="button"
                 onClick={() => onTabChange(t.v)}
                 className={
-                  "shrink-0 h-9 px-4 rounded-full border text-[13px] font-medium transition-colors " +
+                  // h-11 (44px) hits the iOS minimum tap-target. The chip
+                  // still feels tight via min-w-11 + horizontal scroll.
+                  "shrink-0 h-11 min-w-11 px-4 rounded-full border text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 " +
                   (active
                     ? "bg-accent border-accent text-accent-foreground"
                     : "bg-panel border-border text-text-primary")
                 }
+                aria-pressed={active}
               >
                 {t.label}
               </button>

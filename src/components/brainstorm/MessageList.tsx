@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Lightbulb } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { type Emoji, type Message, type Reaction, type ReadState } from "./types";
@@ -20,12 +21,18 @@ function dayLabel(iso: string): string {
 function EmptyState() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center text-text-muted gap-2 py-12">
-      <Lightbulb className="w-8 h-8 text-accent" />
+      <Lightbulb aria-hidden="true" className="w-8 h-8 text-accent" />
       <p className="text-sm font-medium text-text-primary">No ideas yet.</p>
       <p className="text-xs">Start the conversation — what should we improve next?</p>
     </div>
   );
 }
+
+// Rough first guesses for virtualizer pre-allocation; the real height
+// gets measured on mount via `measureElement` so initial scroll position
+// settles within ~1 frame.
+const ESTIMATED_DATE_PX = 28;
+const ESTIMATED_MSG_PX = 76;
 
 export const MessageList = React.forwardRef<
   MessageListHandle,
@@ -61,33 +68,12 @@ export const MessageList = React.forwardRef<
   ref,
 ) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const isNearBottomRef = React.useRef(true);
-
-  const scrollToMessage = React.useCallback((id: string) => {
-    const el = messageRefs.current[id];
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("ring-2", "ring-accent");
-    setTimeout(() => el.classList.remove("ring-2", "ring-accent"), 1500);
-  }, []);
-
-  React.useImperativeHandle(ref, () => ({ scrollToMessage }), [scrollToMessage]);
-
-  const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-  };
-
-  // Auto-scroll if near bottom
-  React.useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (isNearBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [messages]);
+  // Track the message whose row should briefly ring-highlight after a jump.
+  // Replaces the previous classList mutation, which assumed the target row
+  // was mounted — incompatible with virtualization where off-screen rows
+  // don't exist yet.
+  const [highlightedId, setHighlightedId] = React.useState<string | null>(null);
 
   const filtered = React.useMemo(() => {
     if (!search.trim()) return messages;
@@ -99,17 +85,39 @@ export const MessageList = React.forwardRef<
     );
   }, [messages, search]);
 
-  const items = React.useMemo(() => {
-    const out: Array<
-      | { type: "date"; key: string; label: string }
-      | {
-          type: "msg";
-          key: string;
-          msg: Message;
-          showHeader: boolean;
-          parent: Message | null;
-        }
-    > = [];
+  // O(1) parent-message lookup. Previous version did messages.find() inside
+  // the items loop — O(n) per message, O(n²) overall — visible jank around
+  // 200+ messages.
+  const messagesById = React.useMemo(() => {
+    const m = new Map<string, Message>();
+    for (const msg of messages) m.set(msg.id, msg);
+    return m;
+  }, [messages]);
+
+  // O(1) reactions-per-message lookup. Previous version filtered the
+  // reactions array inside every rendered MessageItem prop.
+  const reactionsByMsgId = React.useMemo(() => {
+    const m = new Map<string, Reaction[]>();
+    for (const r of reactions) {
+      const arr = m.get(r.message_id);
+      if (arr) arr.push(r);
+      else m.set(r.message_id, [r]);
+    }
+    return m;
+  }, [reactions]);
+
+  type Item =
+    | { type: "date"; key: string; label: string }
+    | {
+        type: "msg";
+        key: string;
+        msg: Message;
+        showHeader: boolean;
+        parent: Message | null;
+      };
+
+  const items = React.useMemo<Item[]>(() => {
+    const out: Item[] = [];
     let lastDay = "";
     let prev: Message | null = null;
     for (const m of filtered) {
@@ -123,56 +131,129 @@ export const MessageList = React.forwardRef<
         !prev ||
         prev.user_id !== m.user_id ||
         new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 5 * 60_000;
-      const parent = m.reply_to_id
-        ? messages.find((x) => x.id === m.reply_to_id) ?? null
-        : null;
+      const parent = m.reply_to_id ? messagesById.get(m.reply_to_id) ?? null : null;
       out.push({ type: "msg", key: m.id, msg: m, showHeader, parent });
       prev = m;
     }
     return out;
-  }, [filtered, messages]);
+  }, [filtered, messagesById]);
+
+  const EMPTY_REACTIONS: Reaction[] = React.useMemo(() => [], []);
+
+  // O(1) index lookup so scrollToMessage can hand the virtualizer an index.
+  const indexByMsgId = React.useMemo(() => {
+    const m = new Map<string, number>();
+    items.forEach((it, idx) => {
+      if (it.type === "msg") m.set(it.msg.id, idx);
+    });
+    return m;
+  }, [items]);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => (items[i]?.type === "date" ? ESTIMATED_DATE_PX : ESTIMATED_MSG_PX),
+    overscan: 8,
+    getItemKey: (i) => items[i]?.key ?? i,
+  });
+
+  const scrollToMessage = React.useCallback(
+    (id: string) => {
+      const idx = indexByMsgId.get(id);
+      if (idx == null) return;
+      virtualizer.scrollToIndex(idx, { align: "center" });
+      setHighlightedId(id);
+      window.setTimeout(() => {
+        setHighlightedId((cur) => (cur === id ? null : cur));
+      }, 1500);
+    },
+    [indexByMsgId, virtualizer],
+  );
+
+  React.useImperativeHandle(ref, () => ({ scrollToMessage }), [scrollToMessage]);
+
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  // Auto-scroll to newest message if the user was already near the bottom.
+  React.useEffect(() => {
+    if (items.length === 0) return;
+    if (!isNearBottomRef.current) return;
+    virtualizer.scrollToIndex(items.length - 1, { align: "end" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on items length change
+  }, [items.length]);
+
+  const totalSize = virtualizer.getTotalSize();
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <div
       ref={scrollRef}
       onScroll={onScroll}
-      className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
+      className="flex-1 overflow-y-auto ios-scroll px-4 py-3"
     >
       {loading ? (
         <div className="text-text-muted text-sm">Loading messages…</div>
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        items.map((it) =>
-          it.type === "date" ? (
-            <div key={it.key} className="flex justify-center my-3">
-              <span className="text-[10px] uppercase tracking-wider font-mono text-text-muted bg-panel-elevated/60 border border-border px-2 py-0.5 rounded-full">
-                {it.label}
-              </span>
-            </div>
-          ) : (
-            <MessageItem
-              key={it.key}
-              msg={it.msg}
-              parent={it.parent}
-              showHeader={it.showHeader}
-              isOwn={it.msg.user_id === currentUserId}
-              currentUserId={currentUserId}
-              reactions={reactions.filter((r) => r.message_id === it.msg.id)}
-              readers={getReadersFor(it.msg)}
-              totalOtherAdmins={totalOtherAdmins}
-              displayNameFor={displayNameFor}
-              onReply={() => onReply(it.msg)}
-              onEdit={() => onEdit(it.msg)}
-              onDelete={() => onDelete(it.msg)}
-              onReact={(e) => onReact(it.msg, e)}
-              onJumpTo={(id) => scrollToMessage(id)}
-              registerRef={(el) => {
-                messageRefs.current[it.msg.id] = el;
-              }}
-            />
-          ),
-        )
+        <div style={{ height: totalSize, position: "relative", width: "100%" }}>
+          {virtualItems.map((vi) => {
+            const it = items[vi.index];
+            if (!it) return null;
+            return (
+              <div
+                key={vi.key}
+                ref={virtualizer.measureElement}
+                data-index={vi.index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${vi.start}px)`,
+                  paddingBottom: 4,
+                }}
+              >
+                {it.type === "date" ? (
+                  <div className="flex justify-center my-3">
+                    <span className="text-[10px] uppercase tracking-wider font-mono text-text-muted bg-panel-elevated/60 border border-border px-2 py-0.5 rounded-full">
+                      {it.label}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className={
+                      highlightedId === it.msg.id
+                        ? "ring-2 ring-accent rounded-[3px] transition-shadow"
+                        : ""
+                    }
+                  >
+                    <MessageItem
+                      msg={it.msg}
+                      parent={it.parent}
+                      showHeader={it.showHeader}
+                      isOwn={it.msg.user_id === currentUserId}
+                      currentUserId={currentUserId}
+                      reactions={reactionsByMsgId.get(it.msg.id) ?? EMPTY_REACTIONS}
+                      readers={getReadersFor(it.msg)}
+                      totalOtherAdmins={totalOtherAdmins}
+                      displayNameFor={displayNameFor}
+                      onReply={() => onReply(it.msg)}
+                      onEdit={() => onEdit(it.msg)}
+                      onDelete={() => onDelete(it.msg)}
+                      onReact={(e) => onReact(it.msg, e)}
+                      onJumpTo={(id) => scrollToMessage(id)}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

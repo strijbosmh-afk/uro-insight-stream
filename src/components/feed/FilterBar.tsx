@@ -10,12 +10,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
+// Lazy: react-day-picker is ~70KB gzip. Only loads when a user opens the
+// date popover, not on every Feed mount. Suspense fallback is a thin loader
+// so the popover doesn't blink empty.
+const Calendar = React.lazy(() =>
+  import("@/components/ui/calendar").then((m) => ({ default: m.Calendar })),
+);
 import { cn } from "@/lib/utils";
 import { feedService } from "@/services/feedService";
 import { useFeedFilters } from "./FeedFilterContext";
@@ -25,7 +31,7 @@ const ALL = "__all__";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[9px] font-mono uppercase tracking-[0.14em] text-text-muted">
+    <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-text-muted">
       {children}
     </span>
   );
@@ -54,13 +60,21 @@ function DateField({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : null)}
-          initialFocus
-          className={cn("p-3 pointer-events-auto")}
-        />
+        <React.Suspense
+          fallback={
+            <div className="p-6 text-[11px] font-mono text-text-muted">
+              Loading…
+            </div>
+          }
+        >
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : null)}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </React.Suspense>
         {date && (
           <div className="border-t border-border p-2">
             <Button

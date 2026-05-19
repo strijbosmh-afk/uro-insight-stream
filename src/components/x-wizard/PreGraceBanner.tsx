@@ -78,12 +78,14 @@ export function PreGraceBanner() {
   return (
     <>
       <div
+        role={tier === "urgent" ? "alert" : "status"}
+        aria-live={tier === "urgent" ? "assertive" : "polite"}
         className={`flex items-center gap-3 px-3 py-2 border-b text-sm ${styles}`}
       >
         {tier === "info" ? (
-          <Info className={`w-4 h-4 shrink-0 ${iconColor}`} />
+          <Info aria-hidden="true" className={`w-4 h-4 shrink-0 ${iconColor}`} />
         ) : (
-          <AlertTriangle className={`w-4 h-4 shrink-0 ${iconColor}`} />
+          <AlertTriangle aria-hidden="true" className={`w-4 h-4 shrink-0 ${iconColor}`} />
         )}
         <span className="flex-1 min-w-0 text-text-primary">{message}</span>
         <Button size="sm" onClick={() => setOpen(true)}>
@@ -93,9 +95,10 @@ export function PreGraceBanner() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="text-text-muted hover:text-text-primary p-1 rounded-[2px]"
+          title="Dismiss"
+          className="text-text-muted hover:text-text-primary p-1 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
         >
-          <X className="w-3.5 h-3.5" />
+          <X aria-hidden="true" className="w-3.5 h-3.5" />
         </button>
       </div>
       <XConnectWizard open={open} onOpenChange={setOpen} />

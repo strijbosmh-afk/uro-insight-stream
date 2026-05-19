@@ -76,9 +76,13 @@ const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 );
 SheetHeader.displayName = "SheetHeader";
 
-const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+const SheetFooter = ({ className, style, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  // iOS: bottom-anchored footers can sit under the home indicator. Adding
+  // env(safe-area-inset-bottom) pushes the action row above it. Merged
+  // with caller-provided style so existing call sites keep working.
   <div
     className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
+    style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)", ...style }}
     {...props}
   />
 );
