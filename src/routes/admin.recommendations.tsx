@@ -5,6 +5,7 @@ import { Loader2, Upload, Trash2, Plus, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Panel } from "@/components/shell/Panel";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -492,8 +493,14 @@ function Matrix({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-text-muted text-sm">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+      <div className="overflow-auto border border-border rounded-[3px]">
+        <table className="min-w-full text-[12px]">
+          <tbody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <TableRowSkeleton key={i} cols={5} />
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }

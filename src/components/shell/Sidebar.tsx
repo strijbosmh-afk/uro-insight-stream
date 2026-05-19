@@ -179,8 +179,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   <li key={item.to}>
                     <Link
                       to={item.to}
+                      aria-label={collapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                        "relative flex items-center gap-3 h-8 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                         collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
                         active
                           ? "text-text-primary bg-panel-elevated"
@@ -190,10 +193,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       {active && (
                         <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
                       )}
-                      <Icon className="w-4 h-4 shrink-0" />
+                      <Icon aria-hidden="true" className="w-4 h-4 shrink-0" />
                       {!collapsed && <span className="truncate flex-1">{item.label}</span>}
                       {isBrainstorm && unread > 0 && (
                         <span
+                          aria-label={`${unread} unread`}
                           className={cn(
                             "min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-[10px] font-semibold text-accent-foreground flex items-center justify-center",
                             collapsed && "absolute top-1 right-1 min-w-[14px] h-[14px] text-[9px]",
@@ -217,8 +221,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <li>
             <Link
               to="/help/instructions"
+              aria-label={collapsed ? "Help" : undefined}
+              title={collapsed ? "Help" : undefined}
               className={cn(
-                "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                "relative flex items-center gap-3 h-8 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                 collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
                 pathname === "/help/instructions"
                   ? "text-text-primary bg-panel-elevated"
@@ -228,15 +234,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {pathname === "/help/instructions" && (
                 <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
               )}
-              <BookOpen className="w-4 h-4 shrink-0" />
+              <BookOpen aria-hidden="true" className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="truncate">Help</span>}
             </Link>
           </li>
           <li>
             <Link
               to="/settings"
+              search={{ tab: undefined }}
+              aria-label={collapsed ? "Settings" : undefined}
+              title={collapsed ? "Settings" : undefined}
               className={cn(
-                "relative flex items-center gap-3 h-8 text-[13px] transition-colors",
+                "relative flex items-center gap-3 h-8 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                 collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
                 pathname === "/settings" || pathname.startsWith("/settings/")
                   ? "text-text-primary bg-panel-elevated"
@@ -246,7 +255,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {(pathname === "/settings" || pathname.startsWith("/settings/")) && (
                 <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent" />
               )}
-              <Settings className="w-4 h-4 shrink-0" />
+              <Settings aria-hidden="true" className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="truncate">Settings</span>}
             </Link>
           </li>
@@ -254,12 +263,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               type="button"
               onClick={() => setContactOpen(true)}
+              aria-label={collapsed ? "Contact" : undefined}
+              title={collapsed ? "Contact" : undefined}
               className={cn(
-                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
+                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                 collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
               )}
             >
-              <AtSign className="w-4 h-4 shrink-0" />
+              <AtSign aria-hidden="true" className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="truncate">Contact</span>}
             </button>
           </li>
@@ -269,12 +280,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => {
                 void signOut();
               }}
+              aria-label={collapsed ? "Sign out" : undefined}
+              title={collapsed ? "Sign out" : undefined}
               className={cn(
-                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left",
+                "relative w-full flex items-center gap-3 h-8 text-[13px] text-text-muted hover:text-text-primary hover:bg-panel-elevated/60 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
                 collapsed ? "justify-center mx-2 rounded-[3px]" : "px-4",
               )}
             >
-              <LogOut className="w-4 h-4 shrink-0" />
+              <LogOut aria-hidden="true" className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="truncate">Sign out</span>}
             </button>
           </li>
@@ -285,16 +298,19 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <button
         type="button"
         onClick={onToggle}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         className={cn(
-          "h-8 flex items-center gap-2 border-t border-border text-[11px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary hover:bg-panel-elevated transition-colors",
+          "h-8 flex items-center gap-2 border-t border-border text-[11px] font-mono uppercase tracking-wider text-text-muted hover:text-text-primary hover:bg-panel-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
           collapsed ? "justify-center" : "px-4",
         )}
       >
         {collapsed ? (
-          <ChevronsRight className="w-3.5 h-3.5" />
+          <ChevronsRight aria-hidden="true" className="w-3.5 h-3.5" />
         ) : (
           <>
-            <ChevronsLeft className="w-3.5 h-3.5" />
+            <ChevronsLeft aria-hidden="true" className="w-3.5 h-3.5" />
             <span>collapse</span>
           </>
         )}

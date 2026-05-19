@@ -4,8 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Compass, Mail, PenSquare, BookOpen, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
-import { DigestWizard } from "@/components/digests/DigestWizard";
 import { ComposeTweetDialog } from "@/components/x/ComposeTweetDialog";
+
+// Lazy: heavy wizard, only loads on Quick-Start click.
+const DigestWizard = React.lazy(() =>
+  import("@/components/digests/DigestWizard").then((m) => ({
+    default: m.DigestWizard,
+  })),
+);
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -164,14 +170,16 @@ export function QuickStartPanel() {
       </div>
 
       {digestOpen && (
-        <DigestWizard
-          digestId={null}
-          initialPreset="specialty"
-          onClose={() => {
-            setDigestOpen(false);
-            void dismiss();
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <DigestWizard
+            digestId={null}
+            initialPreset="specialty"
+            onClose={() => {
+              setDigestOpen(false);
+              void dismiss();
+            }}
+          />
+        </React.Suspense>
       )}
 
       <ComposeTweetDialog

@@ -20,9 +20,13 @@ import {
   deleteDigest,
   sendDigestNow,
 } from "@/serverFns/digests";
-import { DigestWizard } from "./DigestWizard";
 import { MobileDigestsList } from "./MobileDigestsList";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Lazy: 1262-line component, only needed when the user creates/edits a digest.
+const DigestWizard = React.lazy(() =>
+  import("./DigestWizard").then((m) => ({ default: m.DigestWizard })),
+);
 
 function fmt(iso: string | null) {
   if (!iso) return "—";
@@ -238,14 +242,16 @@ function DesktopDigestsList() {
       </Panel>
 
       {wizardOpen && (
-        <DigestWizard
-          digestId={editingId}
-          onClose={(saved) => {
-            setWizardOpen(false);
-            setEditingId(null);
-            if (saved) qc.invalidateQueries({ queryKey: ["user-digests"] });
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <DigestWizard
+            digestId={editingId}
+            onClose={(saved) => {
+              setWizardOpen(false);
+              setEditingId(null);
+              if (saved) qc.invalidateQueries({ queryKey: ["user-digests"] });
+            }}
+          />
+        </React.Suspense>
       )}
     </div>
   );

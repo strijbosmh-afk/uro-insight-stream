@@ -20,6 +20,7 @@ import {
   ServerCog,
 } from "lucide-react";
 import { Panel } from "@/components/shell/Panel";
+import { EmptyState as ShellEmptyState } from "@/components/shell/EmptyState";
 import { HandleChip } from "@/components/handles/HandleChip";
 import { QuickStartPanel } from "@/components/dashboard/QuickStartPanel";
 import { FollowsImportNudge } from "@/components/dashboard/FollowsImportNudge";
@@ -377,7 +378,12 @@ export function Dashboard() {
             }
           >
             {liveSessions.length === 0 ? (
-              <EmptyState text="No sessions live at this minute." />
+              <ShellEmptyState
+                icon={Radio}
+                caption="No sessions live at this minute."
+                compact
+                action={{ label: "Open feed", href: "/feed", icon: ArrowRight }}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {liveSessions.map((s) => (
@@ -408,7 +414,13 @@ export function Dashboard() {
               {cronHealth.map((job) => (
                 <CronHealthRow key={job.jobname} job={job} />
               ))}
-              {cronHealth.length === 0 && <EmptyState text="No cron health data yet." />}
+              {cronHealth.length === 0 && (
+                <ShellEmptyState
+                  icon={ServerCog}
+                  caption="No cron health data yet."
+                  compact
+                />
+              )}
             </div>
           </Panel>
         </div>
@@ -423,7 +435,11 @@ export function Dashboard() {
           }
         >
           {mostDiscussed.length === 0 ? (
-            <EmptyState text="Not enough chatter yet." />
+            <ShellEmptyState
+              icon={Flame}
+              caption="Not enough chatter yet."
+              compact
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
               {mostDiscussed.map(({ session, count }) => (
@@ -648,14 +664,6 @@ function ActivityRow({
         </div>
       </div>
     </Link>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="text-center py-8 text-[12px] font-mono text-text-muted">
-      {text}
-    </div>
   );
 }
 

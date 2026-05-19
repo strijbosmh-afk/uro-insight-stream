@@ -8,7 +8,6 @@ import * as React from "react";
 
 export type Variant =
   | "developer-account"
-  | "tier-picker"
   | "project-and-app"
   | "user-auth-settings"
   | "keys-and-tokens"
@@ -66,50 +65,15 @@ function renderVariant(v: Variant): React.ReactNode {
             Apply for a developer account
           </text>
           <text x="20" y="70" fill={textMuted} fontSize="10">
-            Free tier · ~2 minutes · email verification
+            ~2 minutes · email verification
           </text>
           <rect x="20" y="90" width="120" height="32" rx="4" fill={accent} />
           <text x="80" y="110" fill="var(--accent-foreground,#000)" fontSize="11" textAnchor="middle" fontWeight="600">
-            Sign up free
+            Sign up
           </text>
           <rect x="20" y="140" width="280" height="40" rx="4" fill={panelEl} stroke={border} />
           <text x="30" y="158" fill={textMuted} fontSize="9">Tell us about your use case</text>
           <text x="30" y="172" fill={textMuted} fontSize="9">e.g. "Personal project to follow medical sources"</text>
-        </>
-      );
-    case "tier-picker":
-      return (
-        <>
-          {[
-            { x: 15, label: "Free", price: "$0", reads: "1 / 15 min" },
-            { x: 115, label: "Basic", price: "$200/mo", reads: "10K / mo" },
-            { x: 215, label: "Pro", price: "$5K/mo", reads: "1M / mo" },
-          ].map((t, i) => (
-            <g key={i}>
-              <rect
-                x={t.x}
-                y="40"
-                width="90"
-                height="140"
-                rx="4"
-                fill={panelEl}
-                stroke={i === 0 ? accent : border}
-                strokeWidth={i === 0 ? "2" : "1"}
-              />
-              <text x={t.x + 45} y="62" fill={textPri} fontSize="12" textAnchor="middle" fontWeight="600">
-                {t.label}
-              </text>
-              <text x={t.x + 45} y="82" fill={accent} fontSize="11" textAnchor="middle">
-                {t.price}
-              </text>
-              <text x={t.x + 45} y="120" fill={textMuted} fontSize="9" textAnchor="middle">
-                {t.reads}
-              </text>
-            </g>
-          ))}
-          <text x="60" y="155" fill={success} fontSize="9" textAnchor="middle">
-            ✓ enough for personal
-          </text>
         </>
       );
     case "project-and-app":

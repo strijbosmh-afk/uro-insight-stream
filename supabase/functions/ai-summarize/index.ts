@@ -303,8 +303,7 @@ async function passThroughError(
   if (resp.status === 402) {
     return jsonResponse(
       {
-        error:
-          "AI credits exhausted. Add credits in Lovable workspace settings.",
+        error: "AI service is temporarily unavailable. Please try again later.",
       },
       402,
     );

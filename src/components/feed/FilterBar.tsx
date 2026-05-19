@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { feedService } from "@/services/feedService";
 import { useFeedFilters } from "./FeedFilterContext";
+import { SavedViewsMenu } from "./SavedViewsMenu";
 
 const ALL = "__all__";
 
@@ -247,17 +248,20 @@ export function FilterBar() {
         </Select>
       </div>
 
-      {activeCount > 0 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={reset}
-          className="h-7 px-2 text-[11px] text-text-muted hover:text-text-primary self-end"
-        >
-          <X className="w-3 h-3 mr-1" />
-          Clear ({activeCount})
-        </Button>
-      )}
+      <div className="ml-auto flex items-end gap-1.5">
+        <SavedViewsMenu />
+        {activeCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={reset}
+            className="h-7 px-2 text-[11px] text-text-muted hover:text-text-primary self-end"
+          >
+            <X className="w-3 h-3 mr-1" />
+            Clear ({activeCount})
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

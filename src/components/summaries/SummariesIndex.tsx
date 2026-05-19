@@ -1,8 +1,10 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ArrowUpDown, FileText, FileSearch } from "lucide-react";
+import { Search, ArrowUpDown, FileText, FileSearch, Download } from "lucide-react";
+import { toast } from "sonner";
 import { Panel } from "@/components/shell/Panel";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -25,7 +27,7 @@ import type { Summary, Session, Abstract } from "@/types";
 import { EmptyState } from "@/components/shell/EmptyState";
 import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import { ExportMenu } from "./ExportMenu";
-import type { SummaryExportInput } from "@/services/exportSummary";
+import { downloadCsv, type SummaryExportInput } from "@/services/exportSummary";
 
 type EnrichedSummary = Summary & {
   title: string;
@@ -238,9 +240,32 @@ export function SummariesIndex() {
           </span>
         }
         actions={
-          <span className="text-[10px] font-mono text-text-muted px-1">
-            AI-generated
-          </span>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              disabled={filtered.length === 0}
+              onClick={() => {
+                downloadCsv(filtered.map((s) => s.exportInput));
+                toast.success(
+                  `Exported ${filtered.length} ${
+                    filtered.length === 1 ? "summary" : "summaries"
+                  } to CSV`,
+                );
+              }}
+              aria-label="Export filtered summaries to CSV"
+              title="Export the current filtered list to CSV"
+            >
+              <Download aria-hidden="true" className="w-3 h-3 mr-1" />
+              <span className="text-[11px] font-mono uppercase tracking-wider">
+                CSV
+              </span>
+            </Button>
+            <span className="text-[10px] font-mono text-text-muted px-1">
+              AI-generated
+            </span>
+          </>
         }
         loading={isLoading}
         className="flex-1 min-h-0"

@@ -10,8 +10,6 @@ import { IllustrationFrame, type Variant } from "./PortalIllustration";
 import { connectX, getXConnectionStatus } from "@/serverFns/x-credentials";
 import { getXSetupProgress, saveXSetupProgress } from "@/serverFns/x-setup-progress";
 
-type Tier = "free" | "basic" | "pro" | "enterprise";
-
 interface Step {
   id: number;
   title: string;
@@ -20,14 +18,15 @@ interface Step {
 
 const STEPS: Step[] = [
   { id: 1, title: "Do you have a developer account?", variant: "developer-account" },
-  { id: 2, title: "Pick your tier", variant: "tier-picker" },
-  { id: 3, title: "Create a Project + App", variant: "project-and-app" },
-  { id: 4, title: "User authentication settings", variant: "user-auth-settings" },
-  { id: 5, title: "Generate Consumer Keys + Access Token", variant: "keys-and-tokens" },
-  { id: 6, title: "Paste credentials", variant: "paste-credentials" },
-  { id: 7, title: "Verify", variant: "verify" },
-  { id: 8, title: "Done", variant: "done" },
+  { id: 2, title: "Create a Project + App", variant: "project-and-app" },
+  { id: 3, title: "User authentication settings", variant: "user-auth-settings" },
+  { id: 4, title: "Generate Consumer Keys + Access Token", variant: "keys-and-tokens" },
+  { id: 5, title: "Paste credentials", variant: "paste-credentials" },
+  { id: 6, title: "Verify", variant: "verify" },
+  { id: 7, title: "Done", variant: "done" },
 ];
+
+const TOTAL_STEPS = STEPS.length;
 
 export function XConnectWizard({
   open,
@@ -51,7 +50,6 @@ export function XConnectWizard({
   });
 
   const [step, setStep] = React.useState(1);
-  const [tier, setTier] = React.useState<Tier>("free");
   const [consumerKey, setConsumerKey] = React.useState("");
   const [consumerSecret, setConsumerSecret] = React.useState("");
   const [accessToken, setAccessToken] = React.useState("");
@@ -62,8 +60,7 @@ export function XConnectWizard({
   React.useEffect(() => {
     if (!open || !progressData) return;
     const p = progressData.progress;
-    setStep(Math.min(8, Math.max(1, p.current_step ?? 1)));
-    if (p.tier_chosen) setTier(p.tier_chosen as Tier);
+    setStep(Math.min(TOTAL_STEPS, Math.max(1, p.current_step ?? 1)));
     completedRef.current = new Set((p.completed_steps as number[]) ?? []);
   }, [open, progressData]);
 
@@ -73,14 +70,13 @@ export function XConnectWizard({
         data: {
           current_step: next,
           completed_steps: Array.from(completedRef.current),
-          tier_chosen: tier,
         },
       }),
   });
 
   const goNext = async () => {
     completedRef.current.add(step);
-    const next = Math.min(8, step + 1);
+    const next = Math.min(TOTAL_STEPS, step + 1);
     setStep(next);
     saveProgress.mutate(next);
   };
@@ -91,16 +87,22 @@ export function XConnectWizard({
     onOpenChange(false);
   };
 
+  // After successful connect, jump straight to the "Done" step. Step IDs
+  // shifted by -1 when the tier-picker step was removed.
+  const PASTE_STEP = 5;
+  const VERIFY_STEP = 6;
+  const DONE_STEP = 7;
+
   const connectMut = useMutation({
     mutationFn: () =>
       connectX({ data: { consumerKey, consumerSecret, accessToken, accessTokenSecret } }),
     onSuccess: async (res) => {
       if (res.ok) {
         toast.success(`Connected as @${res.xUsername}`);
-        completedRef.current.add(6);
-        completedRef.current.add(7);
-        setStep(8);
-        await saveProgress.mutateAsync(8);
+        completedRef.current.add(PASTE_STEP);
+        completedRef.current.add(VERIFY_STEP);
+        setStep(DONE_STEP);
+        await saveProgress.mutateAsync(DONE_STEP);
         qc.invalidateQueries({ queryKey: ["x-connection-status"] });
         qc.invalidateQueries({ queryKey: ["x-accounts"] });
         onConnected?.();
@@ -124,7 +126,7 @@ export function XConnectWizard({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span className="font-mono text-xs text-text-muted">
-              Step {step} / 8
+              Step {step} / {TOTAL_STEPS}
             </span>
             <span>{current.title}</span>
           </DialogTitle>
@@ -150,11 +152,10 @@ export function XConnectWizard({
         <div className="grid md:grid-cols-2 gap-6 mt-4">
           <div className="space-y-3 text-sm">
             {step === 1 && <Step1 />}
-            {step === 2 && <Step2 tier={tier} setTier={setTier} />}
-            {step === 3 && <Step3 />}
-            {step === 4 && <Step4 callbackUrl={callbackUrl} onCopy={copy} />}
-            {step === 5 && <Step5 />}
-            {step === 6 && (
+            {step === 2 && <Step3 />}
+            {step === 3 && <Step4 callbackUrl={callbackUrl} onCopy={copy} />}
+            {step === 4 && <Step5 />}
+            {step === PASTE_STEP && (
               <Step6
                 consumerKey={consumerKey}
                 setConsumerKey={setConsumerKey}
@@ -171,8 +172,8 @@ export function XConnectWizard({
                 }
               />
             )}
-            {step === 7 && <Step7 username={status?.x_username ?? null} />}
-            {step === 8 && <Step8 onClose={() => onOpenChange(false)} />}
+            {step === VERIFY_STEP && <Step7 username={status?.x_username ?? null} />}
+            {step === DONE_STEP && <Step8 onClose={() => onOpenChange(false)} />}
           </div>
           <IllustrationFrame variant={current.variant} />
         </div>
@@ -187,12 +188,12 @@ export function XConnectWizard({
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
               </Button>
             )}
-            {step < 8 && step !== 6 && (
+            {step < TOTAL_STEPS && step !== PASTE_STEP && (
               <Button size="sm" onClick={goNext}>
                 Next <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             )}
-            {step === 8 && (
+            {step === DONE_STEP && (
               <Button size="sm" onClick={() => onOpenChange(false)}>
                 <Check className="w-3.5 h-3.5 mr-1" /> Done
               </Button>
@@ -223,8 +224,8 @@ function Step1() {
   return (
     <div className="space-y-3">
       <p>
-        UroFeed needs an X (Twitter) developer account in your name so ingestion
-        runs against <b>your</b> quota — not the platform's.
+        UroFeed needs an X (Twitter) developer account in your name so
+        ingestion runs against <b>your</b> API access — not the platform's.
       </p>
       <p>
         If you already have one, sign in to the{" "}
@@ -232,46 +233,9 @@ function Step1() {
         {" "}and continue.
       </p>
       <p>
-        If not, apply for the <b>Free</b> tier — it's instant and enough to test
-        the connection. Click <b>Sign up free</b> and answer "Personal use".
+        If not, apply for X's free developer access — it's instant and enough
+        to test the connection. Answer "Personal use" when prompted.
       </p>
-    </div>
-  );
-}
-
-function Step2({ tier, setTier }: { tier: string; setTier: (t: Tier) => void }) {
-  const opts: { id: Tier; name: string; price: string; reads: string; hint: string }[] = [
-    { id: "free", name: "Free", price: "$0", reads: "~1 search / 15min", hint: "Fine for trying UroFeed" },
-    { id: "basic", name: "Basic", price: "$200/mo", reads: "10K reads / month", hint: "Light personal use" },
-    { id: "pro", name: "Pro", price: "$5K/mo", reads: "1M reads / month", hint: "Power users, multi-source" },
-  ];
-  return (
-    <div className="space-y-2">
-      <p className="text-text-muted text-xs">
-        Tell us which tier you'll use so we can show your remaining quota
-        accurately. You can change this anytime.
-      </p>
-      {opts.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          onClick={() => setTier(o.id)}
-          className={
-            "w-full text-left rounded-[3px] border p-3 transition " +
-            (tier === o.id
-              ? "border-accent bg-accent/5"
-              : "border-border hover:border-text-muted")
-          }
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">{o.name}</span>
-            <span className="text-accent text-sm">{o.price}</span>
-          </div>
-          <div className="text-xs text-text-muted mt-1">
-            {o.reads} · {o.hint}
-          </div>
-        </button>
-      ))}
     </div>
   );
 }
@@ -419,7 +383,7 @@ function Step8({ onClose }: { onClose: () => void }) {
       <p className="font-semibold">You're all set.</p>
       <ul className="list-disc pl-5 text-xs space-y-1 text-text-muted">
         <li>Subscribed sources will be ingested with your tokens.</li>
-        <li>You can switch tier or disconnect anytime in Settings → X.</li>
+        <li>You can disconnect anytime in Settings → X.</li>
         <li>Posting from UroFeed (replies, quotes) also goes through your account.</li>
       </ul>
       <Button variant="outline" size="sm" onClick={onClose}>

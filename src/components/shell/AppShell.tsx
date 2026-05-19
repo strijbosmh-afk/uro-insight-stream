@@ -5,7 +5,6 @@ import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
 import { useAuth } from "@/auth/AuthProvider";
 import { useOnboardingGate } from "@/hooks/useOnboardingGate";
-import { OnboardingWizard } from "@/components/wizard/OnboardingWizard";
 import { ResumeBanner } from "@/components/wizard/ResumeBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrainstormUnreadDialog } from "@/components/brainstorm/BrainstormUnreadDialog";
@@ -18,6 +17,13 @@ import { useShouldShowComposeFab } from "@/hooks/useShouldShowComposeFab";
 import { PostGraceBanner } from "@/components/x-wizard/PostGraceBanner";
 import { PreGraceBanner } from "@/components/x-wizard/PreGraceBanner";
 import { useWatchlistRealtime } from "@/hooks/useWatchlistRealtime";
+
+// Lazy: ~1900-line component. Only loads when the user opens the wizard.
+const OnboardingWizard = React.lazy(() =>
+  import("@/components/wizard/OnboardingWizard").then((m) => ({
+    default: m.OnboardingWizard,
+  })),
+);
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -153,21 +159,23 @@ export function AppShell() {
       {isPhone && showFab && <ComposeFAB />}
       {isPhone && <BottomTabBar />}
       {wizardOpen && (
-        <OnboardingWizard
-          initialStep={gate.currentStep}
-          scopeStep={wizardScope}
-          onClose={(reason) => {
-            if (reason === "completed" || reason === "skipped") {
-              completedOnceRef.current = true;
-              setWizardLocked(true);
-              if (wizardLockKey && typeof window !== "undefined") {
-                window.localStorage.setItem(wizardLockKey, "1");
+        <React.Suspense fallback={null}>
+          <OnboardingWizard
+            initialStep={gate.currentStep}
+            scopeStep={wizardScope}
+            onClose={(reason) => {
+              if (reason === "completed" || reason === "skipped") {
+                completedOnceRef.current = true;
+                setWizardLocked(true);
+                if (wizardLockKey && typeof window !== "undefined") {
+                  window.localStorage.setItem(wizardLockKey, "1");
+                }
               }
-            }
-            setWizardOpen(false);
-            setWizardScope(undefined);
-          }}
-        />
+              setWizardOpen(false);
+              setWizardScope(undefined);
+            }}
+          />
+        </React.Suspense>
       )}
     </div>
   );

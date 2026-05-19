@@ -6,51 +6,52 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-8 w-8 text-destructive"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+    <div className="p-6">
+      <section className="bg-panel border border-border rounded-[4px] p-6 max-w-lg mx-auto">
+        <div className="flex items-start gap-3">
+          <div
+            aria-hidden
+            className="mt-0.5 h-7 w-7 shrink-0 flex items-center justify-center rounded-[3px] border border-destructive/40 bg-destructive/10 text-destructive"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-            />
-          </svg>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-destructive">
+              error
+            </div>
+            <h2 className="mt-1 text-[15px] font-semibold text-text-primary">
+              Something went wrong
+            </h2>
+            <p className="mt-1 text-[12px] text-text-muted">
+              The page couldn't load. Try again, or head back home.
+            </p>
+            {import.meta.env.DEV && error.message && (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-[3px] border border-border bg-bg p-2 text-left font-mono text-[11px] text-destructive">
+                {error.message}
+              </pre>
+            )}
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  router.invalidate();
+                  reset();
+                }}
+                className="h-7 px-3 inline-flex items-center text-[11px] font-mono uppercase tracking-wider rounded-[3px] border border-accent bg-accent/10 text-accent hover:bg-accent/20"
+              >
+                Try again
+              </button>
+              <a
+                href="/dashboard"
+                className="h-7 px-3 inline-flex items-center text-[11px] font-mono uppercase tracking-wider rounded-[3px] border border-border text-text-muted hover:text-text-primary"
+              >
+                Go to dashboard
+              </a>
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          An unexpected error occurred. Please try again.
-        </p>
-        {import.meta.env.DEV && error.message && (
-          <pre className="mt-4 max-h-40 overflow-auto rounded-md bg-muted p-3 text-left font-mono text-xs text-destructive">
-            {error.message}
-          </pre>
-        )}
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
