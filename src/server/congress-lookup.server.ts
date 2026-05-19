@@ -1,11 +1,55 @@
 // Server-only: AI-assisted online congress lookup with 24-hour cache.
-// Uses the Lovable AI Gateway (gemini-2.5-pro) with a strict tool-call schema.
+//
+// Uses the Anthropic API (claude-opus-4-7) with the server-side
+// `web_search_20260209` tool for live grounding, adaptive thinking, prompt
+// caching on the large taxonomy/instruction prefix, and a `strict` tool to
+// enforce the JSON shape. Replaces the prior 2-step Lovable (Gemini) pipeline
+// with a single Claude call.
 
 import { createHash } from "crypto";
+import type Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  getAnthropic,
+  normalizeAnthropicError,
+} from "@/server/anthropic-client.server";
 
-export type CongressLookupKol = { handle: string; reason: string };
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
+
+export type CongressLookupKol = {
+  /** X/Twitter handle (no leading @). */
+  handle: string;
+  /** Short, 1-line justification — why this account covers the congress. */
+  reason: string;
+  // --- Extended fields (all optional for backward compatibility) ---
+  /** Best-effort display name from the model's prior knowledge. */
+  display_name?: string | null;
+  /** What kind of account this is. */
+  role?: "kol" | "institution" | "journal" | "society" | "industry" | "other" | null;
+  /** How the account relates to the congress. */
+  category?:
+    | "chair"
+    | "speaker"
+    | "organizer"
+    | "regular_commentator"
+    | "society_account"
+    | null;
+  /** Free-text specialty / clinical focus (e.g. "Prostate cancer, mCRPC trials"). */
+  specialty?: string | null;
+  /** Per-KOL confidence — distinct from the overall congress confidence. */
+  confidence?: "high" | "medium" | "low" | null;
+};
+
 export type CongressLookupCitation = { url: string; title: string };
+
+export type CongressPastEdition = {
+  year: number;
+  city: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
 
 export type CongressLookupResult = {
   name: string | null;
@@ -23,17 +67,39 @@ export type CongressLookupResult = {
   citations: CongressLookupCitation[];
   confidence: "high" | "medium" | "low";
   no_match: boolean;
+  // --- Extended fields (all optional for backward compatibility) ---
+  /** Specific venue / convention center, when announced. */
+  venue?: string | null;
+  /** Year of the edition the lookup refers to (e.g. 2026). */
+  year?: number | null;
+  /** True iff start_date is today or later. */
+  is_future_edition?: boolean;
+  /** Alternate short-code spellings (e.g. ASCO-GU, GUSCO). Lowercased. */
+  alternate_short_codes?: string[];
+  /** Official society X/Twitter handle (no leading @). */
+  society_handle?: string | null;
+  /** Up to 5 past editions for identity verification. */
+  past_editions?: CongressPastEdition[];
 };
 
+// ---------------------------------------------------------------------------
+// Cache + normalization
+// ---------------------------------------------------------------------------
+
 const CACHE_TTL_HOURS = 24;
-const LOOKUP_CACHE_VERSION = "v2-official-page-verify";
+// Bump on any non-additive change to the lookup pipeline so old cached results
+// are not served. Suffix encodes the LLM provider so a future migration is
+// trivially distinguishable in the table.
+const LOOKUP_CACHE_VERSION = "v3-anthropic";
 
 function normalize(query: string): string {
   return query.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 function hashQuery(query: string): string {
-  return createHash("sha256").update(`${LOOKUP_CACHE_VERSION}:${normalize(query)}`).digest("hex");
+  return createHash("sha256")
+    .update(`${LOOKUP_CACHE_VERSION}:${normalize(query)}`)
+    .digest("hex");
 }
 
 function emptyResult(): CongressLookupResult {
@@ -53,6 +119,12 @@ function emptyResult(): CongressLookupResult {
     citations: [],
     confidence: "low",
     no_match: true,
+    venue: null,
+    year: null,
+    is_future_edition: false,
+    alternate_short_codes: [],
+    society_handle: null,
+    past_editions: [],
   };
 }
 
@@ -63,6 +135,10 @@ function cleanHashtag(t: string): string {
 function cleanHandle(h: string): string {
   return h.replace(/^@+/, "").trim();
 }
+
+// ---------------------------------------------------------------------------
+// ESMO official-page verification (deterministic post-LLM cross-check)
+// ---------------------------------------------------------------------------
 
 const MONTHS: Record<string, string> = {
   jan: "01", january: "01",
@@ -110,7 +186,10 @@ function parseHumanDate(value: string): string | null {
 function parseOfficialMeetingPage(html: string, url: string) {
   const text = htmlToText(html);
   const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
-  const facts: Partial<CongressLookupResult> & { verified_url: string; verified_title: string } = {
+  const facts: Partial<CongressLookupResult> & {
+    verified_url: string;
+    verified_title: string;
+  } = {
     verified_url: url,
     verified_title: title ? htmlToText(title).slice(0, 200) : "Official meeting page",
   };
@@ -135,172 +214,9 @@ function normalizeOfficialUrl(url: string): string {
   return url.replace("/meetings/", "/meeting-calendar/");
 }
 
-function buildSystemPrompt(slugs: string[]): string {
-  return `You identify medical / oncology congresses for a research database.
-
-Return data ONLY for real, well-known scientific congresses (e.g. ASCO GU, ESMO, EAU, ASH, SABCS).
-Do not fabricate names, dates, hashtags, URLs, or X/Twitter handles. If you are not confident,
-return null for that field and lower the overall confidence.
-
-Cancer-area taxonomy (use ONLY these slugs, never invent new ones):
-${slugs.join(", ")}
-
-Mapping guidance:
-- urological: prostate, kidney, bladder, testicular, GU
-- breast: SABCS, breast oncology
-- gi: gastric, colorectal, pancreatic, ESMO GI, ASCO GI
-- lung: WCLC, lung cancer
-- gynecological: ovarian, cervical, endometrial, SGO
-- hematological: ASH, EHA, lymphoma, leukemia, myeloma
-- head_neck, skin (melanoma), neuro, sarcoma, pediatric
-
-Hashtag rules:
-- primary_hashtags: 1-3 OFFICIAL congress hashtags (no leading "#"), lowercased.
-- community_hashtags: up to 5 commonly-used variants / topical tags (no leading "#").
-
-KOL rules:
-- 5-10 X/Twitter handles known to actively cover this congress (no leading "@").
-- Each gets a one-line "reason" (e.g. "Prostate cancer KOL, frequent ASCO GU commentator").
-- Do not invent handles. If unsure, return fewer.
-
-Citations: include 2-5 supporting URLs with titles (official site, conference page, society page).
-
-confidence:
-- high: well-known major congress, high certainty in dates + location.
-- medium: known event but some fields uncertain.
-- low: ambiguous or speculative — set no_match=true if you cannot identify the event at all.
-
-Dates as YYYY-MM-DD, or null. Country in English. Description: 1-2 sentences.`;
-}
-
-const TOOL = {
-  type: "function" as const,
-  function: {
-    name: "return_congress_lookup",
-    description: "Return structured data about the requested medical congress.",
-    parameters: {
-      type: "object",
-      properties: {
-        no_match: { type: "boolean" },
-        confidence: { type: "string", enum: ["high", "medium", "low"] },
-        name: { type: ["string", "null"] },
-        short_code: { type: ["string", "null"] },
-        start_date: { type: ["string", "null"] },
-        end_date: { type: ["string", "null"] },
-        city: { type: ["string", "null"] },
-        country: { type: ["string", "null"] },
-        website: { type: ["string", "null"] },
-        description: { type: ["string", "null"] },
-        primary_hashtags: { type: "array", items: { type: "string" } },
-        community_hashtags: { type: "array", items: { type: "string" } },
-        cancer_area_slugs: { type: "array", items: { type: "string" } },
-        suggested_kols: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              handle: { type: "string" },
-              reason: { type: "string" },
-            },
-            required: ["handle", "reason"],
-            additionalProperties: false,
-          },
-        },
-        citations: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              url: { type: "string" },
-              title: { type: "string" },
-            },
-            required: ["url", "title"],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: [
-        "no_match",
-        "confidence",
-        "name",
-        "short_code",
-        "start_date",
-        "end_date",
-        "city",
-        "country",
-        "website",
-        "description",
-        "primary_hashtags",
-        "community_hashtags",
-        "cancer_area_slugs",
-        "suggested_kols",
-        "citations",
-      ],
-      additionalProperties: false,
-    },
-  },
-};
-
-function sanitizeResult(
-  raw: Partial<CongressLookupResult>,
-  validSlugs: Set<string>,
-): CongressLookupResult {
-  const out: CongressLookupResult = emptyResult();
-  out.no_match = !!raw.no_match;
-  out.confidence = (raw.confidence === "high" || raw.confidence === "medium" || raw.confidence === "low")
-    ? raw.confidence
-    : "low";
-  out.name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : null;
-  out.short_code = typeof raw.short_code === "string" && raw.short_code.trim()
-    ? raw.short_code.trim().toUpperCase()
-    : null;
-  out.start_date = typeof raw.start_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.start_date) ? raw.start_date : null;
-  out.end_date = typeof raw.end_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.end_date) ? raw.end_date : null;
-  out.city = typeof raw.city === "string" && raw.city.trim() ? raw.city.trim() : null;
-  out.country = typeof raw.country === "string" && raw.country.trim() ? raw.country.trim() : null;
-  out.website = typeof raw.website === "string" && /^https?:\/\//i.test(raw.website) ? raw.website.trim() : null;
-  out.description = typeof raw.description === "string" && raw.description.trim() ? raw.description.trim().slice(0, 1000) : null;
-
-  const phs = Array.isArray(raw.primary_hashtags) ? raw.primary_hashtags : [];
-  out.primary_hashtags = Array.from(new Set(phs.map(cleanHashtag).filter(Boolean))).slice(0, 5);
-  const chs = Array.isArray(raw.community_hashtags) ? raw.community_hashtags : [];
-  out.community_hashtags = Array.from(new Set(chs.map(cleanHashtag).filter(Boolean))).slice(0, 8);
-
-  const slugs = Array.isArray(raw.cancer_area_slugs) ? raw.cancer_area_slugs : [];
-  out.cancer_area_slugs = Array.from(
-    new Set(slugs.map((s) => String(s).trim().toLowerCase()).filter((s) => validSlugs.has(s))),
-  );
-
-  const kols = Array.isArray(raw.suggested_kols) ? raw.suggested_kols : [];
-  const seenHandles = new Set<string>();
-  out.suggested_kols = [];
-  for (const k of kols) {
-    if (!k || typeof k.handle !== "string") continue;
-    const h = cleanHandle(k.handle);
-    if (!/^[A-Za-z0-9_]{1,15}$/.test(h)) continue;
-    const key = h.toLowerCase();
-    if (seenHandles.has(key)) continue;
-    seenHandles.add(key);
-    out.suggested_kols.push({
-      handle: h,
-      reason: typeof k.reason === "string" ? k.reason.trim().slice(0, 280) : "",
-    });
-    if (out.suggested_kols.length >= 12) break;
-  }
-
-  const cites = Array.isArray(raw.citations) ? raw.citations : [];
-  out.citations = cites
-    .filter((c) => c && typeof c.url === "string" && /^https?:\/\//i.test(c.url))
-    .slice(0, 8)
-    .map((c) => ({
-      url: c.url,
-      title: typeof c.title === "string" ? c.title.slice(0, 200) : c.url,
-    }));
-
-  return out;
-}
-
-async function verifyOfficialFacts(result: CongressLookupResult): Promise<CongressLookupResult> {
+async function verifyOfficialFacts(
+  result: CongressLookupResult,
+): Promise<CongressLookupResult> {
   const officialUrl = normalizeOfficialUrl(
     result.citations.find((c) => /^https:\/\/(?:[^/]+\.)?esmo\.org\//i.test(c.url))?.url
       ?? result.website
@@ -316,6 +232,8 @@ async function verifyOfficialFacts(result: CongressLookupResult): Promise<Congre
     const html = await res.text();
     let facts = parseOfficialMeetingPage(html, officialUrl);
     if (!facts) {
+      // Some ESMO pages render dates only via client-side JS — fall back to
+      // Jina's text-reader proxy which executes the page first.
       const readerRes = await fetch(`https://r.jina.ai/http://${officialUrl}`, {
         headers: { "User-Agent": "UroFeed congress lookup verifier" },
       });
@@ -331,6 +249,8 @@ async function verifyOfficialFacts(result: CongressLookupResult): Promise<Congre
       country: facts.country ?? result.country,
       website: result.website ?? officialUrl,
       citations: [citation, ...result.citations.filter((c) => c.url !== citation.url)].slice(0, 8),
+      // If the official page confirmed dates + location, the result should not
+      // be downgraded below "medium".
       confidence: facts.city && facts.country ? result.confidence : "medium",
     };
   } catch (e) {
@@ -339,114 +259,511 @@ async function verifyOfficialFacts(result: CongressLookupResult): Promise<Congre
   }
 }
 
-async function callGateway(query: string, slugs: string[]): Promise<CongressLookupResult | null> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) {
-    console.error("[congress-lookup] LOVABLE_API_KEY missing");
-    return null;
-  }
-  const url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+// ---------------------------------------------------------------------------
+// Sanitization — never trust raw model output past this gate
+// ---------------------------------------------------------------------------
 
-  // STEP 1 — grounded research call. Use Gemini's google_search tool so the
-  // model fetches real, current facts (city, dates, website, official hashtag)
-  // rather than relying on stale training data. We ask for a brief textual
-  // brief that the structured-extraction step will consume.
-  const groundingPrompt = `Research this medical/oncology congress using Google Search and produce a short factual brief.
+const VALID_KOL_ROLES = new Set([
+  "kol",
+  "institution",
+  "journal",
+  "society",
+  "industry",
+  "other",
+] as const);
+const VALID_KOL_CATEGORIES = new Set([
+  "chair",
+  "speaker",
+  "organizer",
+  "regular_commentator",
+  "society_account",
+] as const);
+
+function isIsoDate(s: unknown): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
+function sanitizeResult(
+  raw: Partial<CongressLookupResult>,
+  validSlugs: Set<string>,
+): CongressLookupResult {
+  const out: CongressLookupResult = emptyResult();
+  out.no_match = !!raw.no_match;
+  out.confidence =
+    raw.confidence === "high" || raw.confidence === "medium" || raw.confidence === "low"
+      ? raw.confidence
+      : "low";
+  out.name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : null;
+  out.short_code =
+    typeof raw.short_code === "string" && raw.short_code.trim()
+      ? raw.short_code.trim().toUpperCase()
+      : null;
+  out.start_date = isIsoDate(raw.start_date) ? raw.start_date : null;
+  out.end_date = isIsoDate(raw.end_date) ? raw.end_date : null;
+  // Defensive: if both dates parsed but end < start, drop end_date (and trust
+  // the post-LLM official-page check to fill in correct values where possible).
+  if (out.start_date && out.end_date && out.end_date < out.start_date) {
+    out.end_date = null;
+  }
+  out.city = typeof raw.city === "string" && raw.city.trim() ? raw.city.trim() : null;
+  out.country = typeof raw.country === "string" && raw.country.trim() ? raw.country.trim() : null;
+  out.website =
+    typeof raw.website === "string" && /^https?:\/\//i.test(raw.website)
+      ? raw.website.trim()
+      : null;
+  out.description =
+    typeof raw.description === "string" && raw.description.trim()
+      ? raw.description.trim().slice(0, 1000)
+      : null;
+
+  const phs = Array.isArray(raw.primary_hashtags) ? raw.primary_hashtags : [];
+  out.primary_hashtags = Array.from(
+    new Set(phs.map(cleanHashtag).filter(Boolean)),
+  ).slice(0, 5);
+  const chs = Array.isArray(raw.community_hashtags) ? raw.community_hashtags : [];
+  out.community_hashtags = Array.from(
+    new Set(chs.map(cleanHashtag).filter(Boolean)),
+  ).slice(0, 8);
+
+  const slugs = Array.isArray(raw.cancer_area_slugs) ? raw.cancer_area_slugs : [];
+  out.cancer_area_slugs = Array.from(
+    new Set(
+      slugs
+        .map((s) => String(s).trim().toLowerCase())
+        .filter((s) => validSlugs.has(s)),
+    ),
+  );
+
+  const kols = Array.isArray(raw.suggested_kols) ? raw.suggested_kols : [];
+  const seenHandles = new Set<string>();
+  out.suggested_kols = [];
+  for (const k of kols) {
+    if (!k || typeof k.handle !== "string") continue;
+    const h = cleanHandle(k.handle);
+    // X/Twitter handle ruleset: 1-15 alphanumeric/underscore.
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(h)) continue;
+    const key = h.toLowerCase();
+    if (seenHandles.has(key)) continue;
+    seenHandles.add(key);
+    const role =
+      typeof k.role === "string" && VALID_KOL_ROLES.has(k.role as never)
+        ? (k.role as CongressLookupKol["role"])
+        : null;
+    const category =
+      typeof k.category === "string" && VALID_KOL_CATEGORIES.has(k.category as never)
+        ? (k.category as CongressLookupKol["category"])
+        : null;
+    const confidence =
+      k.confidence === "high" || k.confidence === "medium" || k.confidence === "low"
+        ? k.confidence
+        : null;
+    out.suggested_kols.push({
+      handle: h,
+      reason: typeof k.reason === "string" ? k.reason.trim().slice(0, 280) : "",
+      display_name:
+        typeof k.display_name === "string" && k.display_name.trim()
+          ? k.display_name.trim().slice(0, 120)
+          : null,
+      role,
+      category,
+      specialty:
+        typeof k.specialty === "string" && k.specialty.trim()
+          ? k.specialty.trim().slice(0, 200)
+          : null,
+      confidence,
+    });
+    // Allow up to 20 KOLs (was 12) to accommodate adding societies + journals
+    // alongside individual experts in one list.
+    if (out.suggested_kols.length >= 20) break;
+  }
+
+  const cites = Array.isArray(raw.citations) ? raw.citations : [];
+  out.citations = cites
+    .filter((c) => c && typeof c.url === "string" && /^https?:\/\//i.test(c.url))
+    .slice(0, 8)
+    .map((c) => ({
+      url: c.url,
+      title: typeof c.title === "string" ? c.title.slice(0, 200) : c.url,
+    }));
+
+  // --- Extended optional fields ---
+  out.venue =
+    typeof raw.venue === "string" && raw.venue.trim() ? raw.venue.trim().slice(0, 200) : null;
+
+  if (typeof raw.year === "number" && Number.isInteger(raw.year) && raw.year >= 2000 && raw.year <= 2099) {
+    out.year = raw.year;
+  } else if (out.start_date) {
+    out.year = Number(out.start_date.slice(0, 4));
+  } else {
+    out.year = null;
+  }
+
+  if (out.start_date) {
+    const today = new Date().toISOString().slice(0, 10);
+    out.is_future_edition = out.start_date >= today;
+  } else {
+    out.is_future_edition = false;
+  }
+
+  const alts = Array.isArray(raw.alternate_short_codes) ? raw.alternate_short_codes : [];
+  out.alternate_short_codes = Array.from(
+    new Set(
+      alts
+        .map((s) => (typeof s === "string" ? s.trim().toLowerCase() : ""))
+        .filter(Boolean),
+    ),
+  ).slice(0, 6);
+
+  out.society_handle =
+    typeof raw.society_handle === "string" && /^[A-Za-z0-9_]{1,15}$/.test(cleanHandle(raw.society_handle))
+      ? cleanHandle(raw.society_handle)
+      : null;
+
+  const editions = Array.isArray(raw.past_editions) ? raw.past_editions : [];
+  out.past_editions = editions
+    .filter((e): e is CongressPastEdition => {
+      if (!e || typeof e !== "object") return false;
+      const ed = e as Partial<CongressPastEdition>;
+      return (
+        typeof ed.year === "number" &&
+        Number.isInteger(ed.year) &&
+        ed.year >= 2000 &&
+        ed.year <= 2099
+      );
+    })
+    .slice(0, 5)
+    .map((e) => ({
+      year: e.year,
+      city: typeof e.city === "string" && e.city.trim() ? e.city.trim().slice(0, 120) : null,
+      start_date: isIsoDate(e.start_date) ? e.start_date : null,
+      end_date: isIsoDate(e.end_date) ? e.end_date : null,
+    }));
+
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Prompt + tool schema
+// ---------------------------------------------------------------------------
+
+function buildSystemPrompt(slugs: string[]): string {
+  return `You identify medical / oncology congresses for a clinical research database.
+
+Return data ONLY for real, well-known scientific congresses (e.g. ASCO GU, ESMO, EAU, ASH, SABCS, ESMO Asia, ASCO Annual Meeting, AUA, EAU, ASTRO). Do not fabricate names, dates, hashtags, URLs, or X/Twitter handles. If you are not confident, return null for that field and lower the overall confidence. If the query does not name a real congress, set no_match=true and leave all fields null.
+
+## Prefer the next upcoming edition
+
+Use the web_search tool to confirm CURRENT facts — society training data is months out of date. For a query that names a congress series (e.g. "ASCO GU"):
+- Find the next upcoming edition (start_date >= today).
+- If a future edition has been formally announced (the society has published dates + city), return THAT edition.
+- If no future edition has been announced yet, return the most recently completed edition and set is_future_edition=false.
+- Set year to the year of the start_date.
+- Populate past_editions with up to 5 prior years for identity verification (year + city + dates).
+
+## Cancer-area taxonomy
+
+Use ONLY these slugs in cancer_area_slugs — never invent new ones:
+${slugs.join(", ")}
+
+Mapping guidance:
+- urological: prostate, kidney, bladder, testicular, GU
+- breast: SABCS, breast oncology
+- gi: gastric, colorectal, pancreatic, ESMO GI, ASCO GI
+- lung: WCLC, lung cancer
+- gynecological: ovarian, cervical, endometrial, SGO
+- hematological: ASH, EHA, lymphoma, leukemia, myeloma
+- head_neck, skin (melanoma), neuro, sarcoma, pediatric
+
+## Hashtags
+
+- primary_hashtags: 1-3 OFFICIAL congress hashtags (no leading "#"), lowercased. Include the year-suffixed variant when one is in active use (e.g. "esmo24", "ascogu26").
+- community_hashtags: up to 5 commonly-used variants / topical tags (no leading "#"). May include #genitourinarycancer, #prostatecancer, etc.
+
+## Suggested X/Twitter accounts (suggested_kols)
+
+Return up to 20 accounts that actively cover this congress. Mix three categories:
+1. **Individual KOLs**: clinicians/researchers who present, chair sessions, or routinely comment live. Set role="kol", category="speaker" | "chair" | "regular_commentator".
+2. **Societies & official accounts**: the host society (e.g. @myESMO, @ASCO), official conference account if it has its own. Set role="society" or "other", category="society_account" or "organizer".
+3. **Journals & institutions**: cancer-focused journals (@NEJM, @TheLancetOncol) and institutions if they cover this disease space. Set role="journal" or "institution".
+
+For each:
+- handle: X/Twitter handle WITHOUT the leading "@", 1-15 chars, alphanumeric + underscore. Must be a REAL account — do NOT invent.
+- display_name: best-effort known display name from your prior knowledge (or null if unsure).
+- reason: one short sentence — what they cover, why they're relevant to THIS congress.
+- specialty: clinical focus area (e.g. "Prostate cancer, mCRPC trials") or null.
+- role: kol | institution | journal | society | industry | other.
+- category: chair | speaker | organizer | regular_commentator | society_account, or null.
+- confidence: high (you're certain the account exists and posts about this congress) | medium | low.
+
+Order by confidence (high first). Set society_handle to the host society's primary X handle.
+
+## Dates, location, venue
+
+- start_date / end_date: YYYY-MM-DD or null. If both are provided, end_date >= start_date.
+- city + country: in English ("Madrid" / "Spain", not "Madrid, ES").
+- venue: convention center / hotel if announced (e.g. "Moscone West" / "IFEMA Madrid"), else null.
+- website: official congress page URL or null. Must start with https://.
+
+## Citations
+
+Include 2-5 supporting URLs with titles. PREFER official society URLs (esmo.org, asco.org, eau.org, aua.net, sabcs.org). Avoid blog posts, slide decks, social media as primary sources.
+
+## Confidence
+
+- high: well-known major congress, dates + location verified against an official source.
+- medium: known event, but some fields still uncertain (e.g. venue TBA).
+- low: ambiguous or speculative — set no_match=true if you cannot identify the event at all.
+
+## Description
+
+1-2 sentences explaining what the congress covers (e.g. "Annual symposium of the American Society of Clinical Oncology focused on genitourinary cancers...").
+
+ALWAYS call the return_congress_lookup tool with your final answer — never reply in plain text.`;
+}
+
+const RETURN_TOOL: Anthropic.Tool = {
+  name: "return_congress_lookup",
+  description:
+    "Return structured data about the requested medical congress. Always call this tool — never reply in plain text.",
+  // `strict: true` makes Anthropic enforce the schema on the model side — any
+  // non-conforming output is auto-rejected and the model retries.
+  // (Property is on the JSON schema, not the SDK type; cast below.)
+  input_schema: {
+    type: "object",
+    properties: {
+      no_match: { type: "boolean", description: "True if the query does not name a real congress." },
+      confidence: { type: "string", enum: ["high", "medium", "low"] },
+      name: { type: ["string", "null"], description: "Full official name." },
+      short_code: { type: ["string", "null"], description: "Short code (e.g. ASCOGU, ESMO)." },
+      year: { type: ["integer", "null"], description: "Year of this edition (e.g. 2026)." },
+      start_date: { type: ["string", "null"], description: "YYYY-MM-DD or null." },
+      end_date: { type: ["string", "null"], description: "YYYY-MM-DD or null." },
+      city: { type: ["string", "null"] },
+      country: { type: ["string", "null"], description: "Country in English." },
+      venue: { type: ["string", "null"], description: "Convention center / hotel if known." },
+      website: { type: ["string", "null"], description: "Official URL, https only." },
+      description: { type: ["string", "null"] },
+      primary_hashtags: {
+        type: "array",
+        items: { type: "string" },
+        description: "1-3 official hashtags, no #, lowercased.",
+      },
+      community_hashtags: {
+        type: "array",
+        items: { type: "string" },
+        description: "Up to 5 community/topical hashtags.",
+      },
+      alternate_short_codes: {
+        type: "array",
+        items: { type: "string" },
+        description: "Alternate spellings of the short code (e.g. asco-gu, gusco).",
+      },
+      cancer_area_slugs: {
+        type: "array",
+        items: { type: "string" },
+        description: "Slugs from the provided taxonomy.",
+      },
+      society_handle: {
+        type: ["string", "null"],
+        description: "Host society X/Twitter handle, no @.",
+      },
+      past_editions: {
+        type: "array",
+        description: "Up to 5 prior editions for identity verification.",
+        items: {
+          type: "object",
+          properties: {
+            year: { type: "integer" },
+            city: { type: ["string", "null"] },
+            start_date: { type: ["string", "null"] },
+            end_date: { type: ["string", "null"] },
+          },
+          required: ["year", "city", "start_date", "end_date"],
+          additionalProperties: false,
+        },
+      },
+      suggested_kols: {
+        type: "array",
+        description: "Up to 20 accounts (KOLs, societies, journals) that cover this congress.",
+        items: {
+          type: "object",
+          properties: {
+            handle: { type: "string", description: "X handle without @, 1-15 chars." },
+            reason: { type: "string" },
+            display_name: { type: ["string", "null"] },
+            role: {
+              type: ["string", "null"],
+              enum: ["kol", "institution", "journal", "society", "industry", "other", null],
+            },
+            category: {
+              type: ["string", "null"],
+              enum: ["chair", "speaker", "organizer", "regular_commentator", "society_account", null],
+            },
+            specialty: { type: ["string", "null"] },
+            confidence: {
+              type: ["string", "null"],
+              enum: ["high", "medium", "low", null],
+            },
+          },
+          required: ["handle", "reason", "display_name", "role", "category", "specialty", "confidence"],
+          additionalProperties: false,
+        },
+      },
+      citations: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            url: { type: "string" },
+            title: { type: "string" },
+          },
+          required: ["url", "title"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: [
+      "no_match",
+      "confidence",
+      "name",
+      "short_code",
+      "year",
+      "start_date",
+      "end_date",
+      "city",
+      "country",
+      "venue",
+      "website",
+      "description",
+      "primary_hashtags",
+      "community_hashtags",
+      "alternate_short_codes",
+      "cancer_area_slugs",
+      "society_handle",
+      "past_editions",
+      "suggested_kols",
+      "citations",
+    ],
+    additionalProperties: false,
+  },
+} as Anthropic.Tool;
+// Anthropic's TS types don't yet declare `strict` on the Tool union; the API
+// honours it. Cast lets us add it without throwing the union type away.
+(RETURN_TOOL as unknown as { strict: boolean }).strict = true;
+
+// ---------------------------------------------------------------------------
+// Anthropic call
+// ---------------------------------------------------------------------------
+
+async function callAnthropic(
+  query: string,
+  slugs: string[],
+): Promise<CongressLookupResult | null> {
+  const client = getAnthropic();
+  const today = new Date().toISOString().slice(0, 10);
+  const systemPrompt = buildSystemPrompt(slugs);
+
+  try {
+    // Streaming + finalMessage:
+    //  - web_search calls can take 30+ seconds; non-streaming would risk
+    //    SDK HTTP timeouts.
+    //  - finalMessage() returns the complete Anthropic.Message so we can
+    //    extract the tool_use block without writing a stream-event loop.
+    const message = await client.messages
+      .stream({
+        model: "claude-opus-4-7",
+        max_tokens: 16000,
+        // Cache the large taxonomy + instruction prefix. The query string sits
+        // in the user message AFTER the breakpoint, so different queries reuse
+        // the same cached prefix (~1.5K tokens, ~90% input cost reduction on
+        // cache hit).
+        system: [
+          {
+            type: "text",
+            text: systemPrompt,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        thinking: { type: "adaptive" },
+        // GA: dynamic-filtering web search. No extra beta header, no
+        // separate code_execution declaration — the model writes filter
+        // scripts internally before results reach context.
+        tools: [
+          { type: "web_search_20260209", name: "web_search", max_uses: 8 },
+          RETURN_TOOL,
+        ],
+        // Force the structured-output tool so the final assistant turn is
+        // always a `return_congress_lookup` call.
+        tool_choice: { type: "tool", name: "return_congress_lookup" },
+        messages: [
+          {
+            role: "user",
+            content: `Today is ${today}.
+
+Research this medical/oncology congress and return structured data via the return_congress_lookup tool.
 
 Query: "${query}"
 
-Return a concise brief (max ~250 words) with these labelled fields, EACH on its own line, using only verified facts from the search results. Use "unknown" if a fact cannot be confirmed.
+Use web_search to confirm CURRENT facts (dates, city, venue, official URL, official hashtag). Return the NEXT UPCOMING edition if one has been announced; otherwise return the most recent past edition and set is_future_edition=false.`,
+          },
+        ],
+      })
+      .finalMessage();
 
-OFFICIAL_NAME: ...
-SHORT_CODE: ...
-START_DATE (YYYY-MM-DD): ...
-END_DATE (YYYY-MM-DD): ...
-CITY: ...
-COUNTRY: ...
-OFFICIAL_WEBSITE: ...
-OFFICIAL_HASHTAGS: #tag1, #tag2
-COMMUNITY_HASHTAGS: #tag1, #tag2
-ONE_LINE_DESCRIPTION: ...
-SOURCES: list 2-5 URLs (one per line) you actually used.
+    // The forced tool_choice means the final assistant turn ends in exactly
+    // one return_congress_lookup call. Find it.
+    const toolUse = message.content.find(
+      (b): b is Anthropic.ToolUseBlock =>
+        b.type === "tool_use" && b.name === "return_congress_lookup",
+    );
+    if (!toolUse) {
+      console.error(
+        "[congress-lookup] no return_congress_lookup tool call in response",
+        message.stop_reason,
+      );
+      return null;
+    }
 
-Do not guess. If the venue/city has been announced for a future edition, cite the official society page.`;
-
-  const groundRes = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      messages: [
-        { role: "system", content: "You are a precise research assistant. Only state facts confirmed by the search results. If unsure, write 'unknown'." },
-        { role: "user", content: groundingPrompt },
-      ],
-      tools: [{ type: "google_search" }],
-    }),
-  });
-  if (groundRes.status === 429 || groundRes.status === 402) {
-    throw new Error(groundRes.status === 429 ? "rate_limited" : "payment_required");
-  }
-  if (!groundRes.ok) {
-    console.error("[congress-lookup] grounding error", groundRes.status, await groundRes.text().catch(() => ""));
-    return null;
-  }
-  const groundJson = (await groundRes.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const brief = groundJson.choices?.[0]?.message?.content?.trim() ?? "";
-  if (!brief) {
-    console.error("[congress-lookup] empty grounding brief");
-    return null;
-  }
-
-  // STEP 2 — structured extraction. Feed the grounded brief back in and force
-  // a tool call so we get strict JSON. The model must NOT add facts beyond
-  // what is in the brief (esp. city/dates/website).
-  const extractRes = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      messages: [
-        { role: "system", content: buildSystemPrompt(slugs) },
-        {
-          role: "user",
-          content: `Below is a verified research brief about the congress "${query}". Extract structured data ONLY from this brief — do not introduce facts that are not present in the brief. If the brief says "unknown" for a field, return null. For suggested_kols, you may add 5-10 well-known X/Twitter handles that historically cover this congress (your training knowledge is fine for KOLs).
-
---- BRIEF ---
-${brief}
---- END BRIEF ---`,
-        },
-      ],
-      tools: [TOOL],
-      tool_choice: { type: "function", function: { name: "return_congress_lookup" } },
-    }),
-  });
-  if (extractRes.status === 429 || extractRes.status === 402) {
-    throw new Error(extractRes.status === 429 ? "rate_limited" : "payment_required");
-  }
-  if (!extractRes.ok) {
-    console.error("[congress-lookup] extract error", extractRes.status, await extractRes.text().catch(() => ""));
-    return null;
-  }
-  const json = (await extractRes.json()) as {
-    choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string } }> } }>;
-  };
-  const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-  if (!args) return null;
-  try {
-    const extracted = sanitizeResult(JSON.parse(args) as Partial<CongressLookupResult>, new Set(slugs));
-    return await verifyOfficialFacts(extracted);
+    const sanitized = sanitizeResult(
+      toolUse.input as Partial<CongressLookupResult>,
+      new Set(slugs),
+    );
+    return await verifyOfficialFacts(sanitized);
   } catch (e) {
-    console.error("[congress-lookup] parse error", e);
+    // normalizeAnthropicError throws — but only for known categories.
+    // For anything else (parse error, network glitch, schema validation
+    // failure that wasn't auto-recoverable), log and return null so the UI
+    // can fall back to manual entry.
+    try {
+      normalizeAnthropicError(e);
+    } catch (mapped) {
+      const code = mapped instanceof Error ? mapped.message : String(mapped);
+      // rate_limited / payment_required / anthropic_overloaded /
+      // anthropic_unauthorized / anthropic_not_configured propagate so the
+      // serverFn can surface them to the user.
+      if (
+        code === "rate_limited" ||
+        code === "payment_required" ||
+        code === "anthropic_overloaded" ||
+        code === "anthropic_unauthorized" ||
+        code === "anthropic_not_configured"
+      ) {
+        throw mapped;
+      }
+    }
+    console.error("[congress-lookup] anthropic call failed", e);
     return null;
   }
 }
 
+// ---------------------------------------------------------------------------
+// Public entry — cache-aware wrapper
+// ---------------------------------------------------------------------------
+
 /**
  * Online lookup with 24h cache. Returns null on hard failure.
- * Throws "rate_limited" / "payment_required" so callers can surface.
+ * Throws "rate_limited" / "payment_required" / "anthropic_*" so callers can
+ * surface them to the user.
  */
 export async function lookupCongress(
   query: string,
@@ -473,14 +790,20 @@ export async function lookupCongress(
     .order("display_order");
   const slugs = ((slugRows ?? []) as Array<{ slug: string }>).map((r) => r.slug);
 
-  const fresh = await callGateway(q, slugs);
+  const fresh = await callAnthropic(q, slugs);
   if (!fresh) return null;
 
   const expiresAt = new Date(Date.now() + CACHE_TTL_HOURS * 3600 * 1000).toISOString();
   await supabaseAdmin
     .from("congress_lookup_cache" as never)
     .upsert(
-      { query_hash: hash, query_raw: q, result: fresh, fetched_at: nowISO, expires_at: expiresAt } as never,
+      {
+        query_hash: hash,
+        query_raw: q,
+        result: fresh,
+        fetched_at: nowISO,
+        expires_at: expiresAt,
+      } as never,
       { onConflict: "query_hash" },
     );
 
