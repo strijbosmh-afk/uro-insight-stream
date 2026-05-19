@@ -119,6 +119,33 @@ export type Database = {
         }
         Relationships: []
       }
+      app_secrets: {
+        Row: {
+          key_name: string
+          last_four: string
+          prefix: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          key_name: string
+          last_four: string
+          prefix: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          key_name?: string
+          last_four?: string
+          prefix?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       ask_query_cache: {
         Row: {
           answer: Json
