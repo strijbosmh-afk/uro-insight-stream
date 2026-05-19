@@ -1,6 +1,6 @@
 // Server-only: AI-assisted online congress lookup with 24-hour cache.
 //
-// Uses the Anthropic API (claude-opus-4-7) with the server-side
+// Uses the Anthropic API (claude-sonnet-4-6) with the server-side
 // `web_search_20260209` tool for live grounding, adaptive thinking, prompt
 // caching on the large taxonomy/instruction prefix, and a `strict` tool to
 // enforce the JSON shape. Replaces the prior 2-step Lovable (Gemini) pipeline
@@ -672,7 +672,7 @@ async function callAnthropic(
     //    extract the tool_use block without writing a stream-event loop.
     const message = await client.messages
       .stream({
-        model: "claude-opus-4-7",
+        model: "claude-sonnet-4-6",
         max_tokens: 16000,
         // Cache the large taxonomy + instruction prefix. The query string sits
         // in the user message AFTER the breakpoint, so different queries reuse
