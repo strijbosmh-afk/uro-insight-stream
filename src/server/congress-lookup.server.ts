@@ -525,9 +525,12 @@ const RETURN_TOOL: Anthropic.Tool = {
   name: "return_congress_lookup",
   description:
     "Return structured data about the requested medical congress. Always call this tool — never reply in plain text.",
-  // `strict: true` makes Anthropic enforce the schema on the model side — any
-  // non-conforming output is auto-rejected and the model retries.
-  // (Property is on the JSON schema, not the SDK type; cast below.)
+  // NOT using strict mode. The strict-schema validator rejects multi-type
+  // arrays like `type: ["string", "null"]` (only `anyOf` is supported in
+  // strict). We use multi-type everywhere here because the model emits
+  // nulls for unknown fields. Server-side `sanitizeResult()` validates
+  // every field regardless of what the model returns, so dropping strict
+  // doesn't loosen the trust boundary.
   input_schema: {
     type: "object",
     properties: {
@@ -647,9 +650,7 @@ const RETURN_TOOL: Anthropic.Tool = {
     additionalProperties: false,
   },
 } as Anthropic.Tool;
-// Anthropic's TS types don't yet declare `strict` on the Tool union; the API
-// honours it. Cast lets us add it without throwing the union type away.
-(RETURN_TOOL as unknown as { strict: boolean }).strict = true;
+// (strict mode intentionally not set — see RETURN_TOOL comment.)
 
 // ---------------------------------------------------------------------------
 // Anthropic call
@@ -717,11 +718,20 @@ Use web_search to confirm CURRENT facts (dates, city, venue, official URL, offic
         b.type === "tool_use" && b.name === "return_congress_lookup",
     );
     if (!toolUse) {
-      console.error(
-        "[congress-lookup] no return_congress_lookup tool call in response",
-        message.stop_reason,
+      // Surface stop reason + any text-block content so the wizard's toast
+      // tells us what the model actually said instead of a generic failure.
+      const textBlock = message.content.find(
+        (b): b is Anthropic.TextBlock => b.type === "text",
       );
-      return null;
+      const detail = textBlock?.text?.slice(0, 200) ?? "(no text block)";
+      console.error(
+        "[congress-lookup] no return_congress_lookup tool call",
+        message.stop_reason,
+        detail,
+      );
+      throw new Error(
+        `lookup_no_tool_call: stop=${message.stop_reason} text=${detail}`,
+      );
     }
 
     const sanitized = sanitizeResult(
@@ -730,29 +740,31 @@ Use web_search to confirm CURRENT facts (dates, city, venue, official URL, offic
     );
     return await verifyOfficialFacts(sanitized);
   } catch (e) {
-    // normalizeAnthropicError throws — but only for known categories.
-    // For anything else (parse error, network glitch, schema validation
-    // failure that wasn't auto-recoverable), log and return null so the UI
-    // can fall back to manual entry.
+    // Re-throw our own lookup_* errors untouched (already user-readable).
+    if (e instanceof Error && e.message.startsWith("lookup_")) throw e;
+
+    // Try to map Anthropic SDK errors to short codes. normalizeAnthropicError
+    // always throws — either the short code or the original error.
+    const KNOWN = new Set([
+      "rate_limited",
+      "payment_required",
+      "anthropic_overloaded",
+      "anthropic_unauthorized",
+      "anthropic_forbidden",
+      "anthropic_not_configured",
+    ]);
     try {
       normalizeAnthropicError(e);
     } catch (mapped) {
-      const code = mapped instanceof Error ? mapped.message : String(mapped);
-      // rate_limited / payment_required / anthropic_overloaded /
-      // anthropic_unauthorized / anthropic_not_configured propagate so the
-      // serverFn can surface them to the user.
-      if (
-        code === "rate_limited" ||
-        code === "payment_required" ||
-        code === "anthropic_overloaded" ||
-        code === "anthropic_unauthorized" ||
-        code === "anthropic_not_configured"
-      ) {
-        throw mapped;
-      }
+      if (mapped instanceof Error && KNOWN.has(mapped.message)) throw mapped;
+      // Fall through to the wrap-with-detail path below.
     }
+
     console.error("[congress-lookup] anthropic call failed", e);
-    return null;
+    // Wrap with a short prefix the wizard toast can show verbatim — this
+    // is what previously got swallowed as a useless generic "lookup_failed".
+    const detail = e instanceof Error ? e.message : String(e);
+    throw new Error(`lookup_failed: ${detail.slice(0, 240)}`);
   }
 }
 
