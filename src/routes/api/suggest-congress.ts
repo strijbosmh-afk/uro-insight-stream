@@ -184,7 +184,7 @@ const SUGGEST_TOOL: Anthropic.Tool = {
 async function callLLM(query: string): Promise<LLMResp | null> {
   let client;
   try {
-    client = getAnthropic();
+    client = await getAnthropic();
   } catch {
     // ANTHROPIC_API_KEY not configured — suggestions degrade silently to "no
     // matches" rather than failing the dialog. The deep lookup will surface

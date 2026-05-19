@@ -29,6 +29,7 @@ import { mockAiService, lovableGatewayService } from "@/services/aiService";
 import { toast } from "sonner";
 import { SwitchRow } from "./SwitchRow";
 import { MobileSaveBar } from "./MobileSaveBar";
+import { AiProviderKeysPanel } from "./AiProviderKeysPanel";
 
 export function AiSettings() {
   const { settings, save, reset } = useAiSettings();
@@ -84,6 +85,9 @@ export function AiSettings() {
           </span>
         </div>
       </header>
+
+      {/* Super-admin-only: workspace API keys. Renders nothing for other users. */}
+      <AiProviderKeysPanel />
 
       {/* Backend toggle */}
       <section className="border border-border rounded-[3px] bg-panel p-4 space-y-4">
