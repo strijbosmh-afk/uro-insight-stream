@@ -384,12 +384,14 @@ export const TweetCard = React.memo(function TweetCard({
               }}
               disabled={likeMutation.isPending}
               title={liked ? "Unlike on X" : "Like on X"}
+              aria-label={liked ? "Unlike on X" : "Like on X"}
+              aria-pressed={liked}
               className={cn(
                 "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-rose-400",
                 liked && "text-rose-400",
               )}
             >
-              <Heart className={cn("w-3 h-3", liked && "fill-current")} />
+              <Heart aria-hidden="true" className={cn("w-3 h-3", liked && "fill-current")} />
               <span className="inline">{compact(tweet.likeCount + (liked ? 1 : 0))}</span>
             </button>
             <button
@@ -400,16 +402,21 @@ export const TweetCard = React.memo(function TweetCard({
               }}
               disabled={retweetMutation.isPending}
               title={retweeted ? "Undo repost" : "Repost on X"}
+              aria-label={retweeted ? "Undo repost" : "Repost on X"}
+              aria-pressed={retweeted}
               className={cn(
                 "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-emerald-400",
                 retweeted && "text-emerald-400",
               )}
             >
-              <Repeat2 className="w-3 h-3" />
+              <Repeat2 aria-hidden="true" className="w-3 h-3" />
               <span className="inline">{compact(tweet.retweetCount + (retweeted ? 1 : 0))}</span>
             </button>
-            <span className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0">
-              <MessageCircle className="w-3 h-3" />
+            <span
+              className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+              aria-label={`${tweet.replyCount} replies`}
+            >
+              <MessageCircle aria-hidden="true" className="w-3 h-3" />
               <span className="inline">{compact(tweet.replyCount)}</span>
             </span>
             <span className="ml-auto uppercase tracking-wider text-text-muted/70 hidden md:inline">
@@ -419,10 +426,11 @@ export const TweetCard = React.memo(function TweetCard({
               href={tweetUrl}
               target="_blank"
               rel="noreferrer noopener"
+              aria-label={`View @${handle}'s post on X (opens new tab)`}
               className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 text-text-muted hover:text-accent"
             >
               <span className="hidden md:inline">View on X</span>
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink aria-hidden="true" className="w-3 h-3" />
             </a>
             <ReplyButton
               reply={{ tweetId: tweet.id, authorHandle: handle, text: tweet.text }}
@@ -436,6 +444,7 @@ export const TweetCard = React.memo(function TweetCard({
               }}
               disabled={toggleBookmark.isPending}
               title={isBookmarked ? "Remove from saved" : "Save tweet"}
+              aria-label={isBookmarked ? "Remove from saved" : "Save tweet"}
               aria-pressed={isBookmarked}
               className={cn(
                 "inline-flex items-center justify-center gap-1 min-h-11 min-w-11 md:min-h-0 md:min-w-0 transition-colors hover:text-accent",
@@ -443,9 +452,9 @@ export const TweetCard = React.memo(function TweetCard({
               )}
             >
               {isBookmarked ? (
-                <BookmarkCheck className="w-3 h-3 fill-current" />
+                <BookmarkCheck aria-hidden="true" className="w-3 h-3 fill-current" />
               ) : (
-                <Bookmark className="w-3 h-3" />
+                <Bookmark aria-hidden="true" className="w-3 h-3" />
               )}
             </button>
           </div>

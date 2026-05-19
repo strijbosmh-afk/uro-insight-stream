@@ -526,8 +526,8 @@ function HelpPanel() {
                   Read+Write was enabled. Regenerate it (Step 4).
                 </p>
                 <p>
-                  <b>453:</b> your X API tier doesn't permit posting. Upgrade
-                  to Basic or Pro tier at developer.x.com.
+                  <b>453:</b> your X API access level doesn't permit posting.
+                  Check your access level at developer.x.com.
                 </p>
               </AccordionContent>
             </AccordionItem>

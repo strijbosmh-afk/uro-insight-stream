@@ -30,7 +30,10 @@ import {
   deleteDigest,
   sendDigestNow,
 } from "@/serverFns/digests";
-import { DigestWizard } from "./DigestWizard";
+// Lazy: large wizard + its mobile sibling. Only load when the user opens it.
+const DigestWizard = React.lazy(() =>
+  import("./DigestWizard").then((m) => ({ default: m.DigestWizard })),
+);
 
 const DAY_LABELS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
 
@@ -261,14 +264,16 @@ export function MobileDigestsList() {
       )}
 
       {wizardOpen && (
-        <DigestWizard
-          digestId={editingId}
-          onClose={(saved) => {
-            setWizardOpen(false);
-            setEditingId(null);
-            if (saved) qc.invalidateQueries({ queryKey: ["user-digests"] });
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <DigestWizard
+            digestId={editingId}
+            onClose={(saved) => {
+              setWizardOpen(false);
+              setEditingId(null);
+              if (saved) qc.invalidateQueries({ queryKey: ["user-digests"] });
+            }}
+          />
+        </React.Suspense>
       )}
 
       <AlertDialog

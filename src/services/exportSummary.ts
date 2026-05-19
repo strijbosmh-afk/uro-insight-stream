@@ -235,3 +235,114 @@ function triggerDownload(blob: Blob, filename: string) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+
+/* ----------------------------- CSV ----------------------------- */
+
+const CSV_HEADER = [
+  "congress_code",
+  "congress_name",
+  "session_title",
+  "session_track",
+  "session_start",
+  "abstract_number",
+  "generated_at",
+  "model",
+  "tweet_count",
+  "sentiment",
+  "item_type",
+  "item_index",
+  "item_text",
+  "source_handle",
+  "source_name",
+] as const;
+
+function csvEscape(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  // Always quote — RFC 4180 safe, lets values contain commas / newlines / quotes.
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+function summaryToCsvRows(input: SummaryExportInput): string[][] {
+  const { summary, title, congress, session, abstract, sourceLookup } = input;
+  const base = {
+    congress_code: congress?.shortCode ?? "",
+    congress_name: congress?.name ?? "",
+    session_title: title || session?.title || "",
+    session_track: session?.track ?? "",
+    session_start: session?.startTime ?? "",
+    abstract_number: abstract?.abstractNumber ?? "",
+    generated_at: summary.generatedAt,
+    model: summary.modelUsed,
+    tweet_count: summary.tweetCount,
+    sentiment: summary.sentiment,
+  };
+
+  const rows: string[][] = [];
+  const push = (
+    item_type: "takeaway" | "quote" | "controversy" | "question",
+    item_index: number,
+    item_text: string,
+    source_handle = "",
+    source_name = "",
+  ) =>
+    rows.push([
+      String(base.congress_code),
+      String(base.congress_name),
+      String(base.session_title),
+      String(base.session_track),
+      String(base.session_start),
+      String(base.abstract_number),
+      String(base.generated_at),
+      String(base.model),
+      String(base.tweet_count),
+      String(base.sentiment),
+      item_type,
+      String(item_index),
+      item_text,
+      source_handle,
+      source_name,
+    ]);
+
+  summary.bulletPoints.forEach((b, i) => push("takeaway", i + 1, b));
+  summary.keyQuotes.forEach((q, i) => {
+    const src = sourceLookup?.get(q.sourceId);
+    const handle = src?.handle?.replace(/^@/, "") ?? q.sourceId.replace(/^@/, "");
+    push("quote", i + 1, q.quote, `@${handle}`, src?.displayName ?? "");
+  });
+  summary.controversies.forEach((c, i) => push("controversy", i + 1, c));
+  summary.takeaways.forEach((t, i) => push("question", i + 1, t));
+  return rows;
+}
+
+/**
+ * Long-format CSV — one row per item across one or more summaries.
+ * Convenient for pivot tables in Excel / Sheets.
+ */
+export function summariesToCsv(inputs: SummaryExportInput[]): string {
+  const out: string[] = [];
+  out.push(CSV_HEADER.map(csvEscape).join(","));
+  for (const input of inputs) {
+    for (const row of summaryToCsvRows(input)) {
+      out.push(row.map(csvEscape).join(","));
+    }
+  }
+  // BOM so Excel auto-detects UTF-8 (otherwise it mangles non-ASCII handles/quotes).
+  return "﻿" + out.join("\r\n");
+}
+
+export function downloadCsv(
+  inputs: SummaryExportInput | SummaryExportInput[],
+  filename?: string,
+): void {
+  const arr = Array.isArray(inputs) ? inputs : [inputs];
+  if (arr.length === 0) return;
+  const csv = summariesToCsv(arr);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const name =
+    filename ??
+    (arr.length === 1
+      ? buildExportFilename(arr[0]!, "md").replace(/\.md$/, ".csv")
+      : `urofeed_summaries_${fmtDate(new Date().toISOString())}.csv`);
+  triggerDownload(blob, name);
+}

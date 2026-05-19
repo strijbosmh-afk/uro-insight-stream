@@ -61,6 +61,8 @@ import {
   type AdminAuditEntry,
 } from "@/serverFns/admin-users";
 import { EmailDiagnosticsView } from "@/components/admin/EmailDiagnosticsView";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Users — UroFeed admin" }] }),
@@ -302,53 +304,55 @@ function UsersTab() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-text-muted text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading users…
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wider text-text-muted border-b border-border">
-              <tr>
-                <th className="w-8 py-2">
-                  <Checkbox
-                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                    onCheckedChange={(v) => toggleAll(v === true)}
-                    aria-label="Select all users"
-                    disabled={selectableIds.length === 0}
-                  />
-                </th>
-                <th className="text-left py-2 font-medium">User</th>
-                <th className="text-left py-2 font-medium">Role</th>
-                <th className="text-left py-2 font-medium">Status</th>
-                <th className="text-left py-2 font-medium">Last sign-in</th>
-                <th className="text-left py-2 font-medium">Created</th>
-                <th className="w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <UserRow
-                  key={u.id}
-                  user={u}
-                  isSelf={u.id === currentUser?.id}
-                  onChange={refresh}
-                  selected={selected.has(u.id)}
-                  onSelectChange={(c) => toggleOne(u.id, c)}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-text-muted border-b border-border">
+            <tr>
+              <th className="w-8 py-2">
+                <Checkbox
+                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                  onCheckedChange={(v) => toggleAll(v === true)}
+                  aria-label="Select all users"
+                  disabled={selectableIds.length === 0 || isLoading}
                 />
-              ))}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-6 text-center text-text-muted">
-                    No users match those filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </th>
+              <th className="text-left py-2 font-medium">User</th>
+              <th className="text-left py-2 font-medium">Role</th>
+              <th className="text-left py-2 font-medium">Status</th>
+              <th className="text-left py-2 font-medium">Last sign-in</th>
+              <th className="text-left py-2 font-medium">Created</th>
+              <th className="w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRowSkeleton key={i} cols={7} />
+              ))
+            ) : (
+              <>
+                {users.map((u) => (
+                  <UserRow
+                    key={u.id}
+                    user={u}
+                    isSelf={u.id === currentUser?.id}
+                    onChange={refresh}
+                    selected={selected.has(u.id)}
+                    onSelectChange={(c) => toggleOne(u.id, c)}
+                  />
+                ))}
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center text-text-muted">
+                      No users match those filters.
+                    </td>
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -680,32 +684,22 @@ function InvitationsTab() {
     queryFn: () => listFn(),
   });
 
-  const resend = useMutation({
+  const resend = useMutationWithToast({
     mutationFn: (id: string) => resendFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Invitation resent");
-      qc.invalidateQueries({ queryKey: ["admin-invitations"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
+    success: "Invitation resent",
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-invitations"] }),
   });
-  const revoke = useMutation({
+  const revoke = useMutationWithToast({
     mutationFn: (id: string) => revokeFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Invitation revoked");
-      qc.invalidateQueries({ queryKey: ["admin-invitations"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
+    success: "Invitation revoked",
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-invitations"] }),
   });
 
   const pending = (data ?? []).filter((i: PendingInvitation) => i.status === "pending");
 
   return (
     <Panel title="Pending invitations">
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-text-muted text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-        </div>
-      ) : pending.length === 0 ? (
+      {!isLoading && pending.length === 0 ? (
         <p className="text-sm text-text-muted">No pending invitations.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -721,6 +715,10 @@ function InvitationsTab() {
               </tr>
             </thead>
             <tbody>
+              {isLoading &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRowSkeleton key={i} cols={6} />
+                ))}
               {pending.map((inv: PendingInvitation) => (
                 <tr key={inv.id} className="border-b border-border/60">
                   <td className="py-3">{inv.email}</td>
@@ -770,11 +768,19 @@ function AuditTab() {
   });
 
   return (
-    <Panel title="Audit log">
+    <Panel title="Audit log" loading={isLoading}>
       {isLoading ? (
-        <div className="flex items-center gap-2 text-text-muted text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-        </div>
+        <ul className="divide-y divide-border/60">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <li key={i} className="py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="block h-3 w-32 rounded-[2px] bg-panel-elevated/70 animate-pulse" />
+                <span className="block h-4 w-16 rounded-[2px] bg-panel-elevated/70 animate-pulse" />
+              </div>
+              <span className="block h-2.5 w-64 rounded-[2px] bg-panel-elevated/70 animate-pulse" />
+            </li>
+          ))}
+        </ul>
       ) : (data ?? []).length === 0 ? (
         <p className="text-sm text-text-muted">No admin actions recorded yet.</p>
       ) : (

@@ -348,7 +348,7 @@ function DesktopDigestWizard({ digestId, onClose, initialPreset }: DigestWizardP
       } else {
         const reason = res.reason ?? "failed";
         if (reason === "rate_limited") toast.error("Rate limited — try again in a moment");
-        else if (reason === "payment_required") toast.error("AI credits exhausted — add credits in workspace settings");
+        else if (reason === "payment_required") toast.error("AI service is temporarily unavailable. Please try again later.");
         else if (reason === "no_summary") toast.error("Not enough recent posts from these sources to summarise");
         else toast.error(`Summary failed: ${reason}`);
       }

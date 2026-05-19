@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Download, FileDown, FileText } from "lucide-react";
+import { Download, FileDown, FileText, Sheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
+  downloadCsv,
   downloadMarkdown,
   downloadPdf,
   type SummaryExportInput,
@@ -31,15 +32,18 @@ export function ExportMenu({
   className,
   label = "Export",
 }: Props) {
-  const [busy, setBusy] = React.useState<"pdf" | "md" | null>(null);
+  const [busy, setBusy] = React.useState<"pdf" | "md" | "csv" | null>(null);
 
-  const onPick = async (kind: "pdf" | "md") => {
+  const onPick = async (kind: "pdf" | "md" | "csv") => {
     setBusy(kind);
     try {
       const input = await resolve();
       if (kind === "md") {
         downloadMarkdown(input);
         toast.success("Markdown downloaded");
+      } else if (kind === "csv") {
+        downloadCsv(input);
+        toast.success("CSV downloaded");
       } else {
         await downloadPdf(input);
         toast.success("PDF downloaded");
@@ -61,8 +65,14 @@ export function ExportMenu({
           disabled={busy !== null}
           aria-label="Export summary"
         >
-          <Download className="w-3.5 h-3.5 mr-1.5" />
-          {busy === "pdf" ? "Exporting PDF…" : busy === "md" ? "Exporting…" : label}
+          <Download aria-hidden="true" className="w-3.5 h-3.5 mr-1.5" />
+          {busy === "pdf"
+            ? "Exporting PDF…"
+            : busy === "csv"
+              ? "Exporting CSV…"
+              : busy === "md"
+                ? "Exporting…"
+                : label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
@@ -73,6 +83,10 @@ export function ExportMenu({
         <DropdownMenuItem onClick={() => onPick("md")} className="gap-2">
           <FileText className="w-3.5 h-3.5 text-accent" />
           <span className="text-[12px]">Download Markdown</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("csv")} className="gap-2">
+          <Sheet className="w-3.5 h-3.5 text-accent" />
+          <span className="text-[12px]">Download CSV</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

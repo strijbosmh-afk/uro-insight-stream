@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { Panel } from "@/components/shell/Panel";
+import { TableRowSkeleton } from "@/components/shell/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,56 +149,58 @@ function GroupsTab() {
   });
 
   return (
-    <Panel>
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-text-muted text-sm p-2">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading groups…
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-text-muted border-b border-border">
-              <tr>
-                <th className="text-left py-2 px-2">Name</th>
-                <th className="text-left py-2 px-2">Cancer areas</th>
-                <th className="text-right py-2 px-2">Members</th>
-                <th className="text-right py-2 px-2">Subscribers</th>
-                <th className="text-left py-2 px-2">Visibility</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data ?? []).map((g) => (
-                <tr key={g.id} className="border-b border-border/50">
-                  <td className="py-2 px-2 font-medium">{g.name}</td>
-                  <td className="py-2 px-2">
-                    <div className="flex flex-wrap gap-1">
-                      {g.cancer_areas.map((a) => (
-                        <Badge key={a.id} variant="secondary" className="text-[10px]">
-                          {a.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-2 px-2 text-right tabular-nums">{g.member_count}</td>
-                  <td className="py-2 px-2 text-right tabular-nums">{g.subscriber_count}</td>
-                  <td className="py-2 px-2">
-                    <Badge variant={g.is_archived ? "outline" : "default"} className="text-[10px]">
-                      {g.is_archived ? "archived" : g.visibility}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-              {(data ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center text-text-muted py-8">
-                    No groups yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <Panel loading={isLoading}>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-text-muted border-b border-border">
+            <tr>
+              <th className="text-left py-2 px-2">Name</th>
+              <th className="text-left py-2 px-2">Cancer areas</th>
+              <th className="text-right py-2 px-2">Members</th>
+              <th className="text-right py-2 px-2">Subscribers</th>
+              <th className="text-left py-2 px-2">Visibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRowSkeleton key={i} cols={5} />
+              ))
+            ) : (
+              <>
+                {(data ?? []).map((g) => (
+                  <tr key={g.id} className="border-b border-border/50">
+                    <td className="py-2 px-2 font-medium">{g.name}</td>
+                    <td className="py-2 px-2">
+                      <div className="flex flex-wrap gap-1">
+                        {g.cancer_areas.map((a) => (
+                          <Badge key={a.id} variant="secondary" className="text-[10px]">
+                            {a.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.member_count}</td>
+                    <td className="py-2 px-2 text-right tabular-nums">{g.subscriber_count}</td>
+                    <td className="py-2 px-2">
+                      <Badge variant={g.is_archived ? "outline" : "default"} className="text-[10px]">
+                        {g.is_archived ? "archived" : g.visibility}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+                {(data ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center text-text-muted py-8">
+                      No groups yet.
+                    </td>
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -447,10 +450,16 @@ function CandidatesTab() {
       )}
 
       {/* Table */}
-      <Panel>
+      <Panel loading={isLoading}>
         {isLoading ? (
-          <div className="flex items-center gap-2 text-text-muted text-sm p-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRowSkeleton key={i} cols={6} />
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : candidates.length === 0 ? (
           <div className="text-center text-text-muted py-12 space-y-2">
@@ -655,9 +664,17 @@ function SignalsTab() {
         click <span className="font-medium">Run now</span> in Candidates).
       </div>
       {isLoading ? (
-        <div className="flex items-center gap-2 text-text-muted text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading signals…
-        </div>
+        <Panel loading>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <TableRowSkeleton key={i} cols={5} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
       ) : (
         grouped.map((area) => {
           const isOpen = open[area.id] ?? true;

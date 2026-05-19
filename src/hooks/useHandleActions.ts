@@ -63,6 +63,56 @@ async function lookupAndPersist(handle: string) {
   if (!found) throw new Error("not_found");
 }
 
+type FollowOptimistic = {
+  prevSet?: Set<string>;
+  prevSubState?: HandleSubState | undefined;
+  id: string;
+};
+
+/**
+ * Snapshot + optimistically patch the two cache surfaces that drive the
+ * follow UI: the per-handle `handle-sub-state` and the global subscribed-id
+ * Set used by tables/lists. Returned snapshot lets onError roll back.
+ */
+function applyFollowOptimistic(
+  qc: ReturnType<typeof useQueryClient>,
+  userId: string,
+  id: string,
+  next: boolean,
+): FollowOptimistic {
+  const subStateKey = ["handle-sub-state", id, userId];
+  const idsKey = ["user-subscribed-source-ids", userId];
+  const prevSubState = qc.getQueryData<HandleSubState>(subStateKey);
+  const prevSet = qc.getQueryData<Set<string>>(idsKey);
+  if (prevSubState) {
+    qc.setQueryData<HandleSubState>(subStateKey, {
+      ...prevSubState,
+      isSubscribed: next,
+    });
+  }
+  if (prevSet) {
+    const nextSet = new Set(prevSet);
+    if (next) nextSet.add(id);
+    else nextSet.delete(id);
+    qc.setQueryData<Set<string>>(idsKey, nextSet);
+  }
+  return { prevSet, prevSubState, id };
+}
+
+function rollbackFollow(
+  qc: ReturnType<typeof useQueryClient>,
+  userId: string,
+  ctx: FollowOptimistic | undefined,
+) {
+  if (!ctx) return;
+  if (ctx.prevSubState !== undefined) {
+    qc.setQueryData(["handle-sub-state", ctx.id, userId], ctx.prevSubState);
+  }
+  if (ctx.prevSet !== undefined) {
+    qc.setQueryData(["user-subscribed-source-ids", userId], ctx.prevSet);
+  }
+}
+
 export function useFollowSource() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -108,7 +158,17 @@ export function useFollowSource() {
       if (error) throw error;
       return { id, backfilled: needsLookup };
     },
-    onSuccess: (_res, vars) => {
+    onMutate: async ({ handle }) => {
+      if (!user) return undefined;
+      const id = handle.replace(/^@/, "").toLowerCase();
+      await qc.cancelQueries({ queryKey: ["handle-sub-state", id, user.id] });
+      return applyFollowOptimistic(qc, user.id, id, true);
+    },
+    onError: (_e, _vars, ctx) => {
+      if (!user) return;
+      rollbackFollow(qc, user.id, ctx);
+    },
+    onSettled: (_res, _e, vars) => {
       const id = vars.handle.replace(/^@/, "").toLowerCase();
       qc.invalidateQueries({ queryKey: ["handle-sub-state", id] });
       qc.invalidateQueries({ queryKey: ["user-subscribed-sources", user?.id] });
@@ -133,8 +193,19 @@ export function useUnfollowSource() {
       if (error) throw error;
       return { id };
     },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["handle-sub-state", res.id] });
+    onMutate: async ({ handle }) => {
+      if (!user) return undefined;
+      const id = handle.replace(/^@/, "").toLowerCase();
+      await qc.cancelQueries({ queryKey: ["handle-sub-state", id, user.id] });
+      return applyFollowOptimistic(qc, user.id, id, false);
+    },
+    onError: (_e, _vars, ctx) => {
+      if (!user) return;
+      rollbackFollow(qc, user.id, ctx);
+    },
+    onSettled: (res, _e, vars) => {
+      const id = res?.id ?? vars.handle.replace(/^@/, "").toLowerCase();
+      qc.invalidateQueries({ queryKey: ["handle-sub-state", id] });
       qc.invalidateQueries({ queryKey: ["user-subscribed-sources", user?.id] });
       qc.invalidateQueries({ queryKey: ["user-subscribed-source-ids", user?.id] });
     },
