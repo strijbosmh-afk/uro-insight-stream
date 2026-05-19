@@ -45,25 +45,55 @@ type NavSection = {
   items: NavItem[];
 };
 
-const BASE_SECTIONS: NavSection[] = [
-  {
-    label: "Workspace",
-    items: [
-      { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-      { label: "Live Feed", to: "/feed", icon: Radio },
-      { label: "Summaries", to: "/summaries", icon: FileText },
-      { label: "Congresses", to: "/congresses", icon: CalendarRange },
-      { label: "Digests", to: "/digests", icon: Mail },
-      { label: "Discover", to: "/discover", icon: Compass },
-      { label: "My Following", to: "/sources", icon: Database },
-    ],
-  },
-];
+// Sidebar sections, grouped by mental model:
+//   Today        → what's happening right now (overview + live tweets)
+//   Insights     → what's been produced (AI summaries, congress library)
+//   Sources      → manage who I follow
+//   Notifications→ delivered to me on a cadence (real-time + scheduled)
+//   Team         → admin-team-internal collaboration (admin only)
+//   Admin        → manage the system itself (admin only)
+
+const TODAY_SECTION: NavSection = {
+  label: "Today",
+  items: [
+    { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+    { label: "Live Feed", to: "/feed", icon: Radio },
+  ],
+};
+
+const INSIGHTS_SECTION: NavSection = {
+  label: "Insights",
+  items: [
+    { label: "Summaries", to: "/summaries", icon: FileText },
+    { label: "Congresses", to: "/congresses", icon: CalendarRange },
+  ],
+};
+
+const SOURCES_SECTION: NavSection = {
+  label: "Sources",
+  items: [
+    { label: "Discover", to: "/discover", icon: Compass },
+    { label: "Following", to: "/sources", icon: Database },
+  ],
+};
+
+const NOTIFICATIONS_SECTION: NavSection = {
+  label: "Notifications",
+  items: [
+    { label: "Alerts", to: "/alerts", icon: Bell },
+    { label: "Digests", to: "/digests", icon: Mail },
+  ],
+};
 
 const BRAINSTORM_ITEM: NavItem = {
   label: "Brainstorm",
   to: "/configuration/brainstorm",
   icon: Lightbulb,
+};
+
+const TEAM_SECTION: NavSection = {
+  label: "Team",
+  items: [BRAINSTORM_ITEM],
 };
 
 const ADMIN_SECTION: NavSection = {
@@ -77,23 +107,6 @@ const ADMIN_SECTION: NavSection = {
   ],
 };
 
-const BRAINSTORM_SECTION: NavSection = {
-  label: "Team",
-  items: [BRAINSTORM_ITEM],
-};
-
-// Reorder Workspace per spec: Dashboard, Live Feed, Summaries, Congresses, Discover, My Following, Digests
-const WORKSPACE_ORDERED: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Live Feed", to: "/feed", icon: Radio },
-  { label: "Summaries", to: "/summaries", icon: FileText },
-  { label: "Congresses", to: "/congresses", icon: CalendarRange },
-  { label: "Discover", to: "/discover", icon: Compass },
-  { label: "My Following", to: "/sources", icon: Database },
-  { label: "Alerts", to: "/alerts", icon: Bell },
-  { label: "Digests", to: "/digests", icon: Mail },
-];
-
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -103,14 +116,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isAdmin, signOut } = useAuth();
   const { unread, markRead } = useBrainstormUnread();
-  const sections = React.useMemo(
-    () => {
-      const workspace: NavSection = { label: "Workspace", items: WORKSPACE_ORDERED };
-      if (!isAdmin) return [workspace];
-      return [workspace, BRAINSTORM_SECTION, ADMIN_SECTION];
-    },
-    [isAdmin],
-  );
+  const sections = React.useMemo(() => {
+    const baseSections: NavSection[] = [
+      TODAY_SECTION,
+      INSIGHTS_SECTION,
+      SOURCES_SECTION,
+      NOTIFICATIONS_SECTION,
+    ];
+    if (!isAdmin) return baseSections;
+    return [...baseSections, TEAM_SECTION, ADMIN_SECTION];
+  }, [isAdmin]);
   const [contactOpen, setContactOpen] = React.useState(false);
 
   React.useEffect(() => {
