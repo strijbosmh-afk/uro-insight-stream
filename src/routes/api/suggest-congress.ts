@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import type Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getAnthropic, normalizeAnthropicError } from "@/server/anthropic-client.server";
 
 const PER_USER_LIMIT = 30;
 const PER_USER_WINDOW_MS = 60 * 1000;
@@ -113,91 +115,113 @@ Rules:
 - If ambiguous (e.g. "GU 2026"), return up to 3 candidates ranked by likelihood.
 - If you don't recognize the query as a real urology / GU congress, set no_match=true and matches=[].
 - Never invent congresses. Never hallucinate dates if you don't know them — set field_confidence to "low" and add a note "verify with official source".
-- Only handle medical / scientific congresses relevant to urology, GU oncology, andrology, female pelvic medicine, endourology. Reject unrelated events.`;
+- Only handle medical / scientific congresses relevant to urology, GU oncology, andrology, female pelvic medicine, endourology. Reject unrelated events.
+- Always call the return_congress_matches tool — never reply in plain text.`;
 
-async function callLLM(query: string): Promise<LLMResp | null> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return null;
-  const tool = {
-    type: "function" as const,
-    function: {
-      name: "return_congress_matches",
-      description: "Return up to 3 candidate congress matches.",
-      parameters: {
-        type: "object",
-        properties: {
-          no_match: { type: "boolean" },
-          matches: {
-            type: "array",
-            items: {
+const SUGGEST_TOOL: Anthropic.Tool = {
+  name: "return_congress_matches",
+  description: "Return up to 3 candidate congress matches.",
+  input_schema: {
+    type: "object",
+    properties: {
+      no_match: { type: "boolean" },
+      matches: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            short_code: { type: "string" },
+            city: { type: "string" },
+            country: { type: "string" },
+            start_date: { type: "string", description: "YYYY-MM-DD or empty" },
+            end_date: { type: "string", description: "YYYY-MM-DD or empty" },
+            primary_hashtags: { type: "array", items: { type: "string" } },
+            status: { type: "string", enum: ["upcoming", "live", "archived"] },
+            confidence: { type: "string", enum: ["high", "medium", "low"] },
+            field_confidence: {
               type: "object",
               properties: {
-                name: { type: "string" },
-                short_code: { type: "string" },
-                city: { type: "string" },
-                country: { type: "string" },
-                start_date: { type: "string", description: "YYYY-MM-DD or empty" },
-                end_date: { type: "string", description: "YYYY-MM-DD or empty" },
-                primary_hashtags: { type: "array", items: { type: "string" } },
-                status: { type: "string", enum: ["upcoming", "live", "archived"] },
-                confidence: { type: "string", enum: ["high", "medium", "low"] },
-                field_confidence: {
-                  type: "object",
-                  properties: {
-                    dates: { type: "string", enum: ["high", "medium", "low"] },
-                    city: { type: "string", enum: ["high", "medium", "low"] },
-                    hashtags: { type: "string", enum: ["high", "medium", "low"] },
-                  },
-                  required: ["dates", "city", "hashtags"],
-                  additionalProperties: false,
-                },
-                notes: { type: "string" },
+                dates: { type: "string", enum: ["high", "medium", "low"] },
+                city: { type: "string", enum: ["high", "medium", "low"] },
+                hashtags: { type: "string", enum: ["high", "medium", "low"] },
               },
-              required: [
-                "name",
-                "short_code",
-                "city",
-                "country",
-                "start_date",
-                "end_date",
-                "primary_hashtags",
-                "status",
-                "confidence",
-                "field_confidence",
-                "notes",
-              ],
+              required: ["dates", "city", "hashtags"],
               additionalProperties: false,
             },
+            notes: { type: "string" },
           },
+          required: [
+            "name",
+            "short_code",
+            "city",
+            "country",
+            "start_date",
+            "end_date",
+            "primary_hashtags",
+            "status",
+            "confidence",
+            "field_confidence",
+            "notes",
+          ],
+          additionalProperties: false,
         },
-        required: ["matches", "no_match"],
-        additionalProperties: false,
       },
     },
-  };
+    required: ["matches", "no_match"],
+    additionalProperties: false,
+  },
+} as Anthropic.Tool;
+(SUGGEST_TOOL as unknown as { strict: boolean }).strict = true;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Query: ${query}` },
-      ],
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: "return_congress_matches" } },
-    }),
-  });
-  if (!res.ok) return null;
-  const json = await res.json();
-  const args = json?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-  if (!args) return null;
+/**
+ * Quick autocomplete-style suggestions for the new-congress dialog.
+ * Uses Haiku for low latency + low cost; the deep wizard lookup uses Opus
+ * with web search. This call does not search the web — it leans on the
+ * model's training knowledge, which is fine for "did you mean ASCO GU?"
+ * style suggestions.
+ */
+async function callLLM(query: string): Promise<LLMResp | null> {
+  let client;
   try {
-    const parsed = JSON.parse(args) as LLMResp;
+    client = getAnthropic();
+  } catch {
+    // ANTHROPIC_API_KEY not configured — suggestions degrade silently to "no
+    // matches" rather than failing the dialog. The deep lookup will surface
+    // a clear error.
+    return null;
+  }
+  try {
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 2000,
+      system: SYSTEM_PROMPT,
+      tools: [SUGGEST_TOOL],
+      tool_choice: { type: "tool", name: "return_congress_matches" },
+      messages: [{ role: "user", content: `Query: ${query}` }],
+    });
+    const toolUse = message.content.find(
+      (b): b is Anthropic.ToolUseBlock =>
+        b.type === "tool_use" && b.name === "return_congress_matches",
+    );
+    if (!toolUse) return null;
+    const parsed = toolUse.input as LLMResp;
     if (!Array.isArray(parsed.matches)) return null;
     return parsed;
-  } catch {
+  } catch (e) {
+    // Map known errors so the route can return the right HTTP status, but
+    // for everything else just log and return null — suggestions are an
+    // enhancement, never block the user.
+    try {
+      normalizeAnthropicError(e);
+    } catch (mapped) {
+      const code = mapped instanceof Error ? mapped.message : String(mapped);
+      if (code === "rate_limited" || code === "anthropic_overloaded") {
+        // Re-raise so POST handler can return a 429.
+        throw mapped;
+      }
+    }
+    console.error("[suggest-congress] anthropic call failed", e);
     return null;
   }
 }
@@ -279,7 +303,20 @@ export const Route = createFileRoute("/api/suggest-congress")({
           );
         }
 
-        const llm = await callLLM(query);
+        let llm: LLMResp | null;
+        try {
+          llm = await callLLM(query);
+        } catch (e) {
+          const code = e instanceof Error ? e.message : "lookup_failed";
+          if (code === "rate_limited" || code === "anthropic_overloaded") {
+            return jsonResponse(
+              { matches: [], error: code },
+              { status: 429, headers: { "Retry-After": "30" } },
+              request,
+            );
+          }
+          return jsonResponse({ matches: [], error: "lookup_failed" }, {}, request);
+        }
         if (!llm) {
           return jsonResponse({ matches: [], error: "lookup_failed" }, {}, request);
         }

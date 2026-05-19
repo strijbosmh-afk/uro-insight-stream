@@ -51,6 +51,10 @@ type Kol = {
   verified?: boolean;
   role?: string | null;
   reason?: string;
+  // Extended fields populated by the Anthropic-backed lookup.
+  specialty?: string | null;
+  category?: string | null;
+  llm_confidence?: "high" | "medium" | "low" | null;
   status: "pending" | "looking-up" | "found" | "not-found";
 };
 
@@ -257,15 +261,26 @@ export function CongressWizard({ open, onOpenChange, editId, onSaved }: Props) {
         setAreaIds(ids);
         setPrimaryAreaId(ids[0]);
       }
-      // Seed suggested KOLs (don't enrich yet — happens on step 5 entry)
+      // Seed suggested KOLs from the LLM. Display name + role + specialty come
+      // pre-populated — X handle enrichment (avatar, verified badge) still
+      // happens on step 5 entry but the user already sees something useful.
       const suggested = (r.suggested_kols ?? []).map((k): Kol => ({
         handle: cleanHandle(k.handle),
         reason: k.reason,
+        display_name: k.display_name ?? undefined,
+        role: k.role ?? undefined,
+        specialty: k.specialty ?? undefined,
+        category: k.category ?? undefined,
+        llm_confidence: k.confidence ?? undefined,
         status: "pending",
       }));
       setKols(suggested);
       setStepIdx(1);
-      toast.success(`Pre-filled (${r.confidence} confidence${r.cached ? ", cached" : ""})`);
+      toast.success(
+        `Pre-filled (${r.confidence} confidence${r.cached ? ", cached" : ""}${
+          r.is_future_edition ? " · upcoming edition" : ""
+        })`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Lookup failed");
     } finally {
@@ -927,14 +942,30 @@ function KolsStep({
                 : <span>@</span>}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[12px] font-medium truncate">
                   {k.display_name || `@${k.handle}`}
                 </span>
-                {k.verified && <span className="text-cyan-400 text-[10px]">✓</span>}
+                {k.verified && (
+                  <span aria-label="Verified on X" className="text-cyan-400 text-[10px]">
+                    ✓
+                  </span>
+                )}
+                {k.role && k.role !== "kol" && (
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-muted border border-border rounded-[2px] px-1">
+                    {k.role}
+                  </span>
+                )}
+                {k.category && (
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-muted/70">
+                    {k.category.replace(/_/g, " ")}
+                  </span>
+                )}
               </div>
               <div className="text-[10px] font-mono text-text-muted truncate">
-                @{k.handle}{k.reason ? ` · ${k.reason}` : ""}
+                @{k.handle}
+                {k.specialty ? ` · ${k.specialty}` : ""}
+                {!k.specialty && k.reason ? ` · ${k.reason}` : ""}
               </div>
             </div>
             <div className="shrink-0">
