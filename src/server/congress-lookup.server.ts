@@ -659,7 +659,7 @@ async function callAnthropic(
   query: string,
   slugs: string[],
 ): Promise<CongressLookupResult | null> {
-  const client = getAnthropic();
+  const client = await getAnthropic();
   const today = new Date().toISOString().slice(0, 10);
   const systemPrompt = buildSystemPrompt(slugs);
 
